@@ -48,7 +48,7 @@ export function cancelAction(token) {
   if (activeAction?.token === token) activeAction = null
 }
 
-export async function confirmAction({ action = 'create', entityName = 'record' } = {}) {
+export async function confirmAction({ action = 'create', entityName = 'record', title, text } = {}) {
   const entity = sentenceCase(entityName)
   const messages = {
     create: `Save this ${entity.toLowerCase()}?`,
@@ -59,7 +59,8 @@ export async function confirmAction({ action = 'create', entityName = 'record' }
   }
 
   const result = await Swal.fire({
-    title: messages[action] || 'Continue with this operation?',
+    title: title || messages[action] || 'Continue with this operation?',
+    ...(text ? { text } : {}),
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'Yes',

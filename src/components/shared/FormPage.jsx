@@ -13,6 +13,7 @@ import {
  * Standard create/edit page shell.
  * Feature pages own state and validation, then pass their rendered fields as
  * children. `onDraft` adds an optional action without changing normal forms.
+ * `onValidate` (optional) returns false to stop submit before the confirm dialog.
  */
 function FormPage({
   title,
@@ -25,15 +26,19 @@ function FormPage({
   onDraft,
   draftLabel = 'Save as Draft',
   submitLabel = 'Save',
+  onValidate,
 }) {
   const entityName = getEntityNameFromTitle(title)
   const action = submitLabel.toLowerCase().includes('update') ? 'update' : 'create'
 
-  const handleSubmit = (event) => runConfirmedFormSubmit(
-    event,
-    { action, entityName },
-    onSubmit,
-  )
+  const handleSubmit = (event) => {
+    // Optional: lets a page show its own inline errors before the confirm dialog opens.
+    if (onValidate && !onValidate()) {
+      event.preventDefault()
+      return false
+    }
+    return runConfirmedFormSubmit(event, { action, entityName }, onSubmit)
+  }
 
   const handleDraft = (event) => runConfirmedFormSubmit(
     {
