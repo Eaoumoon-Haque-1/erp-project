@@ -13,7 +13,7 @@ const columns = [
   { key: 'ITEM_NAME', label: 'Item Name' },
   { key: 'ITEM_GROUP_NAME', label: 'Item Group' },
   { key: 'DEPRI_CATEGORY_NAME', label: 'Depreciation Category' },
-  { key: 'CATEGORY_TYPE', label: 'Category Type' },
+  { key: 'CATEGORY_TYPE', label: 'Asset Type' },
   { key: 'UOM_NAME', label: 'UOM' },
   { key: 'ASSET_OWNER', label: 'Asset Owner' },
   {
@@ -61,7 +61,6 @@ function AssetItemInformationList() {
   ], [rows])
 
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Asset Item ${row.ITEM_NAME}?`)) return
     removeAssetItem(row.ID)
     setRows(listAssetItems())
   }

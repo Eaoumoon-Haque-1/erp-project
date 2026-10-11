@@ -5,8 +5,9 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { modulesApi, permissionsApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { modulesApi } from '../../module/api/moduleApi'
+import { permissionsApi } from '../api/menuPermissionApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import MenuPermissionForm from '../components/MenuPermissionForm'
 import { mapPermissionToApi } from '../data/menuPermissionApiMapper'
@@ -73,7 +74,7 @@ function MenuPermissionCreate() {
       await permissionsApi.create(mapPermissionToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to create Permission.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Permission.'))
     } finally {
       setSubmitting(false)
     }

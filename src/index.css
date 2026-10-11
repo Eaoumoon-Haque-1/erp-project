@@ -861,6 +861,20 @@
     white-space: nowrap;
   }
 
+  .erp-form-control.erp-multi-select-trigger-grow {
+    height: auto;
+    min-height: 45px;
+    max-height: none;
+    align-items: flex-start;
+  }
+
+  .erp-multi-select-trigger-grow > span:first-child {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
   .erp-multi-select-trigger:disabled {
     background: #f3f3f3;
     cursor: not-allowed;
@@ -1032,6 +1046,47 @@
     row-gap: 14px;
   }
 
+  /* Menu creation is intentionally stacked, unlike the standard five-column forms. */
+  .erp-menu-form-layout {
+    display: grid;
+    width: 100%;
+    gap: 18px;
+  }
+
+  .erp-menu-primary-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(240px, 392px));
+    gap: 30px;
+    align-items: start;
+  }
+
+  .erp-menu-stacked-fields {
+    display: grid;
+    width: min(100%, 392px);
+    gap: 14px;
+  }
+
+  .erp-menu-radio-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .erp-menu-radio-options {
+    display: flex;
+    min-height: 38px;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .erp-radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+  }
+
   .erp-user-form-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
@@ -1201,6 +1256,10 @@
 
   .erp-asset-receive-section .erp-employee-section-title {
     margin-bottom: 14px;
+  }
+
+  .erp-asset-receive-tabs {
+    margin-top: 24px;
   }
 
   .erp-asset-receive-empty-note {
@@ -1693,6 +1752,46 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+  }
+
+  .erp-gate-pass-form {
+    display: grid;
+    gap: 16px;
+  }
+
+  .erp-gate-pass-entry-grid {
+    display: grid;
+    grid-template-columns: minmax(280px, 2fr) minmax(160px, 1fr) 48px;
+    gap: 14px 30px;
+    align-items: start;
+    max-width: 900px;
+  }
+
+  .erp-gate-pass-entry-grid .erp-role-add-button {
+    margin-top: 25px;
+  }
+
+  .erp-gate-pass-table-wrap {
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .erp-gate-pass-table {
+    table-layout: fixed;
+  }
+
+  .erp-gate-pass-table .erp-number-column {
+    width: 48px;
+  }
+
+  .erp-gate-pass-table .erp-quantity-column {
+    width: 160px;
+    text-align: center;
+  }
+
+  .erp-gate-pass-table .erp-action-column {
+    width: 80px;
+    text-align: center;
   }
 
   @media (min-width: 992px) {
@@ -2404,6 +2503,10 @@
       grid-template-columns: 1fr;
     }
 
+    .erp-menu-primary-row {
+      grid-template-columns: minmax(0, 392px);
+    }
+
     .erp-menu-form-grid > * {
       grid-column: auto;
       grid-row: auto;
@@ -2456,6 +2559,16 @@
       gap: 12px;
     }
 
+    .erp-gate-pass-entry-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: none;
+    }
+
+    .erp-gate-pass-entry-grid .erp-role-add-button {
+      margin-top: 0;
+    }
+
     .erp-user-type-group-assignment-grid .erp-role-add-button {
       margin-top: 0;
     }
@@ -2477,3 +2590,93 @@
     }
   }
 }
+  .erp-action-alert {
+    border-radius: 8px;
+    font-family: inherit;
+  }
+
+  .erp-action-alert-button {
+    min-width: 86px;
+    margin: 0 5px;
+  }
+
+  /* Shared read-only API record pages. Resource pages supply only their fields. */
+  .erp-record-view-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 24px;
+    margin: 0;
+  }
+
+  .erp-record-view-grid > div {
+    min-width: 0;
+  }
+
+  .erp-record-view-grid dt {
+    margin-bottom: 6px;
+    color: var(--color-app-text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .erp-record-view-grid dd {
+    min-height: 42px;
+    margin: 0;
+    padding: 9px 11px;
+    border: 1px solid #d8dee5;
+    border-radius: 3px;
+    background: #f6f8fa;
+    overflow-wrap: anywhere;
+  }
+
+  .erp-record-view-field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .erp-record-view-image {
+    display: block;
+    width: auto;
+    max-width: min(100%, 300px);
+    max-height: 180px;
+    border: 1px solid #d8dee5;
+    object-fit: contain;
+  }
+
+  .erp-record-view-empty,
+  .erp-record-view-message {
+    color: #64748b;
+  }
+
+  .erp-record-view-error {
+    color: #dc2626;
+  }
+
+  .erp-view-status-active,
+  .erp-view-status-inactive {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .erp-view-status-active {
+    background: #20b486;
+  }
+
+  .erp-view-status-inactive {
+    background: #ef4444;
+  }
+
+  @media (max-width: 1199px) {
+    .erp-record-view-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .erp-record-view-grid {
+      grid-template-columns: 1fr;
+    }
+  }

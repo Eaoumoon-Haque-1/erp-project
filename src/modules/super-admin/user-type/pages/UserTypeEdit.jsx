@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
-import { userTypesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { userTypesApi } from '../api/userTypeApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import UserTypeForm from '../components/UserTypeForm'
 import { mapUserTypeFromApi, mapUserTypeToApi } from '../data/userTypeApiMapper'
 import {
@@ -25,6 +26,10 @@ function UserTypeEdit() {
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const { groupOptions, groupsLoading } = useBusinessOptions('', {
+    loadUnits: false,
+    preserveGroupId: originalValues.BG_ID,
+  })
 
   useEffect(() => {
     let active = true
@@ -64,7 +69,7 @@ function UserTypeEdit() {
       await userTypesApi.update(userTypeId, mapUserTypeToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to update User Type.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update User Type.', { userType: 'TYPE_NAME' }))
     } finally {
       setSubmitting(false)
     }
@@ -79,7 +84,7 @@ function UserTypeEdit() {
 
   return (
     <FormPage title={'User Type Edit'} listTo={listPath} tableName={USER_TYPE_TABLE} onSubmit={handleSubmit} onReset={handleReset} submitLabel={'Update'} message={message} submitting={submitting}>
-      <UserTypeForm values={values} errors={errors} groupName={currentUser.businessGroup.name} typeNameRef={typeNameRef} onChange={handleChange} />
+      <UserTypeForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} typeNameRef={typeNameRef} onChange={handleChange} />
     </FormPage>
   )
 }

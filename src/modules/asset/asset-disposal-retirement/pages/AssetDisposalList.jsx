@@ -26,7 +26,7 @@ function AssetDisposalList() {
     { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
   ], [rows])
   const refresh = () => setRows(listAssetDisposals())
-  const handleDelete = (row) => { if (!window.confirm(`Delete disposal record for "${row.ASSET_NO}"?`)) return; removeAssetDisposal(row.ID); refresh() }
+  const handleDelete = (row) => { removeAssetDisposal(row.ID); refresh() }
   const handleStatusChange = (row) => { updateAssetDisposal(row.ID, { ...row, STATUS: row.STATUS === '1' ? '0' : '1' }); refresh() }
   return <ListPage title={'Asset Disposal / Retirement List'} createLabel={'New'} createTo={'/asset/asset-disposal-retirement/create'} filters={filters} columns={columns} rows={rows} renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/asset/asset-disposal-retirement/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />} />
 }

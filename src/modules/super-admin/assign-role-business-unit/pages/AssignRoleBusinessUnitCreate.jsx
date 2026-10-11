@@ -1,12 +1,10 @@
 /** @file API-backed Business Unit role assignment form. */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  businessGroupsApi,
-  businessUnitRolesApi,
-  businessUnitsApi,
-  rolesApi,
-} from '../../../../api/endpoints'
+import { businessGroupsApi } from '../../business-group/api/businessGroupApi'
+import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
+import { rolesApi } from '../../role/api/roleApi'
+import { businessUnitRolesApi } from '../api/businessUnitRoleApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import AssignRoleBusinessUnitForm from '../components/AssignRoleBusinessUnitForm'
@@ -35,17 +33,16 @@ function AssignRoleBusinessUnitCreate() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const selectedUnit = useMemo(
-    () => businessUnits.find((unit) => String(unit.id) === values.BU_ID),
-    [businessUnits, values.BU_ID],
-  )
-  const groupName =
-    groups.find((group) => String(group.id) === String(selectedUnit?.bgId))
-      ?.groupName || ''
-  const businessUnitOptions = businessUnits.map((unit) => ({
-    value: String(unit.id),
-    label: unit.businessUnit,
+  const groupOptions = groups.map((group) => ({
+    value: String(group.id),
+    label: group.groupName,
   }))
+  const businessUnitOptions = businessUnits
+    .filter((unit) => String(unit.bgId) === values.BG_ID)
+    .map((unit) => ({
+      value: String(unit.id),
+      label: unit.businessUnit,
+    }))
 
   const loadAssignedRoles = async (businessUnitId) => {
     if (!businessUnitId) {
@@ -82,7 +79,12 @@ function AssignRoleBusinessUnitCreate() {
           })),
         )
         const initialBuId = requestedBusinessUnitId || String(units[0]?.id || '')
-        setValues(createInitialRoleBusinessUnitValues(initialBuId))
+        const initialUnit = units.find(
+          (unit) => String(unit.id) === initialBuId,
+        )
+        setValues(
+          createInitialRoleBusinessUnitValues(initialBuId, initialUnit?.bgId),
+        )
         await loadAssignedRoles(initialBuId)
       })
       .catch((error) => {
@@ -95,8 +97,26 @@ function AssignRoleBusinessUnitCreate() {
 
   const handleChange = (event) => {
     const { name, value } = event.target
-    setValues((current) => ({ ...current, [name]: value }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
+    setValues((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === 'BG_ID' ? { BU_ID: '', ROLE_ID: '' } : {}),
+      ...(name === 'BU_ID' ? { ROLE_ID: '' } : {}),
+    }))
+    setErrors((current) => ({
+      ...current,
+      [name]: undefined,
+      ...(name === 'BG_ID'
+        ? { BU_ID: undefined, ROLE_ID: undefined, ASSIGNED_ROLES: undefined }
+        : {}),
+      ...(name === 'BU_ID'
+        ? { ROLE_ID: undefined, ASSIGNED_ROLES: undefined }
+        : {}),
+    }))
+    if (name === 'BG_ID') {
+      setAssignedRoles([])
+      setRemovedMappings([])
+    }
     if (name === 'BU_ID') {
       setRemovedMappings([])
       loadAssignedRoles(value).catch((error) =>
@@ -169,7 +189,10 @@ function AssignRoleBusinessUnitCreate() {
 
   const handleReset = () => {
     const businessUnitId = requestedBusinessUnitId || String(businessUnits[0]?.id || '')
-    setValues(createInitialRoleBusinessUnitValues(businessUnitId))
+    const unit = businessUnits.find(
+      (businessUnit) => String(businessUnit.id) === businessUnitId,
+    )
+    setValues(createInitialRoleBusinessUnitValues(businessUnitId, unit?.bgId))
     setErrors({})
     setRemovedMappings([])
     loadAssignedRoles(businessUnitId).catch(() => {})
@@ -182,7 +205,7 @@ function AssignRoleBusinessUnitCreate() {
         values={values}
         errors={errors}
         assignedRoles={assignedRoles}
-        groupName={groupName}
+        groupOptions={groupOptions}
         businessUnitOptions={businessUnitOptions}
         roleOptions={roleOptions}
         roleRef={roleRef}

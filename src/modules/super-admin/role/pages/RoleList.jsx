@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { rolesApi } from '../../../../api/endpoints'
+import { rolesApi } from '../api/roleApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -67,7 +67,6 @@ function RoleList() {
   }, [])
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete Role "${row.PERMISSION_NAME}"?`)) return
     try {
       await rolesApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
@@ -105,6 +104,7 @@ function RoleList() {
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={(selectedRole) => navigate(`/super-admin/role-creation/role/${selectedRole.ID}/view`)}
           onEdit={(selectedRole) => navigate(`/super-admin/role-creation/role/${selectedRole.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}

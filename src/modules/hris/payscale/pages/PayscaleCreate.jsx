@@ -6,6 +6,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import { runConfirmedAction } from '../../../../components/shared/actionAlerts'
 import PayscaleForm from '../components/PayscaleForm'
 import {
   PAY_SCALE_TABLE,
@@ -48,13 +49,17 @@ function PayscaleCreate() {
     setValues((current) => ({ ...current, details: [...current.details, createPayScaleRow()] }))
   }
 
-  const handleRemoveRow = (index) => {
-    if (!window.confirm('Remove this Stage row?')) return
-    setValues((current) => ({
-      ...current,
-      details: current.details.length === 1 ? [createPayScaleRow()] : current.details.filter((_, rowIndex) => rowIndex !== index),
-    }))
-    setErrors((current) => ({ ...current, details: current.details.filter((_, rowIndex) => rowIndex !== index) }))
+  const handleRemoveRow = async (index) => {
+    await runConfirmedAction(
+      { action: 'delete', entityName: 'Stage row', successText: 'Stage row removed successfully.' },
+      () => {
+        setValues((current) => ({
+          ...current,
+          details: current.details.length === 1 ? [createPayScaleRow()] : current.details.filter((_, rowIndex) => rowIndex !== index),
+        }))
+        setErrors((current) => ({ ...current, details: current.details.filter((_, rowIndex) => rowIndex !== index) }))
+      },
+    )
   }
 
   const handleSubmit = (event) => {

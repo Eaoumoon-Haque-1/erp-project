@@ -1,10 +1,13 @@
 /** @file API-backed User edit page using documented User CRUD fields. */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { currentUser } from '../../../../app/currentUser'
-import { businessUnitsApi, rolesApi, usersApi, userTypesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
+import { rolesApi } from '../../role/api/roleApi'
+import { userTypesApi } from '../../user-type/api/userTypeApi'
+import { usersApi } from '../api/userApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import UserForm from '../components/UserForm'
 import { mapUserFromApi, mapUserToApi } from '../data/userApiMapper'
 import {
@@ -20,34 +23,41 @@ function UserEdit() {
   const { userId } = useParams()
   const navigate = useNavigate()
   const userNameRef = useRef(null)
-  const initialValues = createInitialUserValues(currentUser.businessGroup.id)
+  const initialValues = createInitialUserValues()
   const [values, setValues] = useState(initialValues)
   const [originalValues, setOriginalValues] = useState(initialValues)
   const [originalRecord, setOriginalRecord] = useState({})
-  const [businessUnitOptions, setBusinessUnitOptions] = useState([])
   const [roleOptions, setRoleOptions] = useState([])
   const [userTypeOptions, setUserTypeOptions] = useState([])
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const {
+    groupOptions,
+    businessUnitOptions,
+    groupsLoading,
+    unitsLoading,
+  } = useBusinessOptions(values.BG_ID, {
+    preserveGroupId: originalValues.BG_ID,
+    preserveUnitId: originalValues.BU_ID,
+  })
 
   useEffect(() => {
     let active = true
     Promise.all([
       usersApi.get(userId),
-      businessUnitsApi.listByGroup(currentUser.businessGroup.id),
       rolesApi.list(),
       userTypesApi.list(),
     ])
-      .then(([user, units, roles, userTypes]) => {
+      .then(async ([user, roles, userTypes]) => {
+        const unit = user.buId ? await businessUnitsApi.get(user.buId) : null
         if (!active) return
         const mapped = mapUserFromApi(user, {
-          businessGroupId: currentUser.businessGroup.id,
+          businessGroupId: unit?.bgId,
         })
         setValues(mapped)
         setOriginalValues(mapped)
         setOriginalRecord(user)
-        setBusinessUnitOptions(units.map((unit) => ({ value: String(unit.id), label: unit.businessUnit })))
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
         setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.userType })))
       })
@@ -65,11 +75,16 @@ function UserEdit() {
     setValues((current) => ({
       ...current,
       [name]: nextValue,
+      ...(name === 'BG_ID' ? { BU_ID: '' } : {}),
       ...(name === 'FROM_DATE'
         ? { TO_DATE: getUserValidityToDate(nextValue) }
         : {}),
     }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
+    setErrors((current) => ({
+      ...current,
+      [name]: undefined,
+      ...(name === 'BG_ID' ? { BU_ID: undefined } : {}),
+    }))
   }
 
   const handleSubmit = async (event) => {
@@ -84,7 +99,7 @@ function UserEdit() {
       await usersApi.update(userId, mapUserToApi(result.values, originalRecord))
       navigate(listPath)
     } catch (error) {
-      const apiMessage = getApiErrorMessage(error, 'Unable to update User.')
+      const apiMessage = applyApiFormErrors(error, setErrors, 'Unable to update User.')
       if (/email/i.test(apiMessage)) {
         setErrors((current) => ({ ...current, EMAIL: apiMessage }))
         requestAnimationFrame(() => document.querySelector('[name="EMAIL"]')?.focus())
@@ -105,7 +120,7 @@ function UserEdit() {
 
   return (
     <FormPage title={'User Edit'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} submitLabel={'Update'} message={message} messageTone={'error'} submitting={submitting}>
-      <UserForm values={values} errors={errors} groupName={currentUser.businessGroup.name} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onChange={handleChange} />
+      <UserForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} unitsLoading={unitsLoading} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onChange={handleChange} />
     </FormPage>
   )
 }

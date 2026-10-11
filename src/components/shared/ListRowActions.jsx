@@ -3,6 +3,18 @@
  * Sections: reusable helpers, component behavior, accessibility, and rendered UI.
  * Changing this file can affect many features; keep props backward-compatible when possible.
  */
+import { useContext } from 'react'
+import {
+  beginAction,
+  cancelAction,
+  confirmAction,
+  finishAction,
+  showError,
+  showSuccess,
+  successMessage,
+} from './actionAlerts'
+import ListActionContext from './ListActionContext'
+
 // An omitted handler intentionally disables the corresponding action. Never
 // pass an empty function merely to make an unfinished action look enabled.
 function ActionButton({ label, className, onClick, children }) {
@@ -49,7 +61,28 @@ function ActionIcon({ type }) {
   )
 }
 
-function ListRowActions({ row, onView, onEdit, onDelete, onStatusChange }) {
+function ListRowActions({ row, onView, onEdit, onDelete, onStatusChange, entityName }) {
+  const listEntityName = useContext(ListActionContext)
+  const resolvedEntityName = entityName || listEntityName
+  const runAction = async (action, handler) => {
+    const confirmed = await confirmAction({ action, entityName: resolvedEntityName })
+    if (!confirmed) return
+
+    const token = beginAction({ action, entityName: resolvedEntityName })
+    try {
+      const handlerResult = await handler(row)
+      const result = finishAction(token)
+      if (handlerResult === false || result?.failed) {
+        await showError(result?.message)
+        return
+      }
+      await showSuccess(successMessage(action, resolvedEntityName))
+    } catch (error) {
+      cancelAction(token)
+      await showError(error?.message)
+    }
+  }
+
   return (
     <div className={'inline-flex items-center gap-1'}>
       <ActionButton
@@ -69,14 +102,14 @@ function ListRowActions({ row, onView, onEdit, onDelete, onStatusChange }) {
       <ActionButton
         label={'Delete'}
         className={'bg-action-danger'}
-        onClick={onDelete ? () => onDelete(row) : undefined}
+        onClick={onDelete ? () => runAction('delete', onDelete) : undefined}
       >
         <ActionIcon type={'delete'} />
       </ActionButton>
       <ActionButton
         label={'Change status'}
         className={'bg-action-success'}
-        onClick={onStatusChange ? () => onStatusChange(row) : undefined}
+        onClick={onStatusChange ? () => runAction('status', onStatusChange) : undefined}
       >
         <ActionIcon type={'status'} />
       </ActionButton>

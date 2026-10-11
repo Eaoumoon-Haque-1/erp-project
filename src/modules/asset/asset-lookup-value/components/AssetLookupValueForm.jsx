@@ -15,25 +15,8 @@ function AssetLookupValueForm({ values, errors, typeOptions, valueRef, onChange 
   return (
     <div className={'erp-form-grid'}>
       <div>
-        <label className={'erp-field-label'} htmlFor={'GROUP_NAME'}>
-          Group Name<span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <input
-          id={'GROUP_NAME'}
-          name={'GROUP_NAME'}
-          type={'text'}
-          className={fieldClass(errors.BG_ID, true)}
-          value={values.GROUP_NAME}
-          readOnly
-          aria-invalid={Boolean(errors.BG_ID)}
-          aria-describedby={errors.BG_ID ? 'asset-value-BG_ID-error' : undefined}
-        />
-        <FieldError id={'asset-value-BG_ID-error'} message={errors.BG_ID} />
-      </div>
-
-      <div>
         <label className={'erp-field-label'} htmlFor={'TYPE_ID'}>
-          Type<span className={'erp-required'} aria-hidden={'true'}>*</span>
+          Lookup Type<span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
         <select
           id={'TYPE_ID'}
@@ -45,7 +28,7 @@ function AssetLookupValueForm({ values, errors, typeOptions, valueRef, onChange 
           aria-describedby={errors.TYPE_ID ? 'asset-value-TYPE_ID-error' : undefined}
           onChange={onChange}
         >
-          <option value={''}>--Select Type--</option>
+          <option value={''}>--Select Lookup Type--</option>
           {typeOptions.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
@@ -55,7 +38,7 @@ function AssetLookupValueForm({ values, errors, typeOptions, valueRef, onChange 
 
       <div>
         <label className={'erp-field-label'} htmlFor={'VALUE'}>
-          Value<span className={'erp-required'} aria-hidden={'true'}>*</span>
+          Lookup Value<span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
         <input
           ref={valueRef}
@@ -66,13 +49,34 @@ function AssetLookupValueForm({ values, errors, typeOptions, valueRef, onChange 
           value={values.VALUE}
           minLength={2}
           maxLength={20}
-          placeholder={'Enter value'}
+          placeholder={'Enter lookup value'}
           required
           aria-invalid={Boolean(errors.VALUE)}
           aria-describedby={errors.VALUE ? 'asset-value-VALUE-error' : undefined}
           onChange={onChange}
         />
         <FieldError id={'asset-value-VALUE-error'} message={errors.VALUE} />
+      </div>
+
+      <div>
+        <label className={'erp-field-label'} htmlFor={'VALUE_CODE'}>
+          Lookup Value Code<span className={'erp-required'} aria-hidden={'true'}>*</span>
+        </label>
+        <input
+          id={'VALUE_CODE'}
+          name={'VALUE_CODE'}
+          type={'text'}
+          className={fieldClass(errors.VALUE_CODE, true)}
+          value={values.VALUE_CODE}
+          maxLength={20}
+          placeholder={'Select a Lookup Type'}
+          readOnly
+          required
+          aria-invalid={Boolean(errors.VALUE_CODE)}
+          aria-describedby={errors.VALUE_CODE ? 'asset-value-VALUE_CODE-error' : undefined}
+          onChange={onChange}
+        />
+        <FieldError id={'asset-value-VALUE_CODE-error'} message={errors.VALUE_CODE} />
       </div>
 
       <div>

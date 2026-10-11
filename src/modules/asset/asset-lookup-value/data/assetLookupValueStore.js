@@ -6,16 +6,16 @@ let records = [
   {
     ID: '1',
     BG_ID: '1',
-    GROUP_NAME: 'Health Expert',
     TYPE_ID: '1',
     TYPE_NAME: 'Asset Specification',
     VALUE: 'Size',
+    VALUE_CODE: 'SPEC',
     SORT_ORDER: '1',
     STATUS: '1',
   },
-  { ID: '2', BG_ID: '1', GROUP_NAME: 'Health Expert', TYPE_ID: '2', TYPE_NAME: 'Depreciation Method', VALUE: 'Straight Line', SORT_ORDER: '1', STATUS: '1' },
-  { ID: '3', BG_ID: '1', GROUP_NAME: 'Health Expert', TYPE_ID: '3', TYPE_NAME: 'Asset Type', VALUE: 'Tangible', SORT_ORDER: '1', STATUS: '1' },
-  { ID: '4', BG_ID: '1', GROUP_NAME: 'Health Expert', TYPE_ID: '4', TYPE_NAME: 'UOM', VALUE: 'Each', SORT_ORDER: '1', STATUS: '1' },
+  { ID: '2', BG_ID: '1', TYPE_ID: '2', TYPE_NAME: 'Depreciation Method', VALUE: 'Straight Line', VALUE_CODE: 'DEPRI-MTH', SORT_ORDER: '1', STATUS: '1' },
+  { ID: '3', BG_ID: '1', TYPE_ID: '3', TYPE_NAME: 'Asset Type', VALUE: 'Tangible', VALUE_CODE: 'ASSET-TYPE', SORT_ORDER: '1', STATUS: '1' },
+  { ID: '4', BG_ID: '1', TYPE_ID: '4', TYPE_NAME: 'UOM', VALUE: 'Each', VALUE_CODE: 'UOM', SORT_ORDER: '1', STATUS: '1' },
 ]
 
 export function listAssetLookupValues() {

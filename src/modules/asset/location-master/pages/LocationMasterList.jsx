@@ -33,7 +33,6 @@ function LocationMasterList() {
 
   const refresh = () => setRows(listLocationMasters())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Location "${row.LOCATION_NAME}"?`)) return
     removeLocationMaster(row.ID)
     refresh()
   }

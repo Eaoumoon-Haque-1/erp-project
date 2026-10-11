@@ -1,7 +1,7 @@
 /** @file API-backed role list used as the entry point for assigning menus/permissions. */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { rolesApi } from '../../../../api/endpoints'
+import { rolesApi } from '../../role/api/roleApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'

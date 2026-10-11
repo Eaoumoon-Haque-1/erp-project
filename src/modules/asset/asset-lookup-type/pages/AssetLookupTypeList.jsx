@@ -12,14 +12,14 @@ import {
 const filters = [
   {
     key: 'TYPE_NAME',
-    label: 'Search by Type Name',
-    placeholder: '--Search by Type Name--',
+    label: 'Search by Lookup Type Name',
+    placeholder: '--Search by Lookup Type Name--',
     matches: (row, value) => String(row.TYPE_NAME ?? '').toLowerCase().includes(value.toLowerCase()),
   },
   {
     key: 'CODE',
-    label: 'Search by Code',
-    placeholder: '--Search by Code--',
+    label: 'Search by Lookup Type Code',
+    placeholder: '--Search by Lookup Type Code--',
     matches: (row, value) => String(row.CODE ?? '').toLowerCase().includes(value.toLowerCase()),
   },
   {
@@ -34,8 +34,8 @@ const filters = [
 ]
 
 const columns = [
-  { key: 'TYPE_NAME', label: 'Type Name' },
-  { key: 'CODE', label: 'Code', render: (value) => value || 'N/A' },
+  { key: 'TYPE_NAME', label: 'Lookup Type Name' },
+  { key: 'CODE', label: 'Lookup Type Code', render: (value) => value || 'N/A' },
   {
     key: 'STATUS',
     label: 'Status',
@@ -55,7 +55,6 @@ function AssetLookupTypeList() {
   const [rows, setRows] = useState(() => listAssetLookupTypes())
 
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Asset Lookup Type "${row.TYPE_NAME}"?`)) return
     removeAssetLookupType(row.ID)
     setRows(listAssetLookupTypes())
   }

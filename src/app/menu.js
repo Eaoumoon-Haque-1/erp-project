@@ -7,6 +7,7 @@ import { currentUser } from './currentUser'
 import { accountsMenu } from '../modules/accounts/menu'
 import { assetMenu } from '../modules/asset/menu'
 import { hrisMenu } from '../modules/hris/menu'
+import { procureToPayMenu } from '../modules/procure-to-pay/menu'
 import { salesMenu } from '../modules/sales/menu'
 import { superAdminMenu } from '../modules/super-admin/menu'
 
@@ -24,6 +25,6 @@ function filterMenuByRole(items, role) {
 // Menu arrays control only the sidebar. Every leaf `path` must also exist in
 // the matching module's routes.jsx file.
 export const appMenu = filterMenuByRole(
-  [...superAdminMenu, ...hrisMenu, ...assetMenu, ...accountsMenu, ...salesMenu],
+  [...superAdminMenu, ...hrisMenu, ...assetMenu, ...procureToPayMenu, ...accountsMenu, ...salesMenu],
   currentUser.role,
 )

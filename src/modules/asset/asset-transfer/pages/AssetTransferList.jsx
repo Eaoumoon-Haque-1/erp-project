@@ -26,7 +26,6 @@ function AssetTransferList() {
   ], [])
   const refresh = () => setRows(listAssetTransfers())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete transfer for "${row.ASSET_NO}"?`)) return
     removeAssetTransfer(row.ID)
     refresh()
   }

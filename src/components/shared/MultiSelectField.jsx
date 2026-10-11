@@ -15,6 +15,7 @@ function MultiSelectField({
   error,
   disabled = false,
   required = false,
+  growWithContent = false,
   inputRef,
   onChange,
 }) {
@@ -61,6 +62,7 @@ function MultiSelectField({
           className={[
             "erp-form-control",
             "erp-multi-select-trigger",
+            growWithContent ? "erp-multi-select-trigger-grow" : "",
             error ? "erp-form-control-invalid" : "",
           ]
             .filter(Boolean)

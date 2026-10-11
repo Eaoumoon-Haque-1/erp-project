@@ -3,9 +3,15 @@
  * Sections: local display/interaction helpers and the exported controlled component.
  * Keep page navigation and API persistence in the owning page unless this component is the workflow boundary.
  */
-import { businessUnitOptions } from "../data/userTypeGroupOptions";
-
-function BusinessUnitAssignment({ values, errors, onChange, onAdd }) {
+function BusinessUnitAssignment({
+  values,
+  errors,
+  businessUnitOptions = [],
+  unitsLoading = false,
+  groupSelected = false,
+  onChange,
+  onAdd,
+}) {
   return (
     <div className={"erp-user-type-group-assignment-grid"}>
       <div>
@@ -26,13 +32,16 @@ function BusinessUnitAssignment({ values, errors, onChange, onAdd }) {
             .join(" ")}
           value={values.BU_ID}
           required
+          disabled={!groupSelected || unitsLoading}
           aria-invalid={Boolean(errors.BU_ID)}
           aria-describedby={
             errors.BU_ID ? "user-type-group-BU_ID-error" : undefined
           }
           onChange={onChange}
         >
-          <option value={""}>Select...</option>
+          <option value={""}>
+            {unitsLoading ? "Loading Business Units..." : "Select..."}
+          </option>
           {businessUnitOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

@@ -17,13 +17,14 @@ function TextField({
   placeholder,
   maxLength,
   type = 'text',
+  required = true,
   inputRef,
   onChange,
 }) {
   return (
     <div>
       <label className={'erp-field-label'} htmlFor={name}>
-        {label}<span className={'erp-required'} aria-hidden={'true'}>*</span>
+        {label}{required && <span className={'erp-required'} aria-hidden={'true'}>*</span>}
       </label>
       <input
         ref={inputRef}
@@ -34,7 +35,7 @@ function TextField({
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
-        required
+        required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${name}-error` : undefined}
         onChange={onChange}
@@ -47,11 +48,12 @@ function TextField({
 function VendorSupplierMasterForm({ values, errors, vendorNameRef, onChange }) {
   return (
     <div className={'erp-form-grid'}>
-      <TextField name={'VENDOR_NAME'} label={'Vendor Name'} value={values.VENDOR_NAME} error={errors.VENDOR_NAME} placeholder={'Enter vendor name'} maxLength={150} inputRef={vendorNameRef} onChange={onChange} />
-      <TextField name={'VENDOR_CODE'} label={'Vendor Code'} value={values.VENDOR_CODE} error={errors.VENDOR_CODE} placeholder={'Enter vendor code'} maxLength={30} onChange={onChange} />
+      <TextField name={'VENDOR_NAME'} label={'Supplier Name'} value={values.VENDOR_NAME} error={errors.VENDOR_NAME} placeholder={'Enter supplier name'} maxLength={150} inputRef={vendorNameRef} onChange={onChange} />
+      <TextField name={'VENDOR_CODE'} label={'Supplier Code'} value={values.VENDOR_CODE} error={errors.VENDOR_CODE} placeholder={'Enter supplier code'} maxLength={30} onChange={onChange} />
       <TextField name={'CONTACT_PERSON'} label={'Contact Person'} value={values.CONTACT_PERSON} error={errors.CONTACT_PERSON} placeholder={'Enter contact person'} maxLength={100} onChange={onChange} />
       <TextField name={'PHONE'} label={'Phone'} value={values.PHONE} error={errors.PHONE} placeholder={'+880 1XXXXXXXXX'} maxLength={20} type={'tel'} onChange={onChange} />
       <TextField name={'EMAIL'} label={'Email'} value={values.EMAIL} error={errors.EMAIL} placeholder={'Enter email address'} maxLength={150} type={'email'} onChange={onChange} />
+      <TextField name={'COMPANY_TYPE'} label={'Company Type'} value={values.COMPANY_TYPE} error={errors.COMPANY_TYPE} placeholder={'Enter company type'} maxLength={100} required={false} onChange={onChange} />
 
       <div>
         <label className={'erp-field-label'} htmlFor={'ADDRESS'}>
@@ -64,7 +66,7 @@ function VendorSupplierMasterForm({ values, errors, vendorNameRef, onChange }) {
           value={values.ADDRESS}
           maxLength={255}
           rows={2}
-          placeholder={'Enter vendor address'}
+          placeholder={'Enter supplier address'}
           required
           aria-invalid={Boolean(errors.ADDRESS)}
           aria-describedby={errors.ADDRESS ? 'ADDRESS-error' : undefined}

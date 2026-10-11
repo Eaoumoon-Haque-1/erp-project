@@ -3,8 +3,8 @@ function FieldError({ id, message }) {
   return message ? <p id={id} className={'erp-field-error'}>{message}</p> : null
 }
 
-function fieldClass(error) {
-  return ['erp-form-control', error ? 'erp-form-control-invalid' : '']
+function fieldClass(error, readOnly = false) {
+  return ['erp-form-control', readOnly ? 'erp-readonly' : '', error ? 'erp-form-control-invalid' : '']
     .filter(Boolean)
     .join(' ')
 }
@@ -19,7 +19,7 @@ function ReadonlyField({ name, label, value, error }) {
         id={name}
         name={name}
         type={'text'}
-        className={fieldClass(error)}
+        className={fieldClass(error, true)}
         value={value}
         readOnly
         required
@@ -107,31 +107,6 @@ function AssetItemInformationForm({
         <FieldError id={'ASSET_DEPRI_CATE_ID-error'} message={errors.ASSET_DEPRI_CATE_ID} />
       </div>
 
-      <ReadonlyField
-        name={'CATEGORY_TYPE'}
-        label={'Category Type'}
-        value={values.CATEGORY_TYPE}
-        error={errors.CATEGORY_TYPE}
-      />
-      <ReadonlyField
-        name={'DEPRI_METHOD'}
-        label={'Depreciation Method'}
-        value={values.DEPRI_METHOD}
-        error={errors.DEPRI_METHOD}
-      />
-      <ReadonlyField
-        name={'DEPRI_LIFE'}
-        label={'Depreciation Life (Months)'}
-        value={values.DEPRI_LIFE}
-        error={errors.DEPRI_LIFE}
-      />
-      <ReadonlyField
-        name={'DEPRI_PERCENTAGE'}
-        label={'Depreciation (%)'}
-        value={values.DEPRI_PERCENTAGE}
-        error={errors.DEPRI_PERCENTAGE}
-      />
-
       <div>
         <label className={'erp-field-label'} htmlFor={'UOM'}>
           UOM<span className={'erp-required'} aria-hidden={'true'}>*</span>
@@ -153,6 +128,31 @@ function AssetItemInformationForm({
         </select>
         <FieldError id={'UOM-error'} message={errors.UOM} />
       </div>
+
+      <ReadonlyField
+        name={'DEPRI_METHOD'}
+        label={'Depreciation Method'}
+        value={values.DEPRI_METHOD}
+        error={errors.DEPRI_METHOD}
+      />
+      <ReadonlyField
+        name={'CATEGORY_TYPE'}
+        label={'Asset Type'}
+        value={values.CATEGORY_TYPE}
+        error={errors.CATEGORY_TYPE}
+      />
+      <ReadonlyField
+        name={'DEPRI_LIFE'}
+        label={'Depreciation Life (Months)'}
+        value={values.DEPRI_LIFE}
+        error={errors.DEPRI_LIFE}
+      />
+      <ReadonlyField
+        name={'DEPRI_PERCENTAGE'}
+        label={'Depreciation (%)'}
+        value={values.DEPRI_PERCENTAGE}
+        error={errors.DEPRI_PERCENTAGE}
+      />
 
       <ReadonlyField
         name={'ASSET_OWNER'}

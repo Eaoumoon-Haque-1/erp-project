@@ -4,7 +4,10 @@
  * endpoint; created user accounts are loaded and persisted through `/users`.
  */
 import { useEffect, useState } from 'react'
-import { businessUnitsApi, rolesApi, usersApi, userTypesApi } from '../../../../api/endpoints'
+import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
+import { rolesApi } from '../../role/api/roleApi'
+import { userTypesApi } from '../../user-type/api/userTypeApi'
+import { usersApi } from '../../user/api/userApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -99,7 +102,7 @@ function UserCreateSelfServiceList() {
     } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to save the user account.')) }
   }
 
-  const remove = async (row) => { if (!window.confirm(`Remove the user account for ${row.EMPLOYEE_NAME}?`)) return; try { await usersApi.remove(row.ID); await load() } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to remove user.')) } }
+  const remove = async (row) => { try { await usersApi.remove(row.ID); await load() } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to remove user.')) } }
   const toggle = async (row) => { try { await usersApi.update(row.ID, { ...row.API_RECORD, isActive: row.IS_ACTIVE === '1' ? 0 : 1 }); await load() } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to change user status.')) } }
 
   return <><ListPage title={'User Create Self Service List'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => row.HAS_USER === '1' ? <ListRowActions row={row} onView={setSelectedEmployee} onEdit={setSelectedEmployee} onDelete={remove} onStatusChange={toggle} /> : <ProfileAction onClick={() => setSelectedEmployee(row)} />} />{selectedEmployee && <UserCreateSelfServiceModal key={selectedEmployee.ID} open employee={selectedEmployee} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onClose={() => setSelectedEmployee(null)} onSave={save} />}</>

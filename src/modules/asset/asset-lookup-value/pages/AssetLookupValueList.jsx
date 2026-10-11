@@ -10,9 +10,9 @@ import {
 } from '../data/assetLookupValueStore'
 
 const columns = [
-  { key: 'GROUP_NAME', label: 'Group Name' },
-  { key: 'TYPE_NAME', label: 'Type' },
-  { key: 'VALUE', label: 'Value' },
+  { key: 'TYPE_NAME', label: 'Lookup Type' },
+  { key: 'VALUE', label: 'Lookup Value' },
+  { key: 'VALUE_CODE', label: 'Lookup Value Code', render: (value) => value || 'N/A' },
   { key: 'SORT_ORDER', label: 'Sort Order', render: (value) => value || 'N/A' },
   {
     key: 'STATUS',
@@ -34,15 +34,21 @@ function AssetLookupValueList() {
   const filters = useMemo(() => [
     {
       key: 'TYPE_NAME',
-      label: 'Search by Type',
-      placeholder: '--Search by Type--',
+      label: 'Search by Lookup Type',
+      placeholder: '--Search by Lookup Type--',
       options: [...new Map(rows.map((row) => [row.TYPE_NAME, { label: row.TYPE_NAME, value: row.TYPE_NAME }])).values()],
     },
     {
       key: 'VALUE',
-      label: 'Search by Value',
-      placeholder: '--Search by Value--',
+      label: 'Search by Lookup Value',
+      placeholder: '--Search by Lookup Value--',
       matches: (row, value) => String(row.VALUE ?? '').toLowerCase().includes(value.toLowerCase()),
+    },
+    {
+      key: 'VALUE_CODE',
+      label: 'Search by Lookup Value Code',
+      placeholder: '--Search by Lookup Value Code--',
+      matches: (row, value) => String(row.VALUE_CODE ?? '').toLowerCase().includes(value.toLowerCase()),
     },
     {
       key: 'STATUS',
@@ -53,7 +59,6 @@ function AssetLookupValueList() {
   ], [rows])
 
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Asset Lookup Value "${row.VALUE}"?`)) return
     removeAssetLookupValue(row.ID)
     setRows(listAssetLookupValues())
   }

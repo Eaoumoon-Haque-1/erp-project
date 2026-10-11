@@ -4,6 +4,7 @@
  * Keep open/close behavior accessible and place future API mutations in the owning workflow.
  */
 import { useEffect, useRef, useState } from 'react'
+import ActionForm from '../../../../components/shared/ActionForm'
 import Modal from '../../../../components/shared/Modal'
 import {
   DEPARTMENT_GROUP_TABLE,
@@ -75,7 +76,7 @@ function DepartmentGroupModal({
 
   return (
     <Modal title={'Assign Department Group'} open={open} onClose={onClose}>
-      <form data-table={DEPARTMENT_GROUP_TABLE} onSubmit={handleSubmit} noValidate>
+      <ActionForm entityName={'Department Group'} data-table={DEPARTMENT_GROUP_TABLE} onSubmit={handleSubmit} noValidate>
         <div className={'erp-modal-form'}>
           <div>
             <label className={'erp-field-label'} htmlFor={'DEPT_GROUP_BG_ID-display'}>
@@ -153,7 +154,7 @@ function DepartmentGroupModal({
             Submit
           </button>
         </div>
-      </form>
+      </ActionForm>
     </Modal>
   )
 }

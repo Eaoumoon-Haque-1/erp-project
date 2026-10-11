@@ -7,42 +7,45 @@ export const ASSET_LOOKUP_VALUE_TABLE = 'ASSET_LOOKUP_VALUE'
 export function createInitialAssetLookupValueValues(businessGroup) {
   return {
     BG_ID: String(businessGroup?.id ?? ''),
-    GROUP_NAME: businessGroup?.name ?? '',
     TYPE_ID: '',
     TYPE_NAME: '',
     VALUE: '',
+    VALUE_CODE: '',
     SORT_ORDER: '',
     STATUS: '1',
   }
 }
 
-export function validateAssetLookupValue(values, existingRecords = []) {
+export function validateAssetLookupValue(values, existingRecords = [], typeOptions = []) {
   const normalizedValues = {
     BG_ID: String(values.BG_ID ?? ''),
-    GROUP_NAME: String(values.GROUP_NAME ?? '').trim(),
     TYPE_ID: String(values.TYPE_ID ?? ''),
     TYPE_NAME: String(values.TYPE_NAME ?? '').trim(),
     VALUE: String(values.VALUE ?? '').trim(),
+    VALUE_CODE: String(values.VALUE_CODE ?? '').trim(),
     SORT_ORDER: String(values.SORT_ORDER ?? '').trim(),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
   }
   const errors = {}
 
-  if (!normalizedValues.BG_ID) errors.BG_ID = 'Group Name is required.'
-  if (!normalizedValues.TYPE_ID) errors.TYPE_ID = 'Type is required.'
+  if (!normalizedValues.TYPE_ID) errors.TYPE_ID = 'Lookup Type is required.'
 
   if (!normalizedValues.VALUE) {
-    errors.VALUE = 'Value is required.'
+    errors.VALUE = 'Lookup Value is required.'
   } else if (normalizedValues.VALUE.length < 2) {
-    errors.VALUE = 'Value must be at least 2 characters.'
+    errors.VALUE = 'Lookup Value must be at least 2 characters.'
   } else if (normalizedValues.VALUE.length > 20) {
-    errors.VALUE = 'Value must not exceed 20 characters.'
+    errors.VALUE = 'Lookup Value must not exceed 20 characters.'
   } else if (existingRecords.some((record) => (
     String(record.TYPE_ID) === normalizedValues.TYPE_ID
     && String(record.VALUE).trim().toLowerCase() === normalizedValues.VALUE.toLowerCase()
   ))) {
-    errors.VALUE = 'This Value already exists for the selected Type.'
+    errors.VALUE = 'This Lookup Value already exists for the selected Lookup Type.'
   }
+
+  const selectedType = typeOptions.find((option) => option.value === normalizedValues.TYPE_ID)
+  if (!normalizedValues.VALUE_CODE) errors.VALUE_CODE = 'Lookup Value Code is required. Select a Lookup Type to populate it.'
+  else if (!selectedType || normalizedValues.VALUE_CODE !== String(selectedType.code ?? '').trim()) errors.VALUE_CODE = 'Lookup Value Code must match the selected Lookup Type Code.'
 
   if (normalizedValues.SORT_ORDER) {
     const sortOrder = Number(normalizedValues.SORT_ORDER)

@@ -5,11 +5,12 @@
  */
 import { useState } from "react";
 import { currentUser } from "../../../../app/currentUser";
+import ActionForm from "../../../../components/shared/ActionForm";
 import PageHeader from "../../../../components/shared/PageHeader";
+import useBusinessOptions from "../../../../hooks/useBusinessOptions";
 import BusinessUnitAssignment from "../components/BusinessUnitAssignment";
 import BusinessUnitAssignmentTable from "../components/BusinessUnitAssignmentTable";
 import UserTypeGroupForm from "../components/UserTypeGroupForm";
-import { getBusinessUnitName } from "../data/userTypeGroupOptions";
 import {
   initialBusinessUnitAssignment,
   validateBusinessUnitAssignment,
@@ -27,6 +28,14 @@ function UserTypeGroupEdit() {
   const [assignmentErrors, setAssignmentErrors] = useState({});
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState("");
+  const {
+    groupOptions,
+    businessUnitOptions,
+    groupsLoading,
+    unitsLoading,
+  } = useBusinessOptions(values.BG_ID, {
+    preserveGroupId: values.BG_ID,
+  });
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target;
@@ -35,6 +44,11 @@ function UserTypeGroupEdit() {
       [name]: type === "checkbox" ? (checked ? "1" : "0") : value,
     }));
     setErrors((current) => ({ ...current, [name]: undefined }));
+    if (name === "BG_ID") {
+      setAssignment(initialBusinessUnitAssignment);
+      setAssignmentErrors({});
+      setRows([]);
+    }
   };
   const handleAssignmentChange = (event) => {
     const { name, type, value, checked } = event.target;
@@ -63,7 +77,10 @@ function UserTypeGroupEdit() {
       {
         ID: `${Date.now()}-${current.length}`,
         ...assignmentResult.values,
-        BUSINESS_UNIT_NAME: getBusinessUnitName(assignmentResult.values.BU_ID),
+        BUSINESS_UNIT_NAME:
+          businessUnitOptions.find(
+            (option) => option.value === assignmentResult.values.BU_ID,
+          )?.label ?? "",
       },
     ]);
     setAssignment(initialBusinessUnitAssignment);
@@ -78,20 +95,24 @@ function UserTypeGroupEdit() {
         actionTo={"/super-admin/user-creation/user-type-group"}
       />
       <section className={"erp-form-card erp-role-edit-card"}>
-        <form onSubmit={handleAdd} noValidate>
+        <ActionForm entityName={'Business Unit assignment'} onSubmit={handleAdd} noValidate>
           <UserTypeGroupForm
             values={values}
             errors={errors}
-            groupName={currentUser.businessGroup.name}
+            groupOptions={groupOptions}
+            groupsLoading={groupsLoading}
             onChange={handleChange}
           />
           <div className={"erp-role-divider"} />
           <BusinessUnitAssignment
             values={assignment}
             errors={assignmentErrors}
+            businessUnitOptions={businessUnitOptions}
+            unitsLoading={unitsLoading}
+            groupSelected={Boolean(values.BG_ID)}
             onChange={handleAssignmentChange}
           />
-        </form>
+        </ActionForm>
         <BusinessUnitAssignmentTable
           rows={rows}
           query={query}

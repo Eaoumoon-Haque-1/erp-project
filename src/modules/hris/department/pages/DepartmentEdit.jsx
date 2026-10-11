@@ -5,6 +5,7 @@
  */
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import ActionForm from '../../../../components/shared/ActionForm'
 import PageHeader from '../../../../components/shared/PageHeader'
 import DepartmentForm from '../components/DepartmentForm'
 import DepartmentGroupModal from '../../department-group/components/DepartmentGroupModal'
@@ -114,7 +115,7 @@ function DepartmentEdit() {
       />
 
       <section className={'erp-form-card'}>
-        <form data-table={DEPARTMENT_TABLE} onSubmit={handleSubmit} noValidate>
+        <ActionForm action={'update'} entityName={'Department'} data-table={DEPARTMENT_TABLE} onSubmit={handleSubmit} noValidate>
           <DepartmentForm
             values={values}
             errors={errors}
@@ -125,7 +126,7 @@ function DepartmentEdit() {
           <div className={'erp-form-actions'}>
             <button type={'submit'} className={'primary-button'}>Update</button>
           </div>
-        </form>
+        </ActionForm>
       </section>
 
       <section className={'erp-form-card'}>

@@ -5,7 +5,6 @@
  */
 import { useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { IS_MOCK_API_ENABLED } from '../api/client'
 import useAuth from '../auth/useAuth'
 
 function EyeIcon({ hidden }) {
@@ -103,11 +102,6 @@ function LoginPage() {
           <h1 id={'login-title'}>Login</h1>
           <p>Sign in to continue to Cloud ERP.</p>
         </div>
-        {IS_MOCK_API_ENABLED && (
-          <p className={'erp-form-message'} role={'status'}>
-            Development mock mode is active. Use any non-empty username and password.
-          </p>
-        )}
         <form onSubmit={handleSubmit} noValidate>
           <div className={'auth-field'}>
             <label className={'erp-field-label'} htmlFor={'username'}>

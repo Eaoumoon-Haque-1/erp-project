@@ -4,6 +4,7 @@
  * Keep open/close behavior accessible and place future API mutations in the owning workflow.
  */
 import { useEffect, useRef, useState } from 'react'
+import ActionForm from '../../../../components/shared/ActionForm'
 import Modal from '../../../../components/shared/Modal'
 import UserCreationFromEmployeeForm from '../../../hris/user-creation-from-employee/components/UserCreationFromEmployeeForm'
 import {
@@ -48,7 +49,7 @@ function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptio
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     const result = validateUserCreationFromEmployee(values, {
       requirePassword: employee?.HAS_USER !== '1',
@@ -62,7 +63,7 @@ function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptio
       return
     }
 
-    onSave(result.values)
+    await onSave(result.values)
   }
 
   return (
@@ -72,7 +73,8 @@ function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptio
       onClose={onClose}
       panelClassName={'erp-user-self-service-modal'}
     >
-      <form
+      <ActionForm
+        entityName={'User'}
         ref={formRef}
         data-table={USER_CREATION_FROM_EMPLOYEE_TABLE}
         onSubmit={handleSubmit}
@@ -95,7 +97,7 @@ function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptio
             Save
           </button>
         </div>
-      </form>
+      </ActionForm>
     </Modal>
   )
 }

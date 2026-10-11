@@ -1,8 +1,8 @@
 /** @file API-backed Module edit page. */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { modulesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { modulesApi } from '../api/moduleApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import ModuleForm from '../components/ModuleForm'
 import { mapModuleFromApi, mapModuleToApi } from '../data/moduleApiMapper'
@@ -63,7 +63,7 @@ function ModuleEdit() {
       await modulesApi.update(moduleId, mapModuleToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to update Module.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Module.'))
     } finally {
       setSubmitting(false)
     }

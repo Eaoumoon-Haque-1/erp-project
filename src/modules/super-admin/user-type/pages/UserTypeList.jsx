@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
-import { userTypesApi } from '../../../../api/endpoints'
+import { userTypesApi } from '../api/userTypeApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -77,7 +77,6 @@ function UserTypeList() {
   }, [])
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete User Type "${row.TYPE_NAME}"?`)) return
     try {
       await userTypesApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
@@ -108,7 +107,7 @@ function UserTypeList() {
   }
 
   return (
-    <ListPage title={'User Type List'} createLabel={'New'} createTo={'/super-admin/user-creation/user-type/create'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/super-admin/user-creation/user-type/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />} />
+    <ListPage title={'User Type List'} createLabel={'New'} createTo={'/super-admin/user-creation/user-type/create'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => <ListRowActions row={row} onView={() => navigate(`/super-admin/user-creation/user-type/${row.ID}/view`)} onEdit={() => navigate(`/super-admin/user-creation/user-type/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />} />
   )
 }
 

@@ -1,19 +1,16 @@
 /** @file Active master options and dependent-field derivation for ASSET_ITEM. */
 import { listAssetGroups } from '../../asset-group/data/assetGroupStore'
-import { listAssetLookupValues } from '../../asset-lookup-value/data/assetLookupValueStore'
 import { listDepreciationCategories } from '../../depreciation-category/data/depreciationCategoryStore'
+import { listAssetUnitsOfMeasure } from '../../../procure-to-pay/asset-unit-of-measure/data/assetUnitOfMeasureStore'
 
 export function getAssetItemReferences() {
   const assetGroups = listAssetGroups().filter((record) => record.STATUS === '1')
   const depreciationCategories = listDepreciationCategories()
     .filter((record) => record.STATUS === '1')
-  const uomOptions = listAssetLookupValues()
-    .filter((record) => (
-      record.STATUS === '1'
-      && record.TYPE_NAME.trim().toLowerCase() === 'uom'
-    ))
+  const uomOptions = listAssetUnitsOfMeasure()
+    .filter((record) => record.STATUS === '1')
     .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
-    .map((record) => ({ value: record.ID, label: record.VALUE }))
+    .map((record) => ({ value: record.ID, label: record.UNIT_NAME }))
 
   return { assetGroups, depreciationCategories, uomOptions }
 }

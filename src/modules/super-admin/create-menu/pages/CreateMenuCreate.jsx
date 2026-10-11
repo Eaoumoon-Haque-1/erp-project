@@ -5,8 +5,10 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { menusApi, modulesApi, permissionsApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { permissionsApi } from '../../menu-permission/api/menuPermissionApi'
+import { modulesApi } from '../../module/api/moduleApi'
+import { menusApi } from '../api/menuApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import CreateMenuForm from '../components/CreateMenuForm'
 import { mapMenuToApi } from '../data/menuApiMapper'
@@ -59,10 +61,12 @@ function CreateMenuCreate() {
         permissionsApi.listByModule(moduleId),
       ])
       setParentMenuOptions(
-        menus.map((menu) => ({
-          value: String(menu.id),
-          label: menu.menuName,
-        })),
+        menus
+          .filter((menu) => Number(menu.isParent) === 1)
+          .map((menu) => ({
+            value: String(menu.id),
+            label: menu.menuName,
+          })),
       )
       setPermissionOptions(
         permissions.map((permission) => ({
@@ -84,9 +88,20 @@ function CreateMenuCreate() {
       ...current,
       [name]: nextValue,
       ...(name === 'MODULE_ID'
-        ? { PARENT_MENU_ID: '', PERMISSION_ID: '' }
+        ? { PARENT_MENU_ID: '', PERMISSION_ID: [] }
         : {}),
-      ...(name === 'IS_TOP_MENU' && nextValue === '1' ? { PARENT_MENU_ID: '' } : {}),
+      ...(name === 'IS_TOP_MENU' && nextValue === '1'
+        ? { PARENT_MENU_ID: '', ROUTE_NAME: '#' }
+        : {}),
+      ...(name === 'IS_TOP_MENU' && nextValue === '0'
+        ? {
+            IS_PARENT: '0',
+            PARENT_MENU_ID: '',
+            MODULE_ID: '',
+            PERMISSION_ID: [],
+            ROUTE_NAME: '',
+          }
+        : {}),
     }))
     setErrors((current) => ({
       ...current,
@@ -94,9 +109,22 @@ function CreateMenuCreate() {
       ...(name === 'MODULE_ID'
         ? { PARENT_MENU_ID: undefined, PERMISSION_ID: undefined }
         : {}),
-      ...(name === 'IS_TOP_MENU' ? { PARENT_MENU_ID: undefined } : {}),
+      ...(name === 'IS_TOP_MENU'
+        ? {
+            IS_PARENT: undefined,
+            PARENT_MENU_ID: undefined,
+            MODULE_ID: undefined,
+            PERMISSION_ID: undefined,
+            ROUTE_NAME: undefined,
+          }
+        : {}),
     }))
     if (name === 'MODULE_ID') loadModuleDependencies(nextValue)
+  }
+
+  const handlePermissionChange = (name, value) => {
+    setValues((current) => ({ ...current, [name]: value }))
+    setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
   const handleSubmit = async (event) => {
@@ -116,7 +144,7 @@ function CreateMenuCreate() {
       await menusApi.create(mapMenuToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to create Menu.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Menu.'))
     } finally {
       setSubmitting(false)
     }
@@ -130,7 +158,7 @@ function CreateMenuCreate() {
 
   return (
     <FormPage title={'Create Menu'} listTo={listPath} tableName={MENU_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} submitting={submitting}>
-      <CreateMenuForm values={values} errors={errors} menuNameRef={menuNameRef} moduleOptions={moduleOptions} parentMenuOptions={parentMenuOptions} permissionOptions={permissionOptions} onChange={handleChange} />
+      <CreateMenuForm values={values} errors={errors} menuNameRef={menuNameRef} moduleOptions={moduleOptions} parentMenuOptions={parentMenuOptions} permissionOptions={permissionOptions} onChange={handleChange} onPermissionChange={handlePermissionChange} />
     </FormPage>
   )
 }

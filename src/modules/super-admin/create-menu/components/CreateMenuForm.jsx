@@ -1,28 +1,55 @@
-﻿/**
- * @file Controlled form presentation for Create Menu.
- * Sections: field helpers, feature field groups, validation display, and exported form component.
- * Receive values/errors/callbacks through props; saving, navigation, and API calls stay in the page.
+/**
+ * @file Controlled form presentation for Menu creation/editing.
+ * Menu Name and Is Top Menu share the first row. All conditional fields then
+ * follow vertically so this exceptional form mirrors the approved sheet.
  */
+import MultiSelectField from '../../../../components/shared/MultiSelectField'
+
 function FieldError({ id, message }) {
   if (!message) return null
   return <p id={id} className={'erp-field-error'}>{message}</p>
 }
 
 function fieldClass(error) {
-  return ['erp-form-control', error ? 'erp-form-control-invalid' : ''].filter(Boolean).join(' ')
+  return ['erp-form-control', error ? 'erp-form-control-invalid' : '']
+    .filter(Boolean)
+    .join(' ')
 }
 
-function CheckboxField({ name, label, value, className, onChange }) {
+function RadioField({ name, label, value, options, onChange }) {
   return (
-    <div className={className}>
-      <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
-      <label className={'erp-checkbox-field'}>
-        <input type={'checkbox'} name={name} checked={value === '1'} onChange={onChange} />
-        <span>{label}</span>
-      </label>
-    </div>
+    <fieldset className={'erp-menu-radio-field'}>
+      <legend className={'erp-field-label'}>
+        {label}
+        <span className={'erp-required'} aria-hidden={'true'}>*</span>
+      </legend>
+      <div className={'erp-menu-radio-options'}>
+        {options.map((option) => (
+          <label key={option.value} className={'erp-radio-option'}>
+            <input
+              type={'radio'}
+              name={name}
+              value={option.value}
+              checked={value === option.value}
+              onChange={onChange}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }
+
+const yesNoOptions = [
+  { value: '1', label: 'Yes' },
+  { value: '0', label: 'No' },
+]
+
+const statusOptions = [
+  { value: '1', label: 'Active' },
+  { value: '0', label: 'Inactive' },
+]
 
 function CreateMenuForm({
   values,
@@ -32,156 +59,156 @@ function CreateMenuForm({
   parentMenuOptions = [],
   permissionOptions = [],
   onChange,
+  onPermissionChange,
 }) {
   const isTopMenu = values.IS_TOP_MENU === '1'
 
   return (
-    <div className={'erp-form-grid erp-menu-form-grid'}>
-      <div className={'erp-menu-name-field'}>
-        <label className={'erp-field-label'} htmlFor={'MENU_NAME'}>
-          Menu Name
-          <span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <input
-          ref={menuNameRef}
-          id={'MENU_NAME'}
-          name={'MENU_NAME'}
-          type={'text'}
-          className={fieldClass(errors.MENU_NAME)}
-          value={values.MENU_NAME}
-          maxLength={100}
-          placeholder={'Enter menu name'}
-          required
-          aria-invalid={Boolean(errors.MENU_NAME)}
-          aria-describedby={errors.MENU_NAME ? 'MENU_NAME-error' : undefined}
+    <div className={'erp-menu-form-layout'}>
+      <div className={'erp-menu-primary-row'}>
+        <div>
+          <label className={'erp-field-label'} htmlFor={'MENU_NAME'}>
+            Menu Name
+            <span className={'erp-required'} aria-hidden={'true'}>*</span>
+          </label>
+          <input
+            ref={menuNameRef}
+            id={'MENU_NAME'}
+            name={'MENU_NAME'}
+            type={'text'}
+            className={fieldClass(errors.MENU_NAME)}
+            value={values.MENU_NAME}
+            maxLength={100}
+            placeholder={'Enter menu name'}
+            required
+            aria-invalid={Boolean(errors.MENU_NAME)}
+            aria-describedby={errors.MENU_NAME ? 'MENU_NAME-error' : undefined}
+            onChange={onChange}
+          />
+          <FieldError id={'MENU_NAME-error'} message={errors.MENU_NAME} />
+        </div>
+
+        <RadioField
+          name={'IS_TOP_MENU'}
+          label={'Is Top Menu?'}
+          value={values.IS_TOP_MENU}
+          options={yesNoOptions}
           onChange={onChange}
         />
-        <FieldError id={'MENU_NAME-error'} message={errors.MENU_NAME} />
       </div>
 
-      <CheckboxField className={'erp-menu-parent-check'} name={'IS_PARENT'} label={'Is Parent?'} value={values.IS_PARENT} onChange={onChange} />
+      <div className={'erp-menu-stacked-fields'}>
+        {isTopMenu && (
+          <>
+            <RadioField
+              name={'IS_PARENT'}
+              label={'Is Parent Menu?'}
+              value={values.IS_PARENT}
+              options={yesNoOptions}
+              onChange={onChange}
+            />
 
-      <div className={'erp-menu-parent-field'}>
-        <label className={'erp-field-label'} htmlFor={'PARENT_MENU_ID'}>
-          Parent Menu
-          {!isTopMenu && <span className={'erp-required'} aria-hidden={'true'}>*</span>}
-        </label>
-        <select
-          id={'PARENT_MENU_ID'}
-          name={'PARENT_MENU_ID'}
-          className={fieldClass(errors.PARENT_MENU_ID)}
-          value={values.PARENT_MENU_ID}
-          required={!isTopMenu}
-          disabled={isTopMenu}
-          aria-invalid={Boolean(errors.PARENT_MENU_ID)}
-          aria-describedby={errors.PARENT_MENU_ID ? 'PARENT_MENU_ID-error' : undefined}
-          onChange={onChange}
-        >
-          <option value={''}>--Select Parent Menu--</option>
-          {parentMenuOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-        <FieldError id={'PARENT_MENU_ID-error'} message={errors.PARENT_MENU_ID} />
-      </div>
+            <div>
+              <label className={'erp-field-label'} htmlFor={'PARENT_MENU_ID'}>
+                Parent Menu
+              </label>
+              <select
+                id={'PARENT_MENU_ID'}
+                name={'PARENT_MENU_ID'}
+                className={fieldClass(errors.PARENT_MENU_ID)}
+                value={values.PARENT_MENU_ID}
+                aria-invalid={Boolean(errors.PARENT_MENU_ID)}
+                aria-describedby={errors.PARENT_MENU_ID ? 'PARENT_MENU_ID-error' : undefined}
+                onChange={onChange}
+              >
+                <option value={''}>--Select Parent Menu--</option>
+                {parentMenuOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <FieldError id={'PARENT_MENU_ID-error'} message={errors.PARENT_MENU_ID} />
+            </div>
 
-      <CheckboxField className={'erp-menu-top-check'} name={'IS_TOP_MENU'} label={'Top Menu?'} value={values.IS_TOP_MENU} onChange={onChange} />
+            <div>
+              <label className={'erp-field-label'} htmlFor={'MODULE_ID'}>
+                Module Name
+                <span className={'erp-required'} aria-hidden={'true'}>*</span>
+              </label>
+              <select
+                id={'MODULE_ID'}
+                name={'MODULE_ID'}
+                className={fieldClass(errors.MODULE_ID)}
+                value={values.MODULE_ID}
+                required
+                aria-invalid={Boolean(errors.MODULE_ID)}
+                aria-describedby={errors.MODULE_ID ? 'MODULE_ID-error' : undefined}
+                onChange={onChange}
+              >
+                <option value={''}>--Select Module--</option>
+                {moduleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <FieldError id={'MODULE_ID-error'} message={errors.MODULE_ID} />
+            </div>
 
-      <div className={'erp-menu-module-field'}>
-        <label className={'erp-field-label'} htmlFor={'MODULE_ID'}>
-          Module Name
-          <span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <select
-          id={'MODULE_ID'}
-          name={'MODULE_ID'}
-          className={fieldClass(errors.MODULE_ID)}
-          value={values.MODULE_ID}
-          required
-          aria-invalid={Boolean(errors.MODULE_ID)}
-          aria-describedby={errors.MODULE_ID ? 'MODULE_ID-error' : undefined}
-          onChange={onChange}
-        >
-          <option value={''}>--Select Module--</option>
-          {moduleOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-        <FieldError id={'MODULE_ID-error'} message={errors.MODULE_ID} />
-      </div>
+            <MultiSelectField
+              id={'PERMISSION_ID'}
+              name={'PERMISSION_ID'}
+              label={'Permission'}
+              placeholder={'--Select Permissions--'}
+              options={permissionOptions}
+              value={values.PERMISSION_ID}
+              error={errors.PERMISSION_ID}
+              growWithContent
+              onChange={onPermissionChange}
+            />
 
-      <div className={'erp-menu-permission-field'}>
-        <label className={'erp-field-label'} htmlFor={'PERMISSION_ID'}>
-          Permission
-          <span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <select
-          id={'PERMISSION_ID'}
-          name={'PERMISSION_ID'}
-          className={fieldClass(errors.PERMISSION_ID)}
-          value={values.PERMISSION_ID}
-          required
-          aria-invalid={Boolean(errors.PERMISSION_ID)}
-          aria-describedby={errors.PERMISSION_ID ? 'PERMISSION_ID-error' : undefined}
-          onChange={onChange}
-        >
-          <option value={''}>--Select Permission--</option>
-          {permissionOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-        <FieldError id={'PERMISSION_ID-error'} message={errors.PERMISSION_ID} />
-      </div>
+            <div>
+              <label className={'erp-field-label'} htmlFor={'ROUTE_NAME'}>
+                Route Name
+                <span className={'erp-required'} aria-hidden={'true'}>*</span>
+              </label>
+              <input
+                id={'ROUTE_NAME'}
+                name={'ROUTE_NAME'}
+                type={'text'}
+                className={'erp-form-control erp-readonly'}
+                value={'#'}
+                readOnly
+                aria-readonly={'true'}
+              />
+            </div>
+          </>
+        )}
 
-      <div className={'erp-menu-sort-field'}>
-        <label className={'erp-field-label'} htmlFor={'SORT_ORDER'}>
-          Sort Order
-          <span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <input
-          id={'SORT_ORDER'}
-          name={'SORT_ORDER'}
-          type={'number'}
-          className={fieldClass(errors.SORT_ORDER)}
-          value={values.SORT_ORDER}
-          min={'2'}
-          step={'1'}
-          placeholder={'Enter sort order'}
-          required
-          aria-invalid={Boolean(errors.SORT_ORDER)}
-          aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
-          onChange={onChange}
-        />
-        <FieldError id={'SORT_ORDER-error'} message={errors.SORT_ORDER} />
-      </div>
+        <div>
+          <label className={'erp-field-label'} htmlFor={'SORT_ORDER'}>
+            Sort Order
+          </label>
+          <input
+            id={'SORT_ORDER'}
+            name={'SORT_ORDER'}
+            type={'number'}
+            className={fieldClass(errors.SORT_ORDER)}
+            value={values.SORT_ORDER}
+            min={'0'}
+            step={'any'}
+            placeholder={'Enter sort order'}
+            aria-invalid={Boolean(errors.SORT_ORDER)}
+            aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
+            onChange={onChange}
+          />
+          <FieldError id={'SORT_ORDER-error'} message={errors.SORT_ORDER} />
+        </div>
 
-      <div className={'erp-menu-active-field'}>
-        <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
-        <label className={'erp-switch-field'}>
-          <input className={'erp-switch-control'} type={'checkbox'} role={'switch'} name={'STATUS'} checked={values.STATUS === '1'} onChange={onChange} />
-          <span>Is Active</span>
-        </label>
-      </div>
-
-      <div className={'erp-menu-route-field'}>
-        <label className={'erp-field-label'} htmlFor={'ROUTE_NAME'}>
-          Route Name
-          <span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <input
-          id={'ROUTE_NAME'}
-          name={'ROUTE_NAME'}
-          type={'text'}
-          className={fieldClass(errors.ROUTE_NAME)}
-          value={values.ROUTE_NAME}
-          maxLength={200}
-          placeholder={'Enter Route Name'}
-          required
-          aria-invalid={Boolean(errors.ROUTE_NAME)}
-          aria-describedby={errors.ROUTE_NAME ? 'ROUTE_NAME-error' : undefined}
+        <RadioField
+          name={'STATUS'}
+          label={'Is Active?'}
+          value={values.STATUS}
+          options={statusOptions}
           onChange={onChange}
         />
-        <FieldError id={'ROUTE_NAME-error'} message={errors.ROUTE_NAME} />
       </div>
     </div>
   )

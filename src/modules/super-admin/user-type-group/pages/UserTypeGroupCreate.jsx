@@ -7,10 +7,10 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import BusinessUnitAssignment from '../components/BusinessUnitAssignment'
 import BusinessUnitAssignmentTable from '../components/BusinessUnitAssignmentTable'
 import UserTypeGroupForm from '../components/UserTypeGroupForm'
-import { getBusinessUnitName } from '../data/userTypeGroupOptions'
 import {
   USER_TYPE_GROUP_TABLE,
   createInitialUserTypeGroupValues,
@@ -30,11 +30,24 @@ function UserTypeGroupCreate() {
   const [assignmentErrors, setAssignmentErrors] = useState({})
   const [rows, setRows] = useState([])
   const [query, setQuery] = useState('')
+  const {
+    groupOptions,
+    businessUnitOptions,
+    groupsLoading,
+    unitsLoading,
+  } = useBusinessOptions(values.BG_ID, {
+    preserveGroupId: currentUser.businessGroup.id,
+  })
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
     setValues((current) => ({ ...current, [name]: type === 'checkbox' ? (checked ? '1' : '0') : value }))
     setErrors((current) => ({ ...current, [name]: undefined }))
+    if (name === 'BG_ID') {
+      setAssignment(initialBusinessUnitAssignment)
+      setAssignmentErrors({})
+      setRows([])
+    }
   }
 
   const handleAssignmentChange = (event) => {
@@ -64,7 +77,10 @@ function UserTypeGroupCreate() {
       {
         ID: `${Date.now()}-${current.length}`,
         ...assignmentResult.values,
-        BUSINESS_UNIT_NAME: getBusinessUnitName(assignmentResult.values.BU_ID),
+        BUSINESS_UNIT_NAME:
+          businessUnitOptions.find(
+            (option) => option.value === assignmentResult.values.BU_ID,
+          )?.label ?? '',
       },
     ])
     setAssignment(initialBusinessUnitAssignment)
@@ -107,7 +123,8 @@ function UserTypeGroupCreate() {
       <UserTypeGroupForm
         values={values}
         errors={errors}
-        groupName={currentUser.businessGroup.name}
+        groupOptions={groupOptions}
+        groupsLoading={groupsLoading}
         typeRef={typeRef}
         onChange={handleChange}
       />
@@ -115,6 +132,9 @@ function UserTypeGroupCreate() {
       <BusinessUnitAssignment
         values={assignment}
         errors={assignmentErrors}
+        businessUnitOptions={businessUnitOptions}
+        unitsLoading={unitsLoading}
+        groupSelected={Boolean(values.BG_ID)}
         onChange={handleAssignmentChange}
         onAdd={handleAdd}
       />

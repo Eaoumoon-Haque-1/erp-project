@@ -6,13 +6,14 @@ export const ASSET_ITEM_RETURN_TABLE = 'ASSET_ITEM_RETURN'
 export function createInitialAssetReturnValues() {
   return {
     ASSET_ASSIGNMENT_ID: '', ASSET_RECORD_ID: '', ASSET_NO: '', ITEM_NAME: '', ITEM_NAME_LABEL: '',
-    HR_EMPL_ID: '', EMPLOYEE_NAME: '', EMPLOYEE_ID: '', ASSET_DATE: '', EXPECTED_RETURN_DATE: '',
+    HR_EMPL_ID: '', EMPLOYEE_NAME: '', EMPLOYEE_ID: '', ASSET_DATE: '',
     ACTUAL_RETURN_DATE: formatIsoDate(new Date()), CONDITION_ON_RETURN: '', REMARKS: '', STATUS: '1',
   }
 }
 
 export function validateAssetReturn(values, existingRecords = [], references = {}) {
   const normalized = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, String(value ?? '').trim()]))
+  delete normalized.EXPECTED_RETURN_DATE
   normalized.STATUS = normalized.STATUS === '0' ? '0' : '1'
   const errors = {}
   const selectedAsset = references.assignedAssets?.find((option) => option.value === normalized.ASSET_ASSIGNMENT_ID)
@@ -26,8 +27,6 @@ export function validateAssetReturn(values, existingRecords = [], references = {
 
   const assignDate = parseIsoDate(normalized.ASSET_DATE)
   if (!assignDate) errors.ASSET_DATE = 'A valid Assign Date is unavailable for the selected Asset.'
-
-  if (normalized.EXPECTED_RETURN_DATE && !parseIsoDate(normalized.EXPECTED_RETURN_DATE)) errors.EXPECTED_RETURN_DATE = 'Expected Return Date is invalid.'
 
   const actualDate = parseIsoDate(normalized.ACTUAL_RETURN_DATE)
   const today = parseIsoDate(formatIsoDate(new Date()))

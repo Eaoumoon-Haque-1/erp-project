@@ -5,7 +5,6 @@ export const ASSET_ASSIGN_TO_EMPLOYEE_TABLE = 'ASSET_ASSIGN_TO_EMPL'
 
 export const initialAssetAssignmentValues = {
   ASSET_DATE: formatIsoDate(new Date()),
-  EXPECTED_RETURN_DATE: '',
   ASSET_RECORD_ID: '',
   ASSET_RECEIVE_ID: '',
   ASSET_SOURCE: '',
@@ -25,7 +24,6 @@ export function validateAssetAssignment(values, existingRecords = [], references
   const normalized = {
     ...values,
     ASSET_DATE: String(values.ASSET_DATE ?? ''),
-    EXPECTED_RETURN_DATE: String(values.EXPECTED_RETURN_DATE ?? ''),
     ASSET_RECORD_ID: String(values.ASSET_RECORD_ID ?? ''),
     ASSET_RECEIVE_ID: String(values.ASSET_RECEIVE_ID ?? ''),
     ASSET_SOURCE: String(values.ASSET_SOURCE ?? ''),
@@ -39,6 +37,7 @@ export function validateAssetAssignment(values, existingRecords = [], references
     ACTUAL_RETURN_DATE: String(values.ACTUAL_RETURN_DATE ?? ''),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
   }
+  delete normalized.EXPECTED_RETURN_DATE
   const errors = {}
   const selectedAsset = references.availableAssets?.find(
     (option) => option.value === normalized.ASSET_RECORD_ID,
@@ -52,16 +51,6 @@ export function validateAssetAssignment(values, existingRecords = [], references
     if (!assignDate) errors.ASSET_DATE = 'Enter a valid Assign Date.'
     else if (availableDate && assignDate < availableDate) {
       errors.ASSET_DATE = 'Assign Date cannot be earlier than the asset availability date.'
-    }
-  }
-
-  if (normalized.EXPECTED_RETURN_DATE) {
-    const assignDate = parseIsoDate(normalized.ASSET_DATE)
-    const expectedReturnDate = parseIsoDate(normalized.EXPECTED_RETURN_DATE)
-    if (!expectedReturnDate) {
-      errors.EXPECTED_RETURN_DATE = 'Enter a valid Expected Return Date.'
-    } else if (assignDate && expectedReturnDate <= assignDate) {
-      errors.EXPECTED_RETURN_DATE = 'Expected Return Date must be later than Assign Date.'
     }
   }
 

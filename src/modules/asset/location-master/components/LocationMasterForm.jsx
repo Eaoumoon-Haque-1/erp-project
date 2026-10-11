@@ -41,6 +41,9 @@ function LocationMasterForm({ values, errors, references, locationNameRef, onCha
 
   return (
     <div className={'erp-form-grid'}>
+      <TextField name={'LOCATION_NAME'} label={'Location Name'} value={values.LOCATION_NAME} error={errors.LOCATION_NAME} placeholder={'Enter location name'} inputRef={locationNameRef} onChange={onChange} />
+      <TextField name={'LOCATION_CODE'} label={'Location Code'} value={values.LOCATION_CODE} error={errors.LOCATION_CODE} placeholder={'Enter location code'} maxLength={30} onChange={onChange} />
+
       <div>
         <label className={'erp-field-label'} htmlFor={'CUSTODIAN_ID'}>
           Custodian<span className={'erp-required'} aria-hidden={'true'}>*</span>
@@ -66,9 +69,6 @@ function LocationMasterForm({ values, errors, references, locationNameRef, onCha
         </select>
         <FieldError id={'SUB_CUSTODIAN_ID-error'} message={errors.SUB_CUSTODIAN_ID} />
       </div>
-
-      <TextField name={'LOCATION_NAME'} label={'Location Name'} value={values.LOCATION_NAME} error={errors.LOCATION_NAME} placeholder={'Enter location name'} inputRef={locationNameRef} onChange={onChange} />
-      <TextField name={'LOCATION_CODE'} label={'Location Code'} value={values.LOCATION_CODE} error={errors.LOCATION_CODE} placeholder={'Enter location code'} maxLength={30} onChange={onChange} />
 
       <div>
         <label className={'erp-field-label'} htmlFor={'ADDRESS'}>

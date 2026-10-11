@@ -1,11 +1,9 @@
 /** @file API-backed Business Unit role mapping list. */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  businessGroupsApi,
-  businessUnitRolesApi,
-  businessUnitsApi,
-} from '../../../../api/endpoints'
+import { businessGroupsApi } from '../../business-group/api/businessGroupApi'
+import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
+import { businessUnitRolesApi } from '../api/businessUnitRoleApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'

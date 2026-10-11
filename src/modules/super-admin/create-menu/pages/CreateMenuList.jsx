@@ -3,13 +3,16 @@
  * Sections: filter/column/temporary-row configuration, row handlers, and ListPage composition.
  * Edit here when list columns, filters, navigation, API rows, or enabled actions change.
  */
+
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { menusApi, modulesApi, permissionsApi } from '../../../../api/endpoints'
+import { permissionsApi } from '../../menu-permission/api/menuPermissionApi'
+import { modulesApi } from '../../module/api/moduleApi'
+import { menusApi } from '../api/menuApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import { mapMenuFromApi, mapMenuToApi } from '../data/menuApiMapper'
+import { mapMenuFromApi, mapMenuToApi, parsePermissionIds } from '../data/menuApiMapper'
 
 const filters = [
   {
@@ -98,9 +101,11 @@ function CreateMenuList() {
             ...mapMenuFromApi(menu),
             MODULE_NAME:
               moduleNames.get(String(menu.moduleId)) || String(menu.moduleId),
-            PERMISSION_NAME:
-              permissionNames.get(String(menu.permissionId)) ||
-              String(menu.permissionId || ''),
+            PERMISSION_NAME: parsePermissionIds(
+              menu.permissionIds ?? menu.permissionId,
+            )
+              .map((id) => permissionNames.get(id) || id)
+              .join(', '),
             PARENT_MENU_NAME: menu.parentMenuId
               ? menuNames.get(String(menu.parentMenuId)) || String(menu.parentMenuId)
               : '-',
@@ -119,11 +124,9 @@ function CreateMenuList() {
   }, [])
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete Menu "${row.MENU_NAME}"?`)) return
     try {
       await menusApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
-      setMessage('Menu deleted successfully.')
     } catch (error) {
       setMessage(getApiErrorMessage(error, 'Unable to delete Menu.'))
     }
@@ -163,6 +166,9 @@ function CreateMenuList() {
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={() =>
+            navigate(`/super-admin/menu-creation/create-menu/${row.ID}/view`)
+          }
           onEdit={() =>
             navigate(`/super-admin/menu-creation/create-menu/${row.ID}/edit`)
           }

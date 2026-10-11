@@ -5,7 +5,8 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { modulesApi, permissionsApi } from '../../../../api/endpoints'
+import { modulesApi } from '../../module/api/moduleApi'
+import { permissionsApi } from '../api/menuPermissionApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -108,11 +109,9 @@ function MenuPermissionList() {
   }, [])
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete Permission "${row.PERMISSION_NAME}"?`)) return
     try {
       await permissionsApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
-      setMessage('Permission deleted successfully.')
     } catch (error) {
       setMessage(getApiErrorMessage(error, 'Unable to delete Permission.'))
     }
@@ -149,6 +148,9 @@ function MenuPermissionList() {
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={() =>
+            navigate(`/super-admin/menu-creation/menu-permission/${row.ID}/view`)
+          }
           onEdit={() =>
             navigate(`/super-admin/menu-creation/menu-permission/${row.ID}/edit`)
           }

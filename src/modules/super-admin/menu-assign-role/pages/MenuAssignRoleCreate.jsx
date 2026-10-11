@@ -1,8 +1,12 @@
 /** @file Assigns menu permissions to a selected role using the documented role endpoints. */
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { menusApi, modulesApi, roleDetailsApi, rolesApi } from '../../../../api/endpoints'
+import { menusApi } from '../../create-menu/api/menuApi'
+import { modulesApi } from '../../module/api/moduleApi'
+import { roleDetailsApi, rolesApi } from '../../role/api/roleApi'
 import { getApiErrorMessage } from '../../../../api/errors'
+import { runConfirmedAction, showError } from '../../../../components/shared/actionAlerts'
+import ActionForm from '../../../../components/shared/ActionForm'
 import PageHeader from '../../../../components/shared/PageHeader'
 import RolePermissionAssignment from '../../role/components/RolePermissionAssignment'
 import RolePermissionTable from '../../role/components/RolePermissionTable'
@@ -22,7 +26,6 @@ function MenuAssignRoleCreate() {
   const [menuOptions, setMenuOptions] = useState([])
   const [permissionOptions, setPermissionOptions] = useState([])
   const [query, setQuery] = useState('')
-  const [message, setMessage] = useState('')
 
   useEffect(() => {
     let active = true
@@ -32,7 +35,7 @@ function MenuAssignRoleCreate() {
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
         setModuleOptions(modules.map((module) => ({ value: String(module.id), label: module.moduleName })))
       })
-      .catch((error) => { if (active) setMessage(getApiErrorMessage(error, 'Unable to load assignment options.')) })
+      .catch((error) => { if (active) getApiErrorMessage(error, 'Unable to load assignment options.') })
     return () => { active = false }
   }, [])
 
@@ -41,7 +44,7 @@ function MenuAssignRoleCreate() {
     let active = true
     rolesApi.getDetails(roleId)
       .then((details) => { if (active) setAssignments(flattenRolePermissions(details)) })
-      .catch((error) => { if (active) setMessage(getApiErrorMessage(error, 'Unable to load assigned permissions.')) })
+      .catch((error) => { if (active) getApiErrorMessage(error, 'Unable to load assigned permissions.') })
     return () => { active = false }
   }, [roleId])
 
@@ -63,35 +66,39 @@ function MenuAssignRoleCreate() {
       } else if (name === 'MENU_ID') {
         setPermissionOptions(value && roleId ? (await rolesApi.getAvailablePermissions(roleId, assignmentValues.MODULE_ID, value)).map((permission) => ({ value: String(permission.id), label: permission.permissionName })) : [])
       }
-    } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to load permission options.')) }
+    } catch (error) { getApiErrorMessage(error, 'Unable to load permission options.') }
   }
 
   const add = async (event) => {
     event.preventDefault()
-    if (!roleId) { setMessage('Select a Role first.'); return }
+    if (!roleId) { await showError('Select a Role first.'); return }
     const result = validateRoleAssignment(assignmentValues, assignments)
     setAssignmentValues(result.values); setAssignmentErrors(result.errors)
     if (!result.isValid) return
     try {
       await rolesApi.assignPermissions(roleId, { moduleId: Number(result.values.MODULE_ID), menuId: Number(result.values.MENU_ID), permissionIds: [Number(result.values.PERMISSION_ID)] })
-      await reloadAssignments(); setAssignmentValues(initialRoleAssignmentValues); setMenuOptions([]); setPermissionOptions([]); setMessage('Permission assigned successfully.')
-    } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to assign permission.')) }
+      await reloadAssignments(); setAssignmentValues(initialRoleAssignmentValues); setMenuOptions([]); setPermissionOptions([])
+    } catch (error) { getApiErrorMessage(error, 'Unable to assign permission.') }
   }
 
   const remove = async (row) => {
-    if (!window.confirm(`Remove "${row.PERMISSION_NAME}" permission?`)) return
-    try { await roleDetailsApi.removePermission(row.ROLE_DETAIL_ID, row.PERMISSION_ID); await reloadAssignments(); setMessage('Permission removed successfully.') }
-    catch (error) { setMessage(getApiErrorMessage(error, 'Unable to remove permission.')) }
+    await runConfirmedAction(
+      { action: 'delete', entityName: 'Permission', successText: 'Permission removed successfully.' },
+      async () => {
+        try { await roleDetailsApi.removePermission(row.ROLE_DETAIL_ID, row.PERMISSION_ID); await reloadAssignments() }
+        catch (error) { getApiErrorMessage(error, 'Unable to remove permission.'); return false }
+        return true
+      },
+    )
   }
 
   return (
     <div className={'erp-list-page'}>
       <PageHeader title={'Menu Assign to Role Create'} actionLabel={'List'} actionTo={listPath} />
       <section className={'erp-form-card erp-role-edit-card'}>
-        {message && <p className={'erp-form-message'} role={'status'}>{message}</p>}
         <div className={'max-w-md'}><label className={'erp-field-label'} htmlFor={'ROLE_ID'}>Role Name<span className={'erp-required'}>*</span></label><select id={'ROLE_ID'} className={'erp-form-control'} value={roleId} onChange={changeRole}><option value={''}>--Select Role--</option>{roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
         <div className={'erp-role-divider'} />
-        <form onSubmit={add} noValidate><RolePermissionAssignment values={assignmentValues} errors={assignmentErrors} moduleOptions={moduleOptions} menuOptions={menuOptions} permissionOptions={permissionOptions} onChange={changeAssignment} /></form>
+        <ActionForm entityName={'Permission assignment'} onSubmit={add} noValidate><RolePermissionAssignment values={assignmentValues} errors={assignmentErrors} moduleOptions={moduleOptions} menuOptions={menuOptions} permissionOptions={permissionOptions} onChange={changeAssignment} /></ActionForm>
         <RolePermissionTable rows={assignments} query={query} onQueryChange={setQuery} onDelete={remove} />
       </section>
     </div>

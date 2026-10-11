@@ -27,7 +27,8 @@ function fieldClass(error, readOnly = false) {
 function UserTypeGroupForm({
   values,
   errors,
-  groupName,
+  groupOptions = [],
+  groupsLoading = false,
   typeRef,
   onChange,
 }) {
@@ -40,18 +41,28 @@ function UserTypeGroupForm({
             *
           </span>
         </label>
-        <input
+        <select
           id={"BG_ID"}
           name={"BG_ID"}
-          type={"text"}
-          className={fieldClass(errors.BG_ID, true)}
-          value={groupName}
-          readOnly
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          disabled={groupsLoading}
           aria-invalid={Boolean(errors.BG_ID)}
           aria-describedby={
             errors.BG_ID ? "user-type-group-BG_ID-error" : undefined
           }
-        />
+          onChange={onChange}
+        >
+          <option value={""}>
+            {groupsLoading ? "Loading Group Names..." : "--Select Group Name--"}
+          </option>
+          {groupOptions.map((group) => (
+            <option key={group.value} value={group.value}>
+              {group.label}
+            </option>
+          ))}
+        </select>
         <FieldError id={"user-type-group-BG_ID-error"} message={errors.BG_ID} />
       </div>
       <div>

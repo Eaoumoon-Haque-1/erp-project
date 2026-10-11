@@ -5,8 +5,8 @@
  */
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { rolesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { rolesApi } from '../api/roleApi'
+import { applyApiFormErrors } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import RoleForm from '../components/RoleForm'
 import { mapRoleToApi } from '../data/roleApiMapper'
@@ -47,7 +47,7 @@ function RoleCreate() {
       await rolesApi.create(mapRoleToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to create Role.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Role.', { roleName: 'PERMISSION_NAME' }))
     } finally {
       setSubmitting(false)
     }

@@ -26,7 +26,7 @@ const columns = [
 function DepreciationCategoryList() {
   const navigate = useNavigate()
   const [rows, setRows] = useState(() => listDepreciationCategories())
-  const remove = (row) => { if (!window.confirm(`Delete Depreciation Category "${row.DEPRI_CATEGORY}"?`)) return; removeDepreciationCategory(row.ID); setRows(listDepreciationCategories()) }
+  const remove = (row) => { removeDepreciationCategory(row.ID); setRows(listDepreciationCategories()) }
   const toggle = (row) => { updateDepreciationCategory(row.ID, { ...row, STATUS: row.STATUS === '1' ? '0' : '1' }); setRows(listDepreciationCategories()) }
   return <ListPage title={'Depreciation Category List'} createLabel={'New'} createTo={'/asset/depreciation-category/create'} filters={filters} columns={columns} rows={rows} renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/asset/depreciation-category/${row.ID}/edit`)} onDelete={remove} onStatusChange={toggle} />} />
 }

@@ -27,7 +27,6 @@ function MaintenanceAmcList() {
   ], [rows])
   const refresh = () => setRows(listMaintenanceRecords())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete maintenance record for "${row.ITEM_NAME_LABEL}"?`)) return
     removeMaintenanceRecord(row.ID)
     refresh()
   }

@@ -1,4 +1,4 @@
-/** @file List-page controller for temporary Vendor / Supplier records. */
+/** @file List-page controller for temporary Supplier Information records. */
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ListPage from '../../../../components/shared/ListPage'
@@ -6,11 +6,12 @@ import ListRowActions from '../../../../components/shared/ListRowActions'
 import { listVendorSuppliers, removeVendorSupplier, updateVendorSupplier } from '../data/vendorSupplierMasterStore'
 
 const columns = [
-  { key: 'VENDOR_NAME', label: 'Vendor Name' },
-  { key: 'VENDOR_CODE', label: 'Vendor Code' },
+  { key: 'VENDOR_NAME', label: 'Supplier Name' },
+  { key: 'VENDOR_CODE', label: 'Supplier Code' },
   { key: 'CONTACT_PERSON', label: 'Contact Person' },
   { key: 'PHONE', label: 'Phone' },
   { key: 'EMAIL', label: 'Email' },
+  { key: 'COMPANY_TYPE', label: 'Company Type', render: (value) => value || 'N/A' },
   {
     key: 'STATUS',
     label: 'Status',
@@ -27,14 +28,14 @@ function VendorSupplierMasterList() {
   const navigate = useNavigate()
   const [rows, setRows] = useState(() => listVendorSuppliers())
   const filters = useMemo(() => [
-    { key: 'VENDOR_NAME', label: 'Search by Vendor Name', placeholder: '--Search by Vendor Name--', matches: (row, value) => row.VENDOR_NAME.toLowerCase().includes(value.toLowerCase()) },
-    { key: 'VENDOR_CODE', label: 'Search by Vendor Code', placeholder: '--Search by Vendor Code--', matches: (row, value) => row.VENDOR_CODE.toLowerCase().includes(value.toLowerCase()) },
+    { key: 'VENDOR_NAME', label: 'Search by Supplier Name', placeholder: '--Search by Supplier Name--', matches: (row, value) => row.VENDOR_NAME.toLowerCase().includes(value.toLowerCase()) },
+    { key: 'VENDOR_CODE', label: 'Search by Supplier Code', placeholder: '--Search by Supplier Code--', matches: (row, value) => row.VENDOR_CODE.toLowerCase().includes(value.toLowerCase()) },
+    { key: 'COMPANY_TYPE', label: 'Search by Company Type', placeholder: '--Search by Company Type--', matches: (row, value) => String(row.COMPANY_TYPE ?? '').toLowerCase().includes(value.toLowerCase()) },
     { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
   ], [])
 
   const refresh = () => setRows(listVendorSuppliers())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Vendor / Supplier "${row.VENDOR_NAME}"?`)) return
     removeVendorSupplier(row.ID)
     refresh()
   }
@@ -45,13 +46,13 @@ function VendorSupplierMasterList() {
 
   return (
     <ListPage
-      title={'Vendor / Supplier Master List'}
+      title={'Supplier Information List'}
       createLabel={'New'}
-      createTo={'/asset/vendor-supplier-master/create'}
+      createTo={'/procure-to-pay/procurement-settings/supplier-information/create'}
       filters={filters}
       columns={columns}
       rows={rows}
-      renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/asset/vendor-supplier-master/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />}
+      renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/procure-to-pay/procurement-settings/supplier-information/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />}
     />
   )
 }

@@ -54,7 +54,7 @@ export function validateAssetItemInformation(
     errors.ASSET_DEPRI_CATE_ID = 'Select a valid active Depreciation Category.'
   }
 
-  if (!normalized.CATEGORY_TYPE) errors.CATEGORY_TYPE = 'Category Type is required.'
+  if (!normalized.CATEGORY_TYPE) errors.CATEGORY_TYPE = 'Asset Type is required.'
   if (!normalized.DEPRI_METHOD) errors.DEPRI_METHOD = 'Depreciation Method is required.'
 
   if (!normalized.DEPRI_LIFE) {

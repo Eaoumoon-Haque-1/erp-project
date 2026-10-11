@@ -23,26 +23,28 @@ export function validateAssetLookupType(
   const errors = {}
 
   if (!normalizedValues.TYPE_NAME) {
-    errors.TYPE_NAME = 'Type Name is required.'
+    errors.TYPE_NAME = 'Lookup Type Name is required.'
   } else if (normalizedValues.TYPE_NAME.length < 2) {
-    errors.TYPE_NAME = 'Type Name must be at least 2 characters.'
+    errors.TYPE_NAME = 'Lookup Type Name must be at least 2 characters.'
   } else if (normalizedValues.TYPE_NAME.length > 50) {
-    errors.TYPE_NAME = 'Type Name must not exceed 50 characters.'
+    errors.TYPE_NAME = 'Lookup Type Name must not exceed 50 characters.'
   } else if (existingTypeNames.some(
     (name) => String(name).trim().toLowerCase() === normalizedValues.TYPE_NAME.toLowerCase(),
   )) {
-    errors.TYPE_NAME = 'Type Name must be unique.'
+    errors.TYPE_NAME = 'Lookup Type Name must be unique.'
   }
 
-  if (normalizedValues.CODE) {
+  if (!normalizedValues.CODE) {
+    errors.CODE = 'Lookup Type Code is required.'
+  } else {
     if (normalizedValues.CODE.length < 2) {
-      errors.CODE = 'Code must be at least 2 characters.'
+      errors.CODE = 'Lookup Type Code must be at least 2 characters.'
     } else if (normalizedValues.CODE.length > 10) {
-      errors.CODE = 'Code must not exceed 10 characters.'
+      errors.CODE = 'Lookup Type Code must not exceed 10 characters.'
     } else if (existingCodes.some(
       (code) => String(code).trim().toLowerCase() === normalizedValues.CODE.toLowerCase(),
     )) {
-      errors.CODE = 'Code must be unique.'
+      errors.CODE = 'Lookup Type Code must be unique.'
     }
   }
 

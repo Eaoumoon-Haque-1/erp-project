@@ -5,15 +5,14 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { currentUser } from '../../../../app/currentUser'
-import { businessUnitsApi, rolesApi, usersApi, userTypesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { rolesApi } from '../../role/api/roleApi'
+import { userTypesApi } from '../../user-type/api/userTypeApi'
+import { usersApi } from '../api/userApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import UserAssignmentTabs from '../../../../components/shared/UserAssignmentTabs'
-import {
-  mockBusinessUnitOptions,
-  mockEmployeeListOptions,
-} from '../../../hris/assign-empl-bu-user/validation/assignEmplBuUserValidation'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { mockEmployeeListOptions } from '../../../hris/assign-empl-bu-user/validation/assignEmplBuUserValidation'
 import UserForm from '../components/UserForm'
 import { mapUserToApi } from '../data/userApiMapper'
 import {
@@ -30,27 +29,30 @@ const listPath = '/super-admin/user-creation/user'
 function UserCreate() {
   const navigate = useNavigate()
   const userNameRef = useRef(null)
-  const [values, setValues] = useState(() => createInitialUserValues(currentUser.businessGroup.id))
+  const [values, setValues] = useState(() => createInitialUserValues())
   const [errors, setErrors] = useState({})
   const [activeAssignmentTab, setActiveAssignmentTab] = useState('employee')
   const [employeeRows, setEmployeeRows] = useState([])
   const [businessUnitRows, setBusinessUnitRows] = useState([])
-  const [businessUnitOptions, setBusinessUnitOptions] = useState([])
   const [roleOptions, setRoleOptions] = useState([])
   const [userTypeOptions, setUserTypeOptions] = useState([])
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const {
+    groupOptions,
+    businessUnitOptions,
+    groupsLoading,
+    unitsLoading,
+  } = useBusinessOptions(values.BG_ID)
 
   useEffect(() => {
     let active = true
     Promise.all([
-      businessUnitsApi.listByGroup(currentUser.businessGroup.id),
       rolesApi.list(),
       userTypesApi.list(),
     ])
-      .then(([units, roles, userTypes]) => {
+      .then(([roles, userTypes]) => {
         if (!active) return
-        setBusinessUnitOptions(units.map((unit) => ({ value: String(unit.id), label: unit.businessUnit })))
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
         setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.userType })))
       })
@@ -68,13 +70,16 @@ function UserCreate() {
     setValues((current) => ({
       ...current,
       [name]: nextValue,
+      ...(name === 'BG_ID' ? { BU_ID: '' } : {}),
       ...(name === 'FROM_DATE'
         ? { TO_DATE: getUserValidityToDate(nextValue) }
         : {}),
     }))
+    if (name === 'BG_ID') setBusinessUnitRows([])
     setErrors((current) => ({
       ...current,
       [name]: undefined,
+      ...(name === 'BG_ID' ? { BU_ID: undefined } : {}),
       ...(name === 'FROM_DATE' ? { TO_DATE: undefined } : {}),
     }))
   }
@@ -94,7 +99,7 @@ function UserCreate() {
       await usersApi.create(mapUserToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      const apiMessage = getApiErrorMessage(error, 'Unable to create User.')
+      const apiMessage = applyApiFormErrors(error, setErrors, 'Unable to create User.')
       if (/email/i.test(apiMessage)) {
         setErrors((current) => ({ ...current, EMAIL: apiMessage }))
         requestAnimationFrame(() => document.querySelector('[name="EMAIL"]')?.focus())
@@ -107,7 +112,7 @@ function UserCreate() {
   }
 
   const handleReset = () => {
-    setValues(createInitialUserValues(currentUser.businessGroup.id))
+    setValues(createInitialUserValues())
     setErrors({})
     setActiveAssignmentTab('employee')
     setEmployeeRows([])
@@ -117,10 +122,10 @@ function UserCreate() {
 
   return (
     <FormPage title={'User Create'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} messageTone={'error'} submitting={submitting}>
-      <UserForm values={values} errors={errors} groupName={currentUser.businessGroup.name} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onChange={handleChange} />
+      <UserForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} unitsLoading={unitsLoading} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onChange={handleChange} />
       <UserAssignmentTabs
         employeeOptions={mockEmployeeListOptions}
-        businessUnitOptions={mockBusinessUnitOptions}
+        businessUnitOptions={businessUnitOptions}
         employeeRows={employeeRows}
         businessUnitRows={businessUnitRows}
         activeTab={activeAssignmentTab}

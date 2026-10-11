@@ -5,13 +5,12 @@
  */
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import {
-  menusApi,
-  modulesApi,
-  roleDetailsApi,
-  rolesApi,
-} from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { menusApi } from '../../create-menu/api/menuApi'
+import { modulesApi } from '../../module/api/moduleApi'
+import { roleDetailsApi, rolesApi } from '../api/roleApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import { runConfirmedAction } from '../../../../components/shared/actionAlerts'
+import ActionForm from '../../../../components/shared/ActionForm'
 import PageHeader from '../../../../components/shared/PageHeader'
 import RoleForm from '../components/RoleForm'
 import RolePermissionAssignment from '../components/RolePermissionAssignment'
@@ -43,7 +42,6 @@ function RoleEdit() {
   const [menuOptions, setMenuOptions] = useState([])
   const [permissionOptions, setPermissionOptions] = useState([])
   const [query, setQuery] = useState('')
-  const [message, setMessage] = useState('')
 
   const reloadAssignments = async () => {
     const details = await rolesApi.getDetails(roleId)
@@ -65,7 +63,7 @@ function RoleEdit() {
         )
       })
       .catch((error) => {
-        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Role.'))
+        if (active) getApiErrorMessage(error, 'Unable to load Role.')
       })
     return () => {
       active = false
@@ -91,9 +89,8 @@ function RoleEdit() {
     try {
       const updated = await rolesApi.update(roleId, mapRoleToApi(result.values))
       setRoleValues(mapRoleFromApi(updated))
-      setMessage('Role updated successfully.')
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to update Role.'))
+      applyApiFormErrors(error, setRoleErrors, 'Unable to update Role.', { roleName: 'PERMISSION_NAME' })
     }
   }
 
@@ -142,9 +139,7 @@ function RoleEdit() {
         )
       }
     } catch (error) {
-      setMessage(
-        getApiErrorMessage(error, 'Unable to load permission options.'),
-      )
+      getApiErrorMessage(error, 'Unable to load permission options.')
     }
   }
 
@@ -165,32 +160,35 @@ function RoleEdit() {
       setAssignmentValues(initialRoleAssignmentValues)
       setMenuOptions([])
       setPermissionOptions([])
-      setMessage('Permission assigned successfully.')
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to assign Permission.'))
+      getApiErrorMessage(error, 'Unable to assign Permission.')
     }
   }
 
   const handleDeletePermission = async (row) => {
-    if (!window.confirm(`Remove "${row.PERMISSION_NAME}" permission?`)) return
-    try {
-      await roleDetailsApi.removePermission(
-        row.ROLE_DETAIL_ID,
-        row.PERMISSION_ID,
-      )
-      await reloadAssignments()
-      setMessage('Permission removed successfully.')
-    } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to remove Permission.'))
-    }
+    await runConfirmedAction(
+      { action: 'delete', entityName: 'Permission', successText: 'Permission removed successfully.' },
+      async () => {
+        try {
+          await roleDetailsApi.removePermission(
+            row.ROLE_DETAIL_ID,
+            row.PERMISSION_ID,
+          )
+          await reloadAssignments()
+        } catch (error) {
+          getApiErrorMessage(error, 'Unable to remove Permission.')
+          return false
+        }
+        return true
+      },
+    )
   }
 
   return (
     <div className={'erp-list-page'}>
       <PageHeader title={'Role Edit'} actionLabel={'List'} actionTo={listPath} />
       <section className={'erp-form-card erp-role-edit-card'}>
-        {message && <p className={'erp-form-message'} role={'status'}>{message}</p>}
-        <form onSubmit={handleRoleUpdate} noValidate>
+        <ActionForm action={'update'} entityName={'Role'} onSubmit={handleRoleUpdate} noValidate>
           <RoleForm
             values={roleValues}
             errors={roleErrors}
@@ -199,9 +197,9 @@ function RoleEdit() {
           <div className={'erp-form-actions'}>
             <button type={'submit'} className={'primary-button'}>Update</button>
           </div>
-        </form>
+        </ActionForm>
         <div className={'erp-role-divider'} />
-        <form onSubmit={handleAddPermission} noValidate>
+        <ActionForm entityName={'Permission assignment'} onSubmit={handleAddPermission} noValidate>
           <RolePermissionAssignment
             values={assignmentValues}
             errors={assignmentErrors}
@@ -210,7 +208,7 @@ function RoleEdit() {
             permissionOptions={permissionOptions}
             onChange={handleAssignmentChange}
           />
-        </form>
+        </ActionForm>
         <RolePermissionTable
           rows={assignments}
           query={query}

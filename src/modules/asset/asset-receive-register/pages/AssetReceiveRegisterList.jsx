@@ -9,6 +9,7 @@ import { listAssetReceives, removeAssetReceive, updateAssetReceive } from '../da
 const columns = [
   { key: 'GRN_NO', label: 'Receive No (GRN)' },
   { key: 'GRN_DATE', label: 'Receive Date', render: (value) => formatDateForDisplay(value) },
+  { key: 'PURCHASE_DATE', label: 'Purchase Date', render: (value) => formatDateForDisplay(value) },
   { key: 'ITEM_NAME_LABEL', label: 'Asset Item Name' },
   { key: 'SUPPLIER_NAME', label: 'Vendor / Supplier' },
   { key: 'QTY', label: 'Qty' },
@@ -35,7 +36,6 @@ function AssetReceiveRegisterList() {
 
   const refresh = () => setRows(listAssetReceives())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Asset Receive "${row.GRN_NO}"?`)) return
     removeAssetReceive(row.ID)
     refresh()
   }

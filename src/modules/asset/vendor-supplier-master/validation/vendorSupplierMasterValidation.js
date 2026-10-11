@@ -7,6 +7,7 @@ export const initialVendorSupplierValues = {
   CONTACT_PERSON: '',
   PHONE: '',
   EMAIL: '',
+  COMPANY_TYPE: '',
   ADDRESS: '',
   TAX_ID: '',
   STATUS: '1',
@@ -28,6 +29,7 @@ export function validateVendorSupplier(values, existingRecords = []) {
     CONTACT_PERSON: text(values.CONTACT_PERSON),
     PHONE: text(values.PHONE).replace(/\s+/g, ' '),
     EMAIL: text(values.EMAIL).toLowerCase(),
+    COMPANY_TYPE: text(values.COMPANY_TYPE),
     ADDRESS: text(values.ADDRESS),
     TAX_ID: text(values.TAX_ID),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
@@ -35,25 +37,25 @@ export function validateVendorSupplier(values, existingRecords = []) {
   const errors = {}
 
   if (!normalized.VENDOR_NAME) {
-    errors.VENDOR_NAME = 'Vendor Name is required.'
+    errors.VENDOR_NAME = 'Supplier Name is required.'
   } else if (normalized.VENDOR_NAME.length < 2) {
-    errors.VENDOR_NAME = 'Vendor Name must be at least 2 characters.'
+    errors.VENDOR_NAME = 'Supplier Name must be at least 2 characters.'
   } else if (normalized.VENDOR_NAME.length > 150) {
-    errors.VENDOR_NAME = 'Vendor Name must not exceed 150 characters.'
+    errors.VENDOR_NAME = 'Supplier Name must not exceed 150 characters.'
   } else if (matchesExisting(existingRecords, 'VENDOR_NAME', normalized.VENDOR_NAME)) {
-    errors.VENDOR_NAME = 'This Vendor Name already exists.'
+    errors.VENDOR_NAME = 'This Supplier Name already exists.'
   }
 
   if (!normalized.VENDOR_CODE) {
-    errors.VENDOR_CODE = 'Vendor Code is required.'
+    errors.VENDOR_CODE = 'Supplier Code is required.'
   } else if (normalized.VENDOR_CODE.length < 2) {
-    errors.VENDOR_CODE = 'Vendor Code must be at least 2 characters.'
+    errors.VENDOR_CODE = 'Supplier Code must be at least 2 characters.'
   } else if (normalized.VENDOR_CODE.length > 30) {
-    errors.VENDOR_CODE = 'Vendor Code must not exceed 30 characters.'
+    errors.VENDOR_CODE = 'Supplier Code must not exceed 30 characters.'
   } else if (!/^[A-Za-z0-9_-]+$/.test(normalized.VENDOR_CODE)) {
     errors.VENDOR_CODE = 'Use only letters, numbers, hyphens, and underscores.'
   } else if (matchesExisting(existingRecords, 'VENDOR_CODE', normalized.VENDOR_CODE)) {
-    errors.VENDOR_CODE = 'This Vendor Code already exists.'
+    errors.VENDOR_CODE = 'This Supplier Code already exists.'
   }
 
   if (!normalized.CONTACT_PERSON) {
@@ -86,6 +88,10 @@ export function validateVendorSupplier(values, existingRecords = []) {
     errors.ADDRESS = 'Address must be at least 5 characters.'
   } else if (normalized.ADDRESS.length > 255) {
     errors.ADDRESS = 'Address must not exceed 255 characters.'
+  }
+
+  if (normalized.COMPANY_TYPE.length > 100) {
+    errors.COMPANY_TYPE = 'Company Type must not exceed 100 characters.'
   }
 
   if (!normalized.TAX_ID) {

@@ -10,6 +10,7 @@ let records = [
     CONTACT_PERSON: 'Mahmud Hasan',
     PHONE: '+880 1712-345678',
     EMAIL: 'sales@techsource.example',
+    COMPANY_TYPE: 'Limited Company',
     ADDRESS: 'Banani, Dhaka',
     TAX_ID: 'BIN-001234567',
     STATUS: '1',

@@ -12,7 +12,7 @@ export function createInitialAssetTransferValues() {
     FROM_CONDITION_ON_ISSUE: '', FROM_REMARKS: '',
     TO_CUSTODIAN_ID: '', TO_CUSTODIAN_NAME: '', TO_SUB_CUSTODIAN_ID: '', TO_SUB_CUSTODIAN_NAME: '',
     TO_DEPARTMENT_ID: '', TO_DEPARTMENT_NAME: '', TO_LOCATION: '', TO_LOCATION_NAME: '',
-    TO_BUILDING: '', TO_FLOOR: '', TO_ROOM: '', TO_ASSIGN_DATE: formatIsoDate(new Date()),
+    TO_BUILDING: '', TO_FLOOR: '', TO_ROOM: '', TO_ASSIGN_DATE: formatIsoDate(new Date()), EXPECTED_RETURN_DATE: '',
     TO_CONDITION_ON_ISSUE: '', TO_REMARKS: '', STATUS: '1',
   }
 }
@@ -48,9 +48,15 @@ export function validateAssetTransfer(values, references = {}) {
 
   const fromDate = parseIsoDate(normalized.FROM_ASSIGN_DATE)
   const toDate = parseIsoDate(normalized.TO_ASSIGN_DATE)
-  if (!normalized.TO_ASSIGN_DATE) errors.TO_ASSIGN_DATE = 'To Assign Date is required.'
-  else if (!toDate) errors.TO_ASSIGN_DATE = 'Enter a valid To Assign Date.'
-  else if (fromDate && toDate < fromDate) errors.TO_ASSIGN_DATE = 'To Assign Date cannot be earlier than From Assign Date.'
+  if (!normalized.TO_ASSIGN_DATE) errors.TO_ASSIGN_DATE = 'Transfer Date is required.'
+  else if (!toDate) errors.TO_ASSIGN_DATE = 'Enter a valid Transfer Date.'
+  else if (fromDate && toDate < fromDate) errors.TO_ASSIGN_DATE = 'Transfer Date cannot be earlier than From Assign Date.'
+
+  if (normalized.EXPECTED_RETURN_DATE) {
+    const expectedReturnDate = parseIsoDate(normalized.EXPECTED_RETURN_DATE)
+    if (!expectedReturnDate) errors.EXPECTED_RETURN_DATE = 'Enter a valid Expected Return Date.'
+    else if (toDate && expectedReturnDate <= toDate) errors.EXPECTED_RETURN_DATE = 'Expected Return Date must be later than Transfer Date.'
+  }
 
   if (!normalized.TO_CONDITION_ON_ISSUE) errors.TO_CONDITION_ON_ISSUE = 'To Condition on Issue is required.'
   else if (!references.conditions?.some((option) => option.value === normalized.TO_CONDITION_ON_ISSUE)) errors.TO_CONDITION_ON_ISSUE = 'Select a valid To Condition on Issue.'

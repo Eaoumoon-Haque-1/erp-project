@@ -1,7 +1,6 @@
 /** @file Controlled signature form for assigning an available Asset to an Employee. */
 import AutoGrowTextarea from '../../../../components/shared/AutoGrowTextarea'
 import DateInput from '../../../../components/shared/DateInput'
-import { formatIsoDate, parseIsoDate } from '../../../../utils/dateFormat'
 
 function FieldError({ id, message }) {
   return message ? <p id={id} className={'erp-field-error'}>{message}</p> : null
@@ -11,13 +10,6 @@ function fieldClass(error) {
   return ['erp-form-control', error ? 'erp-form-control-invalid' : '']
     .filter(Boolean)
     .join(' ')
-}
-
-function dayAfter(value) {
-  const date = parseIsoDate(value)
-  if (!date) return ''
-  date.setDate(date.getDate() + 1)
-  return formatIsoDate(date)
 }
 
 function AssetAssignEmployeeForm({ values, errors, references, onChange }) {
@@ -32,14 +24,6 @@ function AssetAssignEmployeeForm({ values, errors, references, onChange }) {
         
         <DateInput id={'ASSET_DATE'} name={'ASSET_DATE'} className={fieldClass(errors.ASSET_DATE)} value={values.ASSET_DATE} required aria-invalid={Boolean(errors.ASSET_DATE)} aria-describedby={errors.ASSET_DATE ? 'ASSET_DATE-error' : undefined} onChange={onChange} />
         <FieldError id={'ASSET_DATE-error'} message={errors.ASSET_DATE} />
-      </div>
-
-      <div>
-        <label className={'erp-field-label'} htmlFor={'EXPECTED_RETURN_DATE'}>
-          Expected Return Date
-        </label>
-        <DateInput id={'EXPECTED_RETURN_DATE'} name={'EXPECTED_RETURN_DATE'} className={fieldClass(errors.EXPECTED_RETURN_DATE)} value={values.EXPECTED_RETURN_DATE} min={dayAfter(values.ASSET_DATE)} aria-invalid={Boolean(errors.EXPECTED_RETURN_DATE)} aria-describedby={errors.EXPECTED_RETURN_DATE ? 'EXPECTED_RETURN_DATE-error' : undefined} onChange={onChange} />
-        <FieldError id={'EXPECTED_RETURN_DATE-error'} message={errors.EXPECTED_RETURN_DATE} />
       </div>
 
       <div>

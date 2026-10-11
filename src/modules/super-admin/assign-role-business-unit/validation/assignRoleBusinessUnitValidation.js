@@ -39,7 +39,11 @@ export const temporaryAssignableRoles = [
   { value: "4", label: "Employee" },
 ];
 
-export const createInitialRoleBusinessUnitValues = (businessUnitId = "") => ({
+export const createInitialRoleBusinessUnitValues = (
+  businessUnitId = "",
+  businessGroupId = "",
+) => ({
+  BG_ID: String(businessGroupId),
   BU_ID: String(businessUnitId),
   ROLE_ID: "",
   STATUS: "1",
@@ -47,12 +51,16 @@ export const createInitialRoleBusinessUnitValues = (businessUnitId = "") => ({
 
 export function validateRoleBusinessUnitMapping(values, assignedRoles) {
   const normalizedValues = {
+    BG_ID: String(values.BG_ID ?? "").trim(),
     BU_ID: String(values.BU_ID ?? "").trim(),
     ROLE_ID: String(values.ROLE_ID ?? "").trim(),
     STATUS: String(values.STATUS) === "0" ? "0" : "1",
   };
   const errors = {};
 
+  if (!normalizedValues.BG_ID) {
+    errors.BG_ID = "Group Name is required.";
+  }
   if (!normalizedValues.BU_ID) {
     errors.BU_ID = "Business Unit is required.";
   }

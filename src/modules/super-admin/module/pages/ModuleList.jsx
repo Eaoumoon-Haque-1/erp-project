@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { modulesApi } from '../../../../api/endpoints'
+import { modulesApi } from '../api/moduleApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -71,11 +71,9 @@ function ModuleList() {
   }, [])
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete Module "${row.MODULE_NAME}"?`)) return
     try {
       await modulesApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
-      setMessage('Module deleted successfully.')
     } catch (error) {
       setMessage(getApiErrorMessage(error, 'Unable to delete Module.'))
     }
@@ -110,6 +108,7 @@ function ModuleList() {
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={() => navigate(`/super-admin/menu-creation/module/${row.ID}/view`)}
           onEdit={() => navigate(`/super-admin/menu-creation/module/${row.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}

@@ -46,7 +46,6 @@ function AssetReturnEmployeeForm({ values, errors, references, onChange }) {
         <FieldError name={'HR_EMPL_ID'} message={errors.HR_EMPL_ID} />
       </div>
 
-      <DateField name={'EXPECTED_RETURN_DATE'} label={'Expected Return Date'} values={values} errors={errors} onChange={onChange} readOnly />
       <DateField name={'ACTUAL_RETURN_DATE'} label={'Actual Return Date'} values={values} errors={errors} onChange={onChange} required min={values.ASSET_DATE} max={formatIsoDate(new Date())} />
 
       <div>

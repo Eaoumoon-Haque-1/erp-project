@@ -1,11 +1,11 @@
 /** @file Active reference data and dependent option helpers for Asset Receive Register. */
 import { reportingOfficerOptions } from '../../../hris/employee-information/data/employeeOptions'
 import { listAssetItems } from '../../asset-item-information/data/assetItemInformationStore'
-import { listAssetLookupValues } from '../../asset-lookup-value/data/assetLookupValueStore'
 import { listAssetSpecificationMaps } from '../../asset-specification-map/data/assetSpecificationMapStore'
 import { listCustodians } from '../../custodian/data/custodianStore'
 import { listLocationMasters } from '../../location-master/data/locationMasterStore'
 import { listVendorSuppliers } from '../../vendor-supplier-master/data/vendorSupplierMasterStore'
+import { listAssetUnitsOfMeasure } from '../../../procure-to-pay/asset-unit-of-measure/data/assetUnitOfMeasureStore'
 
 export const purchaseThroughOptions = [
   { value: 'DIRECT', label: 'Direct Purchase' },
@@ -27,9 +27,10 @@ export const warrantyOptions = [
 ]
 
 export function getAssetReceiveReferences() {
-  const uomOptions = listAssetLookupValues()
-    .filter((record) => record.STATUS === '1' && record.TYPE_NAME.trim().toLowerCase() === 'uom')
-    .map((record) => ({ value: record.ID, label: record.VALUE }))
+  const uomOptions = listAssetUnitsOfMeasure()
+    .filter((record) => record.STATUS === '1')
+    .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
+    .map((record) => ({ value: record.ID, label: record.UNIT_NAME }))
 
   return {
     employees: reportingOfficerOptions,

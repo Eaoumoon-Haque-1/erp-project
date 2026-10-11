@@ -14,7 +14,7 @@ function AssetLookupTypeForm({ values, errors, typeNameRef, onChange }) {
     <div className={'erp-form-grid'}>
       <div>
         <label className={'erp-field-label'} htmlFor={'TYPE_NAME'}>
-          Type Name
+          Lookup Type Name
           <span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
         <input
@@ -26,7 +26,7 @@ function AssetLookupTypeForm({ values, errors, typeNameRef, onChange }) {
           value={values.TYPE_NAME}
           minLength={2}
           maxLength={50}
-          placeholder={'Enter type name'}
+          placeholder={'Enter lookup type name'}
           required
           aria-invalid={Boolean(errors.TYPE_NAME)}
           aria-describedby={errors.TYPE_NAME ? 'asset-TYPE_NAME-error' : undefined}
@@ -36,7 +36,9 @@ function AssetLookupTypeForm({ values, errors, typeNameRef, onChange }) {
       </div>
 
       <div>
-        <label className={'erp-field-label'} htmlFor={'CODE'}>Code</label>
+        <label className={'erp-field-label'} htmlFor={'CODE'}>
+          Lookup Type Code<span className={'erp-required'} aria-hidden={'true'}>*</span>
+        </label>
         <input
           id={'CODE'}
           name={'CODE'}
@@ -45,7 +47,8 @@ function AssetLookupTypeForm({ values, errors, typeNameRef, onChange }) {
           value={values.CODE}
           minLength={2}
           maxLength={10}
-          placeholder={'Enter code'}
+          placeholder={'Enter lookup type code'}
+          required
           aria-invalid={Boolean(errors.CODE)}
           aria-describedby={errors.CODE ? 'asset-CODE-error' : undefined}
           onChange={onChange}

@@ -6,7 +6,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
-import { businessUnitsApi, rolesApi, usersApi, userTypesApi } from '../../../../api/endpoints'
+import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
+import { rolesApi } from '../../role/api/roleApi'
+import { userTypesApi } from '../../user-type/api/userTypeApi'
+import { usersApi } from '../api/userApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -67,7 +70,6 @@ function UserList() {
   }, [])
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete User "${row.USER_NAME}"?`)) return
     try {
       await usersApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
@@ -94,7 +96,7 @@ function UserList() {
     }
   }
 
-  return <ListPage title={'User List'} createLabel={'New'} createTo={'/super-admin/user-creation/user/create'} filters={activeFilters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/super-admin/user-creation/user/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />} />
+  return <ListPage title={'User List'} createLabel={'New'} createTo={'/super-admin/user-creation/user/create'} filters={activeFilters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => <ListRowActions row={row} onView={() => navigate(`/super-admin/user-creation/user/${row.ID}/view`)} onEdit={() => navigate(`/super-admin/user-creation/user/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />} />
 }
 
 export default UserList

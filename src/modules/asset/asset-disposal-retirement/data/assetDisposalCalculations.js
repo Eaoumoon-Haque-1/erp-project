@@ -38,7 +38,7 @@ export function valuesFromAssetOption(option) {
   const base = {
     ASSET_RECORD_ID: option.value, ASSET_SOURCE: option.source, ASSET_RECEIVE_ID: option.receiveId,
     ASSET_NO: record.ASSET_NO || '', ITEM_NAME: record.ITEM_NAME || '', ITEM_NAME_LABEL: record.ITEM_NAME_LABEL || '',
-    PURCHASE_DATE: record.GRN_DATE || '', PURCHASE_PRICE: purchasePrice, GL_DATE: record.GRN_DATE || '',
+    PURCHASE_DATE: record.PURCHASE_DATE || record.GRN_DATE || '', PURCHASE_PRICE: purchasePrice, GL_DATE: record.GRN_DATE || '',
     DEPRI_START_DATE: record.DEPRI_START_DATE || '', DEPRI_END_DATE: record.DEPRI_END_DATE || '',
     DEPRI_PERCENTAGE: record.DEPRI_PERCENTAGE || '', DEPRI_LIFE: record.DEPRI_LIFE || '',
   }

@@ -1,8 +1,9 @@
 /** @file API-backed Menu Permission edit page. */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { modulesApi, permissionsApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { modulesApi } from '../../module/api/moduleApi'
+import { permissionsApi } from '../api/menuPermissionApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import MenuPermissionForm from '../components/MenuPermissionForm'
 import {
@@ -73,7 +74,7 @@ function MenuPermissionEdit() {
       await permissionsApi.update(permissionId, mapPermissionToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to update Permission.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Permission.'))
     } finally {
       setSubmitting(false)
     }

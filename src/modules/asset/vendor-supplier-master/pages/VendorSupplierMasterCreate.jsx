@@ -1,4 +1,4 @@
-/** @file Create-page controller for Vendor / Supplier Master. */
+/** @file Create-page controller for Supplier Information. */
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
@@ -6,7 +6,7 @@ import VendorSupplierMasterForm from '../components/VendorSupplierMasterForm'
 import { createVendorSupplier, listVendorSuppliers } from '../data/vendorSupplierMasterStore'
 import { ASSET_VENDOR_TABLE, initialVendorSupplierValues, validateVendorSupplier } from '../validation/vendorSupplierMasterValidation'
 
-const listPath = '/asset/vendor-supplier-master'
+const listPath = '/procure-to-pay/procurement-settings/supplier-information'
 
 function VendorSupplierMasterCreate() {
   const navigate = useNavigate()
@@ -43,7 +43,7 @@ function VendorSupplierMasterCreate() {
   }
 
   return (
-    <FormPage title={'Vendor / Supplier Master Create'} listTo={listPath} tableName={ASSET_VENDOR_TABLE} onSubmit={handleSubmit} onReset={handleReset}>
+    <FormPage title={'Supplier Information Create'} listTo={listPath} tableName={ASSET_VENDOR_TABLE} onSubmit={handleSubmit} onReset={handleReset}>
       <VendorSupplierMasterForm values={values} errors={errors} vendorNameRef={vendorNameRef} onChange={handleChange} />
     </FormPage>
   )

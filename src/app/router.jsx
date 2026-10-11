@@ -9,6 +9,7 @@ import RootLayout from '../layouts/RootLayout'
 import { accountsRoutes } from '../modules/accounts/routes'
 import { assetRoutes } from '../modules/asset/routes'
 import { hrisRoutes } from '../modules/hris/routes'
+import { procureToPayRoutes } from '../modules/procure-to-pay/routes'
 import { salesRoutes } from '../modules/sales/routes'
 import { superAdminRoutes } from '../modules/super-admin/routes'
 import HomePage from '../pages/HomePage'
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       ...superAdminRoutes,
       ...hrisRoutes,
       ...assetRoutes,
+      ...procureToPayRoutes,
       ...accountsRoutes,
       ...salesRoutes,
       { path: '*', element: <NotFoundPage /> },

@@ -61,9 +61,6 @@ function AssetSpecificationMapList() {
   ], [rows])
 
   const handleDelete = (row) => {
-    if (!window.confirm(
-      `Delete ${row.SPECIFICATION_NAME} mapping for ${row.ITEM_NAME_LABEL}?`,
-    )) return
     removeAssetSpecificationMap(row.ID)
     setRows(listAssetSpecificationMaps())
   }

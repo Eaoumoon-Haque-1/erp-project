@@ -40,7 +40,7 @@ export default function AssignRoleBusinessUnitForm({
   values,
   errors,
   assignedRoles,
-  groupName,
+  groupOptions,
   businessUnitOptions,
   roleOptions,
   roleRef,
@@ -56,13 +56,28 @@ export default function AssignRoleBusinessUnitForm({
         <div>
           <label className={"erp-field-label"} htmlFor={"GROUP_NAME"}>
             Group Name
+            <span className={"erp-required"} aria-hidden={"true"}>
+              *
+            </span>
           </label>
-          <input
+          <select
             id={"GROUP_NAME"}
-            className={"erp-form-control"}
-            value={groupName}
-            readOnly
-          />
+            name={"BG_ID"}
+            className={fieldClass(errors.BG_ID)}
+            value={values.BG_ID}
+            required
+            aria-invalid={Boolean(errors.BG_ID)}
+            aria-describedby={errors.BG_ID ? "BG_ID-error" : undefined}
+            onChange={onChange}
+          >
+            <option value={""}>--Select Group Name--</option>
+            {groupOptions.map((group) => (
+              <option key={group.value} value={group.value}>
+                {group.label}
+              </option>
+            ))}
+          </select>
+          <FieldError id={"BG_ID-error"} message={errors.BG_ID} />
         </div>
 
         <div>
@@ -74,6 +89,7 @@ export default function AssignRoleBusinessUnitForm({
             name={"BU_ID"}
             className={fieldClass(errors.BU_ID)}
             value={values.BU_ID}
+            disabled={!values.BG_ID}
             aria-invalid={Boolean(errors.BU_ID)}
             aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
             onChange={onChange}

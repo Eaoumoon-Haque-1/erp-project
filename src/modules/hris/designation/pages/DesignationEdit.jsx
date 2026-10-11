@@ -5,6 +5,7 @@
  */
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import ActionForm from '../../../../components/shared/ActionForm'
 import PageHeader from '../../../../components/shared/PageHeader'
 import DesignationGroupModal from '../../designation-group/components/DesignationGroupModal'
 import { temporaryDesignationGroupBusinessUnits } from '../../designation-group/validation/designationGroupValidation'
@@ -114,7 +115,7 @@ function DesignationEdit() {
       />
 
       <section className={'erp-form-card'}>
-        <form data-table={DESIGNATION_TABLE} onSubmit={handleSubmit} noValidate>
+        <ActionForm action={'update'} entityName={'Designation'} data-table={DESIGNATION_TABLE} onSubmit={handleSubmit} noValidate>
           <DesignationForm
             values={values}
             errors={errors}
@@ -125,7 +126,7 @@ function DesignationEdit() {
           <div className={'erp-form-actions'}>
             <button type={'submit'} className={'primary-button'}>Update</button>
           </div>
-        </form>
+        </ActionForm>
       </section>
 
       <section className={'erp-form-card'}>

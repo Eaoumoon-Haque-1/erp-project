@@ -21,7 +21,7 @@ function AssetLookupValueCreate() {
   const [errors, setErrors] = useState({})
   const typeOptions = useMemo(() => listAssetLookupTypes()
     .filter((record) => record.STATUS === '1')
-    .map((record) => ({ value: record.ID, label: record.TYPE_NAME })), [])
+    .map((record) => ({ value: record.ID, label: record.TYPE_NAME, code: record.CODE })), [])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -31,14 +31,15 @@ function AssetLookupValueCreate() {
       [name]: nextValue,
       ...(name === 'TYPE_ID' ? {
         TYPE_NAME: typeOptions.find((option) => option.value === value)?.label || '',
+        VALUE_CODE: typeOptions.find((option) => option.value === value)?.code || '',
       } : {}),
     }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
+    setErrors((current) => ({ ...current, [name]: undefined, ...(name === 'TYPE_ID' ? { VALUE_CODE: undefined } : {}) }))
   }
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    const result = validateAssetLookupValue(values, listAssetLookupValues())
+    const result = validateAssetLookupValue(values, listAssetLookupValues(), typeOptions)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) {

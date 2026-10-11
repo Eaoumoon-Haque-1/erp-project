@@ -12,6 +12,7 @@ export function createInitialAssetReceiveValues(numbers) {
   return {
     GRN_NO: numbers.GRN_NO,
     GRN_DATE: todayIso(),
+    PURCHASE_DATE: todayIso(),
     RECEIVED_BY_ID: '',
     RECEIVED_BY_NAME: '',
     PURCHASE_THROUGH: '',
@@ -113,6 +114,7 @@ export function validateAssetReceive(values, existingRecords = [], references = 
 
   for (const [key, label] of [
     ['GRN_NO', 'Receive No (GRN)'], ['GRN_DATE', 'Receive Date'],
+    ['PURCHASE_DATE', 'Purchase Date'],
     ['RECEIVED_BY_ID', 'Received By'], ['PURCHASE_THROUGH', 'Purchase Through'],
     ['ITEM_NAME', 'Asset Item Name'], ['ITEM_GROUP', 'Item Group'],
     ['SUPPLIER_ID', 'Vendor / Supplier'], ['UOM', 'UOM'], ['CURRENCY', 'Currency'],
@@ -133,6 +135,12 @@ export function validateAssetReceive(values, existingRecords = [], references = 
   const receiveDate = parseIsoDate(normalized.GRN_DATE)
   if (normalized.GRN_DATE && (!receiveDate || receiveDate > new Date())) {
     errors.GRN_DATE = 'Receive Date must be a valid date and cannot be in the future.'
+  }
+  const purchaseDate = parseIsoDate(normalized.PURCHASE_DATE)
+  if (normalized.PURCHASE_DATE && (!purchaseDate || purchaseDate > new Date())) {
+    errors.PURCHASE_DATE = 'Purchase Date must be a valid date and cannot be in the future.'
+  } else if (purchaseDate && receiveDate && purchaseDate > receiveDate) {
+    errors.PURCHASE_DATE = 'Purchase Date cannot be later than Receive Date.'
   }
   if (normalized.PURCHASE_THROUGH === 'PURCHASE_ORDER' && !normalized.PO_NO) {
     errors.PO_NO = 'PO No is required for Purchase Order receipts.'

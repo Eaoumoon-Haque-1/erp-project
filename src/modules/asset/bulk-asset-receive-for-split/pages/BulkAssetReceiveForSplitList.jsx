@@ -35,7 +35,6 @@ function BulkAssetReceiveForSplitList() {
 
   const refresh = () => setRows(listBulkAssetReceives())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Bulk Asset Receive "${row.GRN_NO}"?`)) return
     removeBulkAssetReceive(row.ID)
     refresh()
   }

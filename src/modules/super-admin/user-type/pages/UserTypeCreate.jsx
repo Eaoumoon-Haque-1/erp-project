@@ -6,9 +6,10 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
-import { userTypesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { userTypesApi } from '../api/userTypeApi'
+import { applyApiFormErrors } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import UserTypeForm from '../components/UserTypeForm'
 import { mapUserTypeToApi } from '../data/userTypeApiMapper'
 import { USER_TYPE_TABLE, createInitialUserTypeValues, validateUserType } from '../validation/userTypeValidation'
@@ -25,6 +26,10 @@ function UserTypeCreate() {
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const { groupOptions, groupsLoading } = useBusinessOptions('', {
+    loadUnits: false,
+    preserveGroupId: currentUser.businessGroup.id,
+  })
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -50,7 +55,7 @@ function UserTypeCreate() {
       await userTypesApi.create(mapUserTypeToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to create User Type.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create User Type.', { userType: 'TYPE_NAME' }))
     } finally {
       setSubmitting(false)
     }
@@ -64,7 +69,7 @@ function UserTypeCreate() {
 
   return (
     <FormPage title={'User Type Create'} listTo={listPath} tableName={USER_TYPE_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} submitting={submitting}>
-      <UserTypeForm values={values} errors={errors} groupName={currentUser.businessGroup.name} typeNameRef={typeNameRef} onChange={handleChange} />
+      <UserTypeForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} typeNameRef={typeNameRef} onChange={handleChange} />
     </FormPage>
   )
 }

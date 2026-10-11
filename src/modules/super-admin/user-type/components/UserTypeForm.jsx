@@ -12,14 +12,40 @@ function fieldClass(error) {
   return ['erp-form-control', error ? 'erp-form-control-invalid' : ''].filter(Boolean).join(' ')
 }
 
-function UserTypeForm({ values, errors, groupName, typeNameRef, onChange }) {
+function UserTypeForm({
+  values,
+  errors,
+  groupOptions = [],
+  groupsLoading = false,
+  typeNameRef,
+  onChange,
+}) {
   return (
     <div className={'erp-form-grid'}>
       <div>
         <label className={'erp-field-label'} htmlFor={'BG_ID'}>
           Group Name<span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
-        <input id={'BG_ID'} name={'BG_ID'} type={'text'} className={'erp-form-control erp-readonly'} value={groupName} readOnly aria-invalid={Boolean(errors.BG_ID)} aria-describedby={errors.BG_ID ? 'BG_ID-error' : undefined} />
+        <select
+          id={'BG_ID'}
+          name={'BG_ID'}
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          disabled={groupsLoading}
+          aria-invalid={Boolean(errors.BG_ID)}
+          aria-describedby={errors.BG_ID ? 'BG_ID-error' : undefined}
+          onChange={onChange}
+        >
+          <option value={''}>
+            {groupsLoading ? 'Loading Group Names...' : '--Select Group Name--'}
+          </option>
+          {groupOptions.map((group) => (
+            <option key={group.value} value={group.value}>
+              {group.label}
+            </option>
+          ))}
+        </select>
         <FieldError id={'BG_ID-error'} message={errors.BG_ID} />
       </div>
 

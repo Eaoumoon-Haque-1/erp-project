@@ -4,6 +4,8 @@
  * Changing this file can affect many features; keep props backward-compatible when possible.
  */
 import { useMemo, useState } from 'react'
+import { getEntityNameFromTitle } from './actionAlerts'
+import ListActionContext from './ListActionContext'
 import PageHeader from './PageHeader'
 
 /**
@@ -22,7 +24,6 @@ function ListPage({
   rowKey = 'ID',
   renderActions,
   loading = false,
-  message = '',
 }) {
   const [query, setQuery] = useState('')
   const [filterValues, setFilterValues] = useState({})
@@ -72,15 +73,11 @@ function ListPage({
   }
 
   return (
+    <ListActionContext.Provider value={getEntityNameFromTitle(title)}>
     <div className={'erp-list-page'}>
       <PageHeader title={title} actionLabel={createLabel} actionTo={createTo} />
 
       <section className={'erp-form-card'}>
-      {message && (
-        <p className={'erp-form-message'} role={'status'}>
-          {message}
-        </p>
-      )}
       {/* Filters render as selects when options exist, otherwise as search inputs. */}
       {filters.length > 0 && (
         <div className={'erp-list-filters'}>
@@ -214,6 +211,7 @@ function ListPage({
           </div>
         </div>
     </div>
+    </ListActionContext.Provider>
   )
 }
 

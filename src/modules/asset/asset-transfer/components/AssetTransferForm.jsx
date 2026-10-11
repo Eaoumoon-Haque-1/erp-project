@@ -75,6 +75,16 @@ function AssetTransferForm({ values, errors, references, onChange }) {
     <>
       <Section title={'Asset Information'}>
         <SelectField name={'ASSET_ASSIGNMENT_ID'} label={'Asset Item Name & ID'} values={values} errors={errors} options={references.transferableAssets} placeholder={'--Select Assigned Asset--'} onChange={onChange} />
+        <div>
+          <label className={'erp-field-label'} htmlFor={'TO_ASSIGN_DATE'}>Transfer Date<span className={'erp-required'} aria-hidden={'true'}>*</span></label>
+          <DateInput id={'TO_ASSIGN_DATE'} name={'TO_ASSIGN_DATE'} className={controlClass(errors.TO_ASSIGN_DATE)} value={values.TO_ASSIGN_DATE} min={values.FROM_ASSIGN_DATE} required aria-invalid={Boolean(errors.TO_ASSIGN_DATE)} aria-describedby={errors.TO_ASSIGN_DATE ? 'TO_ASSIGN_DATE-error' : undefined} onChange={onChange} />
+          <FieldError name={'TO_ASSIGN_DATE'} message={errors.TO_ASSIGN_DATE} />
+        </div>
+        <div>
+          <label className={'erp-field-label'} htmlFor={'EXPECTED_RETURN_DATE'}>Expected Return Date</label>
+          <DateInput id={'EXPECTED_RETURN_DATE'} name={'EXPECTED_RETURN_DATE'} className={controlClass(errors.EXPECTED_RETURN_DATE)} value={values.EXPECTED_RETURN_DATE} min={values.TO_ASSIGN_DATE} aria-invalid={Boolean(errors.EXPECTED_RETURN_DATE)} aria-describedby={errors.EXPECTED_RETURN_DATE ? 'EXPECTED_RETURN_DATE-error' : undefined} onChange={onChange} />
+          <FieldError name={'EXPECTED_RETURN_DATE'} message={errors.EXPECTED_RETURN_DATE} />
+        </div>
       </Section>
 
       <Section title={'Before Asset Transfer'}>
@@ -98,11 +108,6 @@ function AssetTransferForm({ values, errors, references, onChange }) {
         <ReadOnlyField name={'TO_BUILDING'} label={'To Building'} values={values} errors={errors} />
         <ReadOnlyField name={'TO_FLOOR'} label={'To Floor'} values={values} errors={errors} />
         <ReadOnlyField name={'TO_ROOM'} label={'To Room'} values={values} errors={errors} />
-        <div>
-          <label className={'erp-field-label'} htmlFor={'TO_ASSIGN_DATE'}>To Assign Date<span className={'erp-required'} aria-hidden={'true'}>*</span></label>
-          <DateInput id={'TO_ASSIGN_DATE'} name={'TO_ASSIGN_DATE'} className={controlClass(errors.TO_ASSIGN_DATE)} value={values.TO_ASSIGN_DATE} min={values.FROM_ASSIGN_DATE} required aria-invalid={Boolean(errors.TO_ASSIGN_DATE)} aria-describedby={errors.TO_ASSIGN_DATE ? 'TO_ASSIGN_DATE-error' : undefined} onChange={onChange} />
-          <FieldError name={'TO_ASSIGN_DATE'} message={errors.TO_ASSIGN_DATE} />
-        </div>
         <SelectField name={'TO_CONDITION_ON_ISSUE'} label={'To Condition on Issue'} values={values} errors={errors} options={references.conditions} placeholder={'--Select Condition--'} onChange={onChange} />
         <div className={'erp-asset-remarks-field'}>
           <label className={'erp-field-label'} htmlFor={'TO_REMARKS'}>To Remarks{remarksRequired && <span className={'erp-required'} aria-hidden={'true'}>*</span>}</label>

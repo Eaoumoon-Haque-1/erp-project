@@ -5,8 +5,8 @@
  */
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { modulesApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { modulesApi } from '../api/moduleApi'
+import { applyApiFormErrors } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import ModuleForm from '../components/ModuleForm'
 import { mapModuleToApi } from '../data/moduleApiMapper'
@@ -51,7 +51,7 @@ function ModuleCreate() {
       await modulesApi.create(mapModuleToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to create Module.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Module.'))
     } finally {
       setSubmitting(false)
     }

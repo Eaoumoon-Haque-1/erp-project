@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ActionForm from "../../../../components/shared/ActionForm";
 import PageHeader from "../../../../components/shared/PageHeader";
 import EmployeeInformationForm from "../components/EmployeeInformationForm";
 import {
@@ -279,7 +280,8 @@ function EmployeeInformationCreate() {
         actionLabel={"List"}
         actionTo={"/hris/hris-forms/employee-information"}
       />
-      <form
+      <ActionForm
+        entityName={"Employee Information"}
         data-table={EMPLOYEE_TABLE}
         onSubmit={handleSubmit}
         onReset={handleReset}
@@ -308,7 +310,7 @@ function EmployeeInformationCreate() {
             </button>
           </div>
         </section>
-      </form>
+      </ActionForm>
     </div>
   );
 }

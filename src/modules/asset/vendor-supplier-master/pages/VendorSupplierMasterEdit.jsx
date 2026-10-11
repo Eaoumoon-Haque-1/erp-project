@@ -1,4 +1,4 @@
-/** @file Edit-page controller for temporary Vendor / Supplier records. */
+/** @file Edit-page controller for temporary Supplier Information records. */
 import { useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
@@ -6,7 +6,7 @@ import VendorSupplierMasterForm from '../components/VendorSupplierMasterForm'
 import { getVendorSupplier, listVendorSuppliers, updateVendorSupplier } from '../data/vendorSupplierMasterStore'
 import { ASSET_VENDOR_TABLE, validateVendorSupplier } from '../validation/vendorSupplierMasterValidation'
 
-const listPath = '/asset/vendor-supplier-master'
+const listPath = '/procure-to-pay/procurement-settings/supplier-information'
 
 function VendorSupplierMasterEdit() {
   const { vendorSupplierId } = useParams()
@@ -48,7 +48,7 @@ function VendorSupplierMasterEdit() {
   }
 
   return (
-    <FormPage title={'Vendor / Supplier Master Edit'} listTo={listPath} tableName={ASSET_VENDOR_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset}>
+    <FormPage title={'Supplier Information Edit'} listTo={listPath} tableName={ASSET_VENDOR_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset}>
       <VendorSupplierMasterForm values={values} errors={errors} vendorNameRef={vendorNameRef} onChange={handleChange} />
     </FormPage>
   )

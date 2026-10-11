@@ -27,7 +27,6 @@ function AssetReturnEmployeeList() {
   ], [rows])
   const refresh = () => setRows(listAssetReturns())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete return for "${row.ASSET_NO}"?`)) return
     removeAssetReturn(row.ID)
     refresh()
   }

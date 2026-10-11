@@ -1,7 +1,7 @@
 /** @file API-backed Chart of Accounts list with CRUD and status actions. */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { chartOfAccountsApi } from '../../../../api/endpoints'
+import { chartOfAccountsApi } from '../api/chartOfAccountsApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -41,7 +41,6 @@ function ChartOfAccountsList() {
   }, [])
 
   const remove = async (row) => {
-    if (!window.confirm(`Delete account "${row.ACCOUNT_HEAD}"?`)) return
     try { await chartOfAccountsApi.remove(row.ID); await loadRows() }
     catch (error) { setMessage(getApiErrorMessage(error, 'Unable to delete account.')) }
   }
@@ -51,7 +50,7 @@ function ChartOfAccountsList() {
     catch (error) { setMessage(getApiErrorMessage(error, 'Unable to change account status.')) }
   }
 
-  return <ListPage title={'Chart of Accounts List'} createLabel={'New'} createTo={'/accounts/chart-of-accounts/create'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/accounts/chart-of-accounts/${row.ID}/edit`)} onDelete={remove} onStatusChange={toggle} />} />
+  return <ListPage title={'Chart of Accounts List'} createLabel={'New'} createTo={'/accounts/chart-of-accounts/create'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => <ListRowActions row={row} onView={() => navigate(`/accounts/chart-of-accounts/${row.ID}/view`)} onEdit={() => navigate(`/accounts/chart-of-accounts/${row.ID}/edit`)} onDelete={remove} onStatusChange={toggle} />} />
 }
 
 export default ChartOfAccountsList

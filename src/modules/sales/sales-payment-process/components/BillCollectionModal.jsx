@@ -4,6 +4,7 @@
  * Keep open/close behavior accessible and place future API mutations in the owning workflow.
  */
 import { useRef, useState } from 'react'
+import ActionForm from '../../../../components/shared/ActionForm'
 import AutoGrowTextarea from '../../../../components/shared/AutoGrowTextarea'
 import Modal from '../../../../components/shared/Modal'
 import {
@@ -65,7 +66,7 @@ function BillCollectionModal({ open, payment, businessUnitName, onClose, onSave 
       onClose={onClose}
       panelClassName={'erp-bill-collection-modal'}
     >
-      <form data-table={BILL_COLLECTION_TABLE} onSubmit={handleSubmit} noValidate>
+      <ActionForm entityName={'Bill Collection'} data-table={BILL_COLLECTION_TABLE} onSubmit={handleSubmit} noValidate>
         <div className={'erp-bill-collection-grid'}>
           <div>
             <Label htmlFor={'BILL_COLLECTION_BU_ID'} required>Business Unit</Label>
@@ -171,7 +172,7 @@ function BillCollectionModal({ open, payment, businessUnitName, onClose, onSave 
           <button type={'button'} className={'secondary-button'} onClick={onClose}>Cancel</button>
           <button type={'submit'} className={'primary-button'}>Save</button>
         </div>
-      </form>
+      </ActionForm>
     </Modal>
   )
 }

@@ -55,7 +55,6 @@ function CustodianList() {
   const refresh = () => setRows(toListRows(listCustodians()))
 
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Custodian "${row.CUSTODIAN_NAME}"?`)) return
     removeCustodian(row.ID)
     refresh()
   }

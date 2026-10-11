@@ -25,7 +25,7 @@ function AssetRepairList() {
     { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
   ], [])
   const refresh = () => setRows(listAssetRepairs())
-  const handleDelete = (row) => { if (!window.confirm(`Delete repair record for "${row.ASSET_NO}"?`)) return; removeAssetRepair(row.ID); refresh() }
+  const handleDelete = (row) => { removeAssetRepair(row.ID); refresh() }
   const handleStatusChange = (row) => { updateAssetRepair(row.ID, { ...row, STATUS: row.STATUS === '1' ? '0' : '1' }); refresh() }
   return <ListPage title={'Asset Repair List'} createLabel={'New'} createTo={'/asset/asset-repair/create'} filters={filters} columns={columns} rows={rows} renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/asset/asset-repair/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />} />
 }

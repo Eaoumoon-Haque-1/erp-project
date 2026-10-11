@@ -54,7 +54,6 @@ function AssetGroupList() {
   ], [rows])
 
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete Asset Group "${row.ASSET_GROUP}"?`)) return
     removeAssetGroup(row.ID)
     setRows(listAssetGroups())
   }

@@ -15,6 +15,5 @@ export function updateAssetReturnField(current, name, value, references) {
     EMPLOYEE_NAME: assignment?.EMPLOYEE_NAME || employee?.name || '',
     EMPLOYEE_ID: employee?.employeeId || '',
     ASSET_DATE: assignment?.ASSET_DATE || '',
-    EXPECTED_RETURN_DATE: assignment?.EXPECTED_RETURN_DATE || '',
   }
 }

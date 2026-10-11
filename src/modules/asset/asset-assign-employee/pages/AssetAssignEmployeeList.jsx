@@ -34,7 +34,6 @@ function AssetAssignEmployeeList() {
 
   const refresh = () => setRows(listAssetAssignments())
   const handleDelete = (row) => {
-    if (!window.confirm(`Delete assignment for "${row.ASSET_NO}"?`)) return
     removeAssetAssignment(row.ID)
     refresh()
   }

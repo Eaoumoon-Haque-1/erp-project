@@ -5,24 +5,30 @@
  */
 import { Outlet } from "react-router-dom";
 import RequireRole from "../../components/auth/RequireRole";
-import BusinessGroupCreate from "../hris/business-group/pages/BusinessGroupCreate";
-import BusinessGroupEdit from "../hris/business-group/pages/BusinessGroupEdit";
-import BusinessGroupList from "../hris/business-group/pages/BusinessGroupList";
-import BusinessUnitCreate from "../hris/business-unit/pages/BusinessUnitCreate";
-import BusinessUnitEdit from "../hris/business-unit/pages/BusinessUnitEdit";
-import BusinessUnitList from "../hris/business-unit/pages/BusinessUnitList";
+import BusinessGroupCreate from "./business-group/pages/BusinessGroupCreate";
+import BusinessGroupEdit from "./business-group/pages/BusinessGroupEdit";
+import BusinessGroupList from "./business-group/pages/BusinessGroupList";
+import BusinessGroupView from "./business-group/pages/BusinessGroupView";
+import BusinessUnitCreate from "./business-unit/pages/BusinessUnitCreate";
+import BusinessUnitEdit from "./business-unit/pages/BusinessUnitEdit";
+import BusinessUnitList from "./business-unit/pages/BusinessUnitList";
+import BusinessUnitView from "./business-unit/pages/BusinessUnitView";
 import ModuleCreate from "./module/pages/ModuleCreate";
 import ModuleEdit from "./module/pages/ModuleEdit";
 import ModuleList from "./module/pages/ModuleList";
+import ModuleView from "./module/pages/ModuleView";
 import MenuPermissionCreate from "./menu-permission/pages/MenuPermissionCreate";
 import MenuPermissionEdit from "./menu-permission/pages/MenuPermissionEdit";
 import MenuPermissionList from "./menu-permission/pages/MenuPermissionList";
+import MenuPermissionView from "./menu-permission/pages/MenuPermissionView";
 import CreateMenuCreate from "./create-menu/pages/CreateMenuCreate";
 import CreateMenuEdit from "./create-menu/pages/CreateMenuEdit";
 import CreateMenuList from "./create-menu/pages/CreateMenuList";
+import CreateMenuView from "./create-menu/pages/CreateMenuView";
 import RoleList from "./role/pages/RoleList";
 import RoleCreate from "./role/pages/RoleCreate";
 import RoleEdit from "./role/pages/RoleEdit";
+import RoleView from "./role/pages/RoleView";
 import AssignRoleBusinessUnitList from "./assign-role-business-unit/pages/AssignRoleBusinessUnitList";
 import AssignRoleBusinessUnitCreate from "./assign-role-business-unit/pages/AssignRoleBusinessUnitCreate";
 import MenuAssignRoleList from "./menu-assign-role/pages/MenuAssignRoleList";
@@ -30,12 +36,14 @@ import MenuAssignRoleCreate from "./menu-assign-role/pages/MenuAssignRoleCreate"
 import UserTypeList from "./user-type/pages/UserTypeList";
 import UserTypeCreate from "./user-type/pages/UserTypeCreate";
 import UserTypeEdit from "./user-type/pages/UserTypeEdit";
+import UserTypeView from "./user-type/pages/UserTypeView";
 import UserTypeGroupList from "./user-type-group/pages/UserTypeGroupList";
 import UserTypeGroupCreate from "./user-type-group/pages/UserTypeGroupCreate";
 import UserTypeGroupEdit from "./user-type-group/pages/UserTypeGroupEdit";
 import UserList from "./user/pages/UserList";
 import UserCreate from "./user/pages/UserCreate";
 import UserEdit from "./user/pages/UserEdit";
+import UserView from "./user/pages/UserView";
 import UserCreateSelfServiceList from "./user-create-self-service/pages/UserCreateSelfServiceList";
 import LeaveAllocationList from "./leave-allocation/pages/LeaveAllocationList";
 import LeaveAllocationCreate from "./leave-allocation/pages/LeaveAllocationCreate";
@@ -66,6 +74,10 @@ export const superAdminRoutes = [
         element: <BusinessGroupEdit />,
       },
       {
+        path: "business-group/:businessGroupId/view",
+        element: <BusinessGroupView />,
+      },
+      {
         path: "business-unit",
         element: <BusinessUnitList />,
       },
@@ -76,6 +88,10 @@ export const superAdminRoutes = [
       {
         path: "business-unit/:businessUnitId/edit",
         element: <BusinessUnitEdit />,
+      },
+      {
+        path: "business-unit/:businessUnitId/view",
+        element: <BusinessUnitView />,
       },
       {
         path: "menu-creation/module",
@@ -90,6 +106,10 @@ export const superAdminRoutes = [
         element: <ModuleEdit />,
       },
       {
+        path: "menu-creation/module/:moduleId/view",
+        element: <ModuleView />,
+      },
+      {
         path: "menu-creation/menu-permission",
         element: <MenuPermissionList />,
       },
@@ -100,6 +120,10 @@ export const superAdminRoutes = [
       {
         path: "menu-creation/menu-permission/:permissionId/edit",
         element: <MenuPermissionEdit />,
+      },
+      {
+        path: "menu-creation/menu-permission/:permissionId/view",
+        element: <MenuPermissionView />,
       },
       {
         path: "menu-creation/create-menu",
@@ -114,6 +138,10 @@ export const superAdminRoutes = [
         element: <CreateMenuEdit />,
       },
       {
+        path: "menu-creation/create-menu/:menuId/view",
+        element: <CreateMenuView />,
+      },
+      {
         path: "role-creation/role",
         element: <RoleList />,
       },
@@ -124,6 +152,10 @@ export const superAdminRoutes = [
       {
         path: "role-creation/role/:roleId/edit",
         element: <RoleEdit />,
+      },
+      {
+        path: "role-creation/role/:roleId/view",
+        element: <RoleView />,
       },
       {
         path: "role-creation/assign-role-business-unit",
@@ -166,6 +198,10 @@ export const superAdminRoutes = [
         element: <UserTypeEdit />,
       },
       {
+        path: "user-creation/user-type/:userTypeId/view",
+        element: <UserTypeView />,
+      },
+      {
         path: "user-creation/user-type-group",
         element: <UserTypeGroupList />,
       },
@@ -188,6 +224,10 @@ export const superAdminRoutes = [
       {
         path: "user-creation/user/:userId/edit",
         element: <UserEdit />,
+      },
+      {
+        path: "user-creation/user/:userId/view",
+        element: <UserView />,
       },
       {
         path: "user-creation/user-create-self-service",

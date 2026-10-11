@@ -1,8 +1,10 @@
 /** @file API-backed Menu edit page with Module-dependent lookup options. */
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { menusApi, modulesApi, permissionsApi } from '../../../../api/endpoints'
-import { getApiErrorMessage } from '../../../../api/errors'
+import { permissionsApi } from '../../menu-permission/api/menuPermissionApi'
+import { modulesApi } from '../../module/api/moduleApi'
+import { menusApi } from '../api/menuApi'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import CreateMenuForm from '../components/CreateMenuForm'
 import { mapMenuFromApi, mapMenuToApi } from '../data/menuApiMapper'
@@ -27,7 +29,7 @@ function CreateMenuEdit() {
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const loadDependencies = async (moduleId) => {
+  const loadDependencies = useCallback(async (moduleId) => {
     if (!moduleId) {
       setParentMenuOptions([])
       setPermissionOptions([])
@@ -39,7 +41,10 @@ function CreateMenuEdit() {
     ])
     setParentMenuOptions(
       menus
-        .filter((menu) => String(menu.id) !== String(menuId))
+        .filter(
+          (menu) =>
+            String(menu.id) !== String(menuId) && Number(menu.isParent) === 1,
+        )
         .map((menu) => ({ value: String(menu.id), label: menu.menuName })),
     )
     setPermissionOptions(
@@ -48,7 +53,7 @@ function CreateMenuEdit() {
         label: permission.permissionName,
       })),
     )
-  }
+  }, [menuId])
 
   useEffect(() => {
     let active = true
@@ -72,7 +77,7 @@ function CreateMenuEdit() {
     return () => {
       active = false
     }
-  }, [menuId])
+  }, [loadDependencies, menuId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -81,13 +86,34 @@ function CreateMenuEdit() {
       ...current,
       [name]: nextValue,
       ...(name === 'MODULE_ID'
-        ? { PARENT_MENU_ID: '', PERMISSION_ID: '' }
+        ? { PARENT_MENU_ID: '', PERMISSION_ID: [] }
         : {}),
       ...(name === 'IS_TOP_MENU' && nextValue === '1'
-        ? { PARENT_MENU_ID: '' }
+        ? { PARENT_MENU_ID: '', ROUTE_NAME: '#' }
+        : {}),
+      ...(name === 'IS_TOP_MENU' && nextValue === '0'
+        ? {
+            IS_PARENT: '0',
+            PARENT_MENU_ID: '',
+            MODULE_ID: '',
+            PERMISSION_ID: [],
+            ROUTE_NAME: '',
+          }
         : {}),
     }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
+    setErrors((current) => ({
+      ...current,
+      [name]: undefined,
+      ...(name === 'IS_TOP_MENU'
+        ? {
+            IS_PARENT: undefined,
+            PARENT_MENU_ID: undefined,
+            MODULE_ID: undefined,
+            PERMISSION_ID: undefined,
+            ROUTE_NAME: undefined,
+          }
+        : {}),
+    }))
     if (name === 'MODULE_ID') {
       loadDependencies(nextValue).catch((error) =>
         setMessage(
@@ -95,6 +121,11 @@ function CreateMenuEdit() {
         ),
       )
     }
+  }
+
+  const handlePermissionChange = (name, value) => {
+    setValues((current) => ({ ...current, [name]: value }))
+    setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
   const handleSubmit = async (event) => {
@@ -110,7 +141,7 @@ function CreateMenuEdit() {
       await menusApi.update(menuId, mapMenuToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to update Menu.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Menu.'))
     } finally {
       setSubmitting(false)
     }
@@ -143,6 +174,7 @@ function CreateMenuEdit() {
         parentMenuOptions={parentMenuOptions}
         permissionOptions={permissionOptions}
         onChange={handleChange}
+        onPermissionChange={handlePermissionChange}
       />
     </FormPage>
   )

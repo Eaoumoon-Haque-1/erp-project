@@ -5,6 +5,9 @@ import AssetGroupList from './asset-group/pages/AssetGroupList'
 import AssetAssignEmployeeCreate from './asset-assign-employee/pages/AssetAssignEmployeeCreate'
 import AssetAssignEmployeeEdit from './asset-assign-employee/pages/AssetAssignEmployeeEdit'
 import AssetAssignEmployeeList from './asset-assign-employee/pages/AssetAssignEmployeeList'
+import AssetAuditCreate from './asset-audit/pages/AssetAuditCreate'
+import AssetAuditEdit from './asset-audit/pages/AssetAuditEdit'
+import AssetAuditList from './asset-audit/pages/AssetAuditList'
 import AssetDisposalCreate from './asset-disposal-retirement/pages/AssetDisposalCreate'
 import AssetDisposalEdit from './asset-disposal-retirement/pages/AssetDisposalEdit'
 import AssetDisposalList from './asset-disposal-retirement/pages/AssetDisposalList'
@@ -47,9 +50,9 @@ import LocationMasterList from './location-master/pages/LocationMasterList'
 import MaintenanceAmcCreate from './maintenance-amc/pages/MaintenanceAmcCreate'
 import MaintenanceAmcEdit from './maintenance-amc/pages/MaintenanceAmcEdit'
 import MaintenanceAmcList from './maintenance-amc/pages/MaintenanceAmcList'
-import VendorSupplierMasterCreate from './vendor-supplier-master/pages/VendorSupplierMasterCreate'
-import VendorSupplierMasterEdit from './vendor-supplier-master/pages/VendorSupplierMasterEdit'
-import VendorSupplierMasterList from './vendor-supplier-master/pages/VendorSupplierMasterList'
+import GatePassCreate from './gate-pass/pages/GatePassCreate'
+import GatePassEdit from './gate-pass/pages/GatePassEdit'
+import GatePassList from './gate-pass/pages/GatePassList'
 
 export const assetRoutes = [
   { path: 'asset/asset-assign-to-employee', element: <AssetAssignEmployeeList /> },
@@ -67,6 +70,9 @@ export const assetRoutes = [
   { path: 'asset/asset-disposal-retirement', element: <AssetDisposalList /> },
   { path: 'asset/asset-disposal-retirement/create', element: <AssetDisposalCreate /> },
   { path: 'asset/asset-disposal-retirement/:disposalId/edit', element: <AssetDisposalEdit /> },
+  { path: 'asset/asset-audit', element: <AssetAuditList /> },
+  { path: 'asset/asset-audit/create', element: <AssetAuditCreate /> },
+  { path: 'asset/asset-audit/:assetAuditId/edit', element: <AssetAuditEdit /> },
   { path: 'asset/asset-repair', element: <AssetRepairList /> },
   { path: 'asset/asset-repair/create', element: <AssetRepairCreate /> },
   { path: 'asset/asset-repair/:repairId/edit', element: <AssetRepairEdit /> },
@@ -91,9 +97,6 @@ export const assetRoutes = [
   { path: 'asset/location-master', element: <LocationMasterList /> },
   { path: 'asset/location-master/create', element: <LocationMasterCreate /> },
   { path: 'asset/location-master/:locationMasterId/edit', element: <LocationMasterEdit /> },
-  { path: 'asset/vendor-supplier-master', element: <VendorSupplierMasterList /> },
-  { path: 'asset/vendor-supplier-master/create', element: <VendorSupplierMasterCreate /> },
-  { path: 'asset/vendor-supplier-master/:vendorSupplierId/edit', element: <VendorSupplierMasterEdit /> },
   { path: 'asset/asset-lookup-type', element: <AssetLookupTypeList /> },
   { path: 'asset/asset-lookup-type/create', element: <AssetLookupTypeCreate /> },
   { path: 'asset/asset-lookup-type/:assetLookupTypeId/edit', element: <AssetLookupTypeEdit /> },
@@ -103,5 +106,8 @@ export const assetRoutes = [
   { path: 'asset/depreciation-category', element: <DepreciationCategoryList /> },
   { path: 'asset/depreciation-category/create', element: <DepreciationCategoryCreate /> },
   { path: 'asset/depreciation-category/:depreciationCategoryId/edit', element: <DepreciationCategoryEdit /> },
+  { path: 'asset/gate-pass', element: <GatePassList /> },
+  { path: 'asset/gate-pass/create', element: <GatePassCreate /> },
+  { path: 'asset/gate-pass/:gatePassId/edit', element: <GatePassEdit /> },
 ]
 
