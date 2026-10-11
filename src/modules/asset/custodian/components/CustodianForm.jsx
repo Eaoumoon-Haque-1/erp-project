@@ -1,4 +1,6 @@
 /** @file Controlled Custodian form with repeatable ASSET_CUSTODIAN_DTL rows. */
+import { isRequired } from '../../../../config/devFlags'
+
 function FieldError({ id, message }) {
   return message ? <p id={id} className={'erp-field-error'}>{message}</p> : null
 }
@@ -65,7 +67,7 @@ function CustodianForm({
 
         <div>
           <label className={'erp-field-label'} htmlFor={'CUSTODIAN_NAME'}>
-            Custodian Name<span className={'erp-required'} aria-hidden={'true'}>*</span>
+            Custodian Name{isRequired() && <span className={'erp-required'} aria-hidden={'true'}>*</span>}
           </label>
           <input
             ref={custodianNameRef}
@@ -77,7 +79,7 @@ function CustodianForm({
             minLength={2}
             maxLength={100}
             placeholder={'Enter custodian name'}
-            required
+            required={isRequired()}
             aria-invalid={Boolean(errors.CUSTODIAN_NAME)}
             aria-describedby={errors.CUSTODIAN_NAME ? 'CUSTODIAN_NAME-error' : undefined}
             onChange={onChange}

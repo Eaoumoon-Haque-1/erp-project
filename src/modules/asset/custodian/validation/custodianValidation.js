@@ -3,6 +3,7 @@
  * The backend remains the source of truth; these rules only give early feedback.
  * Errors: { BU_ID, CUSTODIAN_NAME, subRows: { [_ROW_ID]: message } }.
  */
+import { isRequired } from '../../../../config/devFlags'
 import { custodianBusinessGroup } from '../data/custodianScope'
 
 export const ASSET_CUSTODIAN_TABLE = 'ASSET_CUSTODIAN'
@@ -19,7 +20,8 @@ const sameName = (a, b) => normalizeName(a).toLowerCase() === normalizeName(b).t
 
 function validateName(value, label) {
   const name = normalizeName(value)
-  if (!name) return `${label} is required.`
+  // RELAX_REQUIRED: an empty name is allowed; length checks run only when entered.
+  if (!name) return isRequired() ? `${label} is required.` : ''
   if (name.length < 2) return `${label} must be at least 2 characters.`
   if (name.length > 100) return `${label} must not exceed 100 characters.`
   return ''
@@ -35,10 +37,10 @@ export function validateSubCustodianRows(rows, custodianName) {
 
   normalizedRows.forEach((row, index) => {
     let message = validateName(row.SUB_CUSTODIAN_NAME, 'Sub Custodian Name')
-    if (!message && normalizeName(custodianName) && sameName(row.SUB_CUSTODIAN_NAME, custodianName)) {
+    if (!message && row.SUB_CUSTODIAN_NAME && normalizeName(custodianName) && sameName(row.SUB_CUSTODIAN_NAME, custodianName)) {
       message = 'Sub Custodian Name cannot match the Custodian Name.'
     }
-    if (!message && normalizedRows.some((other, otherIndex) => (
+    if (!message && row.SUB_CUSTODIAN_NAME && normalizedRows.some((other, otherIndex) => (
       otherIndex !== index && sameName(other.SUB_CUSTODIAN_NAME, row.SUB_CUSTODIAN_NAME)
     ))) {
       message = 'This Sub Custodian Name is duplicated.'

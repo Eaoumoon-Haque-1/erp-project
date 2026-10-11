@@ -1,50 +1,64 @@
 /** @file Create-page controller for Supplier Information. */
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { suppliersApi } from '../../../../api/supplier'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import VendorSupplierMasterForm from '../components/VendorSupplierMasterForm'
-import { createVendorSupplier, listVendorSuppliers } from '../data/vendorSupplierMasterStore'
-import { ASSET_VENDOR_TABLE, initialVendorSupplierValues, validateVendorSupplier } from '../validation/vendorSupplierMasterValidation'
+import { mapSupplierToApi } from '../data/vendorSupplierMasterApiMapper'
+import { supplierBusinessGroup } from '../data/vendorSupplierMasterScope'
+import useSupplierForm from '../data/useSupplierForm'
+import { SUPPLIER_TABLE, createInitialSupplierValues } from '../validation/vendorSupplierMasterValidation'
 
 const listPath = '/procure-to-pay/procurement-settings/supplier-information'
 
 function VendorSupplierMasterCreate() {
   const navigate = useNavigate()
-  const vendorNameRef = useRef(null)
-  const [values, setValues] = useState(initialVendorSupplierValues)
-  const [errors, setErrors] = useState({})
+  const supplierNameRef = useRef(null)
+  const [submitting, setSubmitting] = useState(false)
+  const form = useSupplierForm(createInitialSupplierValues())
+  const { businessUnitOptions, unitsLoading } = useBusinessOptions(supplierBusinessGroup.ID)
 
-  const handleChange = (event) => {
-    const { name, type, value, checked } = event.target
-    setValues((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
-    }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
-  }
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateVendorSupplier(values, listVendorSuppliers())
-    setValues(result.values)
-    setErrors(result.errors)
-    if (!result.isValid) {
-      requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
-      return
+    const result = form.validate()
+    if (!result.isValid) return
+
+    setSubmitting(true)
+    try {
+      await suppliersApi.create(mapSupplierToApi(result.values))
+      navigate(listPath)
+    } catch (error) {
+      await form.failWithApiError(error, 'Unable to create Supplier.')
+    } finally {
+      setSubmitting(false)
     }
-    createVendorSupplier(result.values)
-    navigate(listPath)
   }
 
   const handleReset = () => {
-    setValues(initialVendorSupplierValues)
-    setErrors({})
-    requestAnimationFrame(() => vendorNameRef.current?.focus())
+    form.reset(createInitialSupplierValues())
+    requestAnimationFrame(() => supplierNameRef.current?.focus())
   }
 
   return (
-    <FormPage title={'Supplier Information Create'} listTo={listPath} tableName={ASSET_VENDOR_TABLE} onSubmit={handleSubmit} onReset={handleReset}>
-      <VendorSupplierMasterForm values={values} errors={errors} vendorNameRef={vendorNameRef} onChange={handleChange} />
+    <FormPage
+      title={'Supplier Information Create'}
+      listTo={listPath}
+      tableName={SUPPLIER_TABLE}
+      onSubmit={handleSubmit}
+      onValidate={() => form.validate().isValid}
+      onReset={handleReset}
+      submitting={submitting}
+    >
+      <VendorSupplierMasterForm
+        values={form.values}
+        errors={form.errors}
+        groupName={supplierBusinessGroup.GROUP_NAME}
+        businessUnitOptions={businessUnitOptions}
+        unitsLoading={unitsLoading}
+        supplierNameRef={supplierNameRef}
+        onChange={form.handleChange}
+      />
     </FormPage>
   )
 }
