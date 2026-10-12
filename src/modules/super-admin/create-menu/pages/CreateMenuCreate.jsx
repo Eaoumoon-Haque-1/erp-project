@@ -91,16 +91,16 @@ function CreateMenuCreate() {
         ? { PARENT_MENU_ID: '', PERMISSION_ID: [] }
         : {}),
       ...(name === 'IS_TOP_MENU' && nextValue === '1'
-        ? { PARENT_MENU_ID: '', ROUTE_NAME: '#' }
-        : {}),
-      ...(name === 'IS_TOP_MENU' && nextValue === '0'
         ? {
             IS_PARENT: '0',
             PARENT_MENU_ID: '',
             MODULE_ID: '',
             PERMISSION_ID: [],
-            ROUTE_NAME: '',
+            ROUTE_NAME: '#',
           }
+        : {}),
+      ...(name === 'IS_TOP_MENU' && nextValue === '0'
+        ? { ROUTE_NAME: '' }
         : {}),
     }))
     setErrors((current) => ({

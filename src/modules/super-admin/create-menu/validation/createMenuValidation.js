@@ -35,13 +35,11 @@ export function validateMenu(values, existingMenuNames = []) {
   const errors = {}
 
   if (normalizedValues.IS_TOP_MENU === '1') {
-    normalizedValues.ROUTE_NAME = '#'
-  } else {
     normalizedValues.IS_PARENT = '0'
     normalizedValues.PARENT_MENU_ID = ''
     normalizedValues.MODULE_ID = ''
     normalizedValues.PERMISSION_ID = []
-    normalizedValues.ROUTE_NAME = ''
+    normalizedValues.ROUTE_NAME = '#'
   }
 
   if (!normalizedValues.MENU_NAME) {
@@ -56,8 +54,22 @@ export function validateMenu(values, existingMenuNames = []) {
     errors.MENU_NAME = 'Menu Name must be unique.'
   }
 
-  if (normalizedValues.IS_TOP_MENU === '1' && !normalizedValues.MODULE_ID) {
-    errors.MODULE_ID = 'Module Name is required.'
+  if (normalizedValues.IS_TOP_MENU === '0') {
+    if (!normalizedValues.MODULE_ID) {
+      errors.MODULE_ID = 'Module Name is required.'
+    }
+
+    if (normalizedValues.PERMISSION_ID.length === 0) {
+      errors.PERMISSION_ID = 'Select at least one Permission.'
+    }
+
+    if (!normalizedValues.ROUTE_NAME) {
+      errors.ROUTE_NAME = 'Route Name is required.'
+    } else if (normalizedValues.ROUTE_NAME.length < 2) {
+      errors.ROUTE_NAME = 'Route Name must be at least 2 characters.'
+    } else if (normalizedValues.ROUTE_NAME.length > 100) {
+      errors.ROUTE_NAME = 'Route Name must not exceed 100 characters.'
+    }
   }
 
   if (normalizedValues.SORT_ORDER && !Number.isFinite(Number(normalizedValues.SORT_ORDER))) {

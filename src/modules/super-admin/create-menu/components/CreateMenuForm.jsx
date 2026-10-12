@@ -98,7 +98,7 @@ function CreateMenuForm({
       </div>
 
       <div className={'erp-menu-stacked-fields'}>
-        {isTopMenu && (
+        {!isTopMenu && (
           <>
             <RadioField
               name={'IS_PARENT'}
@@ -160,6 +160,7 @@ function CreateMenuForm({
               options={permissionOptions}
               value={values.PERMISSION_ID}
               error={errors.PERMISSION_ID}
+              required
               growWithContent
               onChange={onPermissionChange}
             />
@@ -173,11 +174,16 @@ function CreateMenuForm({
                 id={'ROUTE_NAME'}
                 name={'ROUTE_NAME'}
                 type={'text'}
-                className={'erp-form-control erp-readonly'}
-                value={'#'}
-                readOnly
-                aria-readonly={'true'}
+                className={fieldClass(errors.ROUTE_NAME)}
+                value={values.ROUTE_NAME}
+                maxLength={100}
+                placeholder={'Enter route name'}
+                required
+                aria-invalid={Boolean(errors.ROUTE_NAME)}
+                aria-describedby={errors.ROUTE_NAME ? 'ROUTE_NAME-error' : undefined}
+                onChange={onChange}
               />
+              <FieldError id={'ROUTE_NAME-error'} message={errors.ROUTE_NAME} />
             </div>
           </>
         )}
