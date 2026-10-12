@@ -1,112 +1,75 @@
-/** @file ASSET_VENDOR defaults and workbook validation rules. */
-export const ASSET_VENDOR_TABLE = 'ASSET_VENDOR'
+/**
+ * @file INV_SUPPLIER defaults and client validation (mirrors backend rules; the
+ * backend remains the source of truth, including uniqueness per Business Unit).
+ * Returned `values` are normalized: trimmed, phone without spaces/hyphens,
+ * email lowercase.
+ */
+import { isRequired } from '../../../../config/devFlags'
+import { supplierBusinessGroup } from '../data/vendorSupplierMasterScope'
 
-export const initialVendorSupplierValues = {
-  VENDOR_NAME: '',
-  VENDOR_CODE: '',
+export const SUPPLIER_TABLE = 'INV_SUPPLIER'
+
+export const createInitialSupplierValues = () => ({
+  BG_ID: supplierBusinessGroup.ID,
+  BU_ID: '',
+  SUPPLIER_NAME: '',
+  SUPPLIER_CODE: '',
   CONTACT_PERSON: '',
   PHONE: '',
   EMAIL: '',
-  COMPANY_TYPE: '',
   ADDRESS: '',
+  COMPANY_TYPE: '',
   TAX_ID: '',
   STATUS: '1',
+})
+
+const PHONE_PATTERN = /^\+?[0-9]{7,15}$/
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// [key, label, min, max, pattern, patternMessage, required]
+const TEXT_RULES = [
+  ['SUPPLIER_NAME', 'Supplier Name', 2, 150, null, '', true],
+  ['SUPPLIER_CODE', 'Supplier Code', 2, 30, /^[A-Za-z0-9_-]+$/,
+    'Supplier Code allows only letters, digits, hyphen and underscore.', true],
+  ['CONTACT_PERSON', 'Contact Person', 2, 100, /^[A-Za-z .'-]+$/,
+    'Contact Person allows only letters, spaces, dots, apostrophes and hyphens.', true],
+  ['PHONE', 'Phone', 7, 16, PHONE_PATTERN,
+    'Phone must have 7-15 digits and may start with +.', true],
+  ['EMAIL', 'Email', 5, 150, EMAIL_PATTERN, 'Enter a valid Email.', true],
+  ['ADDRESS', 'Address', 5, 255, null, '', true],
+  ['TAX_ID', 'Tax ID / BIN', 5, 50, /^[A-Za-z0-9-]+$/,
+    'Tax ID / BIN allows only letters, digits and hyphen.', true],
+  ['COMPANY_TYPE', 'Company Type', 0, 50, null, '', false],
+]
+
+function normalizeValue(key, raw) {
+  const value = String(raw ?? '').trim()
+  if (key === 'PHONE') return value.replace(/[\s-]/g, '')
+  if (key === 'EMAIL') return value.toLowerCase()
+  return value
 }
 
-function text(value) {
-  return String(value ?? '').trim()
-}
-
-function matchesExisting(records, key, value) {
-  const normalizedValue = text(value).toLowerCase()
-  return records.some((record) => text(record[key]).toLowerCase() === normalizedValue)
-}
-
-export function validateVendorSupplier(values, existingRecords = []) {
-  const normalized = {
-    VENDOR_NAME: text(values.VENDOR_NAME),
-    VENDOR_CODE: text(values.VENDOR_CODE),
-    CONTACT_PERSON: text(values.CONTACT_PERSON),
-    PHONE: text(values.PHONE).replace(/\s+/g, ' '),
-    EMAIL: text(values.EMAIL).toLowerCase(),
-    COMPANY_TYPE: text(values.COMPANY_TYPE),
-    ADDRESS: text(values.ADDRESS),
-    TAX_ID: text(values.TAX_ID),
-    STATUS: String(values.STATUS) === '0' ? '0' : '1',
-  }
+export function validateSupplier(values) {
+  const normalized = { ...values, STATUS: String(values.STATUS) === '0' ? '0' : '1' }
   const errors = {}
 
-  if (!normalized.VENDOR_NAME) {
-    errors.VENDOR_NAME = 'Supplier Name is required.'
-  } else if (normalized.VENDOR_NAME.length < 2) {
-    errors.VENDOR_NAME = 'Supplier Name must be at least 2 characters.'
-  } else if (normalized.VENDOR_NAME.length > 150) {
-    errors.VENDOR_NAME = 'Supplier Name must not exceed 150 characters.'
-  } else if (matchesExisting(existingRecords, 'VENDOR_NAME', normalized.VENDOR_NAME)) {
-    errors.VENDOR_NAME = 'This Supplier Name already exists.'
-  }
+  // Business Unit is always required: buId is needed to build the request.
+  if (!String(normalized.BU_ID ?? '')) errors.BU_ID = 'Business Unit is required.'
 
-  if (!normalized.VENDOR_CODE) {
-    errors.VENDOR_CODE = 'Supplier Code is required.'
-  } else if (normalized.VENDOR_CODE.length < 2) {
-    errors.VENDOR_CODE = 'Supplier Code must be at least 2 characters.'
-  } else if (normalized.VENDOR_CODE.length > 30) {
-    errors.VENDOR_CODE = 'Supplier Code must not exceed 30 characters.'
-  } else if (!/^[A-Za-z0-9_-]+$/.test(normalized.VENDOR_CODE)) {
-    errors.VENDOR_CODE = 'Use only letters, numbers, hyphens, and underscores.'
-  } else if (matchesExisting(existingRecords, 'VENDOR_CODE', normalized.VENDOR_CODE)) {
-    errors.VENDOR_CODE = 'This Supplier Code already exists.'
-  }
+  TEXT_RULES.forEach(([key, label, min, max, pattern, patternMessage, required]) => {
+    const value = normalizeValue(key, normalized[key])
+    normalized[key] = value
+    if (!value) {
+      // RELAX_REQUIRED: empty values are allowed; format/length checks run only when entered.
+      if (required && isRequired()) errors[key] = `${label} is required.`
+    } else if (value.length < min) {
+      errors[key] = key === 'PHONE' ? patternMessage : `${label} must be at least ${min} characters.`
+    } else if (value.length > max) {
+      errors[key] = key === 'PHONE' ? patternMessage : `${label} must not exceed ${max} characters.`
+    } else if (pattern && !pattern.test(value)) {
+      errors[key] = patternMessage
+    }
+  })
 
-  if (!normalized.CONTACT_PERSON) {
-    errors.CONTACT_PERSON = 'Contact Person is required.'
-  } else if (normalized.CONTACT_PERSON.length < 2) {
-    errors.CONTACT_PERSON = 'Contact Person must be at least 2 characters.'
-  } else if (normalized.CONTACT_PERSON.length > 100) {
-    errors.CONTACT_PERSON = 'Contact Person must not exceed 100 characters.'
-  }
-
-  if (!normalized.PHONE) {
-    errors.PHONE = 'Phone is required.'
-  } else if (normalized.PHONE.length > 20) {
-    errors.PHONE = 'Phone must not exceed 20 characters.'
-  } else if (!/^\+?[0-9][0-9\s()-]{5,18}[0-9]$/.test(normalized.PHONE)) {
-    errors.PHONE = 'Enter a valid phone number.'
-  }
-
-  if (!normalized.EMAIL) {
-    errors.EMAIL = 'Email is required.'
-  } else if (normalized.EMAIL.length > 150) {
-    errors.EMAIL = 'Email must not exceed 150 characters.'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.EMAIL)) {
-    errors.EMAIL = 'Enter a valid email address.'
-  }
-
-  if (!normalized.ADDRESS) {
-    errors.ADDRESS = 'Address is required.'
-  } else if (normalized.ADDRESS.length < 5) {
-    errors.ADDRESS = 'Address must be at least 5 characters.'
-  } else if (normalized.ADDRESS.length > 255) {
-    errors.ADDRESS = 'Address must not exceed 255 characters.'
-  }
-
-  if (normalized.COMPANY_TYPE.length > 100) {
-    errors.COMPANY_TYPE = 'Company Type must not exceed 100 characters.'
-  }
-
-  if (!normalized.TAX_ID) {
-    errors.TAX_ID = 'Tax ID / BIN is required.'
-  } else if (normalized.TAX_ID.length > 50) {
-    errors.TAX_ID = 'Tax ID / BIN must not exceed 50 characters.'
-  } else if (!/^[A-Za-z0-9/_ -]+$/.test(normalized.TAX_ID)) {
-    errors.TAX_ID = 'Tax ID / BIN contains invalid characters.'
-  } else if (matchesExisting(existingRecords, 'TAX_ID', normalized.TAX_ID)) {
-    errors.TAX_ID = 'This Tax ID / BIN already exists.'
-  }
-
-  return {
-    values: normalized,
-    errors,
-    isValid: Object.keys(errors).length === 0,
-  }
+  return { values: normalized, errors, isValid: Object.keys(errors).length === 0 }
 }

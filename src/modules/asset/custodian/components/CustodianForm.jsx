@@ -1,53 +1,73 @@
 /** @file Controlled Custodian form with repeatable ASSET_CUSTODIAN_DTL rows. */
+import { isRequired } from '../../../../config/devFlags'
+
 function FieldError({ id, message }) {
   return message ? <p id={id} className={'erp-field-error'}>{message}</p> : null
 }
 
-function fieldClass(error) {
-  return ['erp-form-control', error ? 'erp-form-control-invalid' : '']
+function fieldClass(error, readOnly = false) {
+  return ['erp-form-control', readOnly ? 'erp-readonly' : '', error ? 'erp-form-control-invalid' : '']
     .filter(Boolean)
     .join(' ')
 }
 
-function DeleteIcon() {
-  return (
-    <svg viewBox={'0 0 24 24'} className={'size-4'} fill={'none'} stroke={'currentColor'} strokeWidth={'2'} strokeLinecap={'round'} strokeLinejoin={'round'} aria-hidden={'true'}>
-      <path d={'M4 7h16'} />
-      <path d={'M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5'} />
-    </svg>
-  )
-}
-
-function StatusBadge({ status }) {
-  const active = String(status) === '1'
-  return (
-    <span className={[
-      'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
-      active ? 'bg-action-success' : 'bg-action-danger',
-    ].join(' ')}>
-      {active ? 'Active' : 'Inactive'}
-    </span>
-  )
-}
-
 function CustodianForm({
   values,
-  entryValues,
   errors,
   rows,
+  groupName,
+  businessUnitOptions = [],
+  unitsLoading = false,
+  businessUnitLocked = false,
   custodianNameRef,
-  subCustodianNameRef,
   onChange,
-  onEntryChange,
-  onAdd,
-  onRemove,
+  onRowChange,
+  onAddRow,
+  onRemoveRow,
 }) {
   return (
     <>
       <div className={'erp-form-grid'}>
         <div>
+          <label className={'erp-field-label'} htmlFor={'CUSTODIAN_BG_ID-display'}>Group Name</label>
+          <input type={'hidden'} name={'BG_ID'} value={values.BG_ID} />
+          <input
+            id={'CUSTODIAN_BG_ID-display'}
+            className={'erp-form-control erp-readonly'}
+            type={'text'}
+            value={groupName}
+            readOnly
+          />
+        </div>
+
+        <div>
+          <label className={'erp-field-label'} htmlFor={'BU_ID'}>
+            Business Unit<span className={'erp-required'} aria-hidden={'true'}>*</span>
+          </label>
+          <select
+            id={'BU_ID'}
+            name={'BU_ID'}
+            className={fieldClass(errors.BU_ID, businessUnitLocked)}
+            value={values.BU_ID}
+            required
+            disabled={unitsLoading || businessUnitLocked}
+            aria-invalid={Boolean(errors.BU_ID)}
+            aria-describedby={errors.BU_ID ? 'BU_ID-error' : undefined}
+            onChange={onChange}
+          >
+            <option value={''}>
+              {unitsLoading ? 'Loading Business Units...' : '--Select Business Unit--'}
+            </option>
+            {businessUnitOptions.map((unit) => (
+              <option key={unit.value} value={unit.value}>{unit.label}</option>
+            ))}
+          </select>
+          <FieldError id={'BU_ID-error'} message={errors.BU_ID} />
+        </div>
+
+        <div>
           <label className={'erp-field-label'} htmlFor={'CUSTODIAN_NAME'}>
-            Custodian Name<span className={'erp-required'} aria-hidden={'true'}>*</span>
+            Custodian Name{isRequired() && <span className={'erp-required'} aria-hidden={'true'}>*</span>}
           </label>
           <input
             ref={custodianNameRef}
@@ -59,7 +79,7 @@ function CustodianForm({
             minLength={2}
             maxLength={100}
             placeholder={'Enter custodian name'}
-            required
+            required={isRequired()}
             aria-invalid={Boolean(errors.CUSTODIAN_NAME)}
             aria-describedby={errors.CUSTODIAN_NAME ? 'CUSTODIAN_NAME-error' : undefined}
             onChange={onChange}
@@ -85,58 +105,14 @@ function CustodianForm({
 
       <div className={'erp-role-divider'} />
 
-      <div className={'erp-custodian-entry-grid'}>
-        <div>
-          <label className={'erp-field-label'} htmlFor={'SUB_CUSTODIAN_NAME'}>
-            Sub Custodian Name<span className={'erp-required'} aria-hidden={'true'}>*</span>
-          </label>
-          <input
-            ref={subCustodianNameRef}
-            id={'SUB_CUSTODIAN_NAME'}
-            name={'SUB_CUSTODIAN_NAME'}
-            type={'text'}
-            className={fieldClass(errors.SUB_CUSTODIAN_NAME)}
-            value={entryValues.SUB_CUSTODIAN_NAME}
-            minLength={2}
-            maxLength={100}
-            placeholder={'Enter sub custodian name'}
-            aria-invalid={Boolean(errors.SUB_CUSTODIAN_NAME)}
-            aria-describedby={errors.SUB_CUSTODIAN_NAME ? 'SUB_CUSTODIAN_NAME-error' : undefined}
-            onChange={onEntryChange}
-          />
-          <FieldError id={'SUB_CUSTODIAN_NAME-error'} message={errors.SUB_CUSTODIAN_NAME} />
-        </div>
-
-        <div>
-          <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
-          <label className={'erp-switch-field'}>
-            <input
-              className={'erp-switch-control'}
-              type={'checkbox'}
-              role={'switch'}
-              name={'STATUS'}
-              checked={entryValues.STATUS === '1'}
-              onChange={onEntryChange}
-            />
-            <span>Is Active</span>
-          </label>
-        </div>
-
-        <button type={'button'} className={'erp-role-add-button'} aria-label={'Add sub custodian'} title={'Add'} onClick={onAdd}>
-          <span aria-hidden={'true'}>+</span>
-        </button>
-      </div>
-
-      <div className={'erp-role-divider'} />
-
-      <h2 className={'erp-employee-section-title'}>Sub Custodian List</h2>
+      <h2 className={'erp-employee-section-title'}>Sub Custodian</h2>
       <div className={'erp-table-wrap'}>
         <table className={'erp-table erp-custodian-table'} data-table={'ASSET_CUSTODIAN_DTL'}>
           <thead>
             <tr>
               <th className={'erp-number-column'}>#</th>
               <th>Sub Custodian Name</th>
-              <th className={'erp-status-column'}>Status</th>
+              <th className={'erp-status-column'}>Is Active?</th>
               <th className={'erp-action-column'}>Action</th>
             </tr>
           </thead>
@@ -145,22 +121,61 @@ function CustodianForm({
               <tr>
                 <td className={'erp-empty-cell'} colSpan={4}>No Sub Custodian has been added.</td>
               </tr>
-            ) : rows.map((row, index) => (
-              <tr key={row.ID}>
-                <td className={'erp-number-column'}>{index + 1}</td>
-                <td>{row.SUB_CUSTODIAN_NAME}</td>
-                <td className={'erp-status-column'}><StatusBadge status={row.STATUS} /></td>
-                <td className={'erp-action-column'}>
-                  <button type={'button'} className={'erp-role-delete-button'} aria-label={`Remove ${row.SUB_CUSTODIAN_NAME}`} title={'Remove'} onClick={() => onRemove(row.ID)}>
-                    <DeleteIcon />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            ) : rows.map((row, index) => {
+              const error = errors.subRows?.[row._ROW_ID]
+              return (
+                <tr key={row._ROW_ID}>
+                  <td className={'erp-number-column'}>{index + 1}</td>
+                  <td>
+                    <input
+                      id={`SUB_CUSTODIAN_NAME-${row._ROW_ID}`}
+                      name={'SUB_CUSTODIAN_NAME'}
+                      type={'text'}
+                      className={fieldClass(error)}
+                      value={row.SUB_CUSTODIAN_NAME}
+                      minLength={2}
+                      maxLength={100}
+                      placeholder={'Enter sub custodian name'}
+                      aria-label={`Sub Custodian Name ${index + 1}`}
+                      aria-invalid={Boolean(error)}
+                      aria-describedby={error ? `SUB_CUSTODIAN_NAME-${row._ROW_ID}-error` : undefined}
+                      onChange={(event) => onRowChange(row._ROW_ID, 'SUB_CUSTODIAN_NAME', event.target.value)}
+                    />
+                    <FieldError id={`SUB_CUSTODIAN_NAME-${row._ROW_ID}-error`} message={error} />
+                  </td>
+                  <td className={'erp-status-column'}>
+                    <label className={'erp-switch-field justify-center'}>
+                      <input
+                        className={'erp-switch-control'}
+                        type={'checkbox'}
+                        role={'switch'}
+                        name={'STATUS'}
+                        checked={row.STATUS === '1'}
+                        aria-label={`Sub Custodian ${index + 1} is active`}
+                        onChange={(event) => onRowChange(row._ROW_ID, 'STATUS', event.target.checked ? '1' : '0')}
+                      />
+                      <span>{row.STATUS === '1' ? 'Active' : 'Inactive'}</span>
+                    </label>
+                  </td>
+                  <td className={'erp-action-column'}>
+                    <button
+                      type={'button'}
+                      className={'erp-remove-row-button'}
+                      aria-label={`Remove sub custodian ${index + 1}`}
+                      title={'Remove'}
+                      onClick={() => onRemoveRow(row)}
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
-      <FieldError id={'SUB_CUSTODIANS-error'} message={errors.SUB_CUSTODIANS} />
+
+      <button type={'button'} className={'primary-button erp-add-row-button'} onClick={onAddRow}>+ Add More</button>
     </>
   )
 }

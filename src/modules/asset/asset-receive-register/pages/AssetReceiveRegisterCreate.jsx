@@ -1,64 +1,86 @@
-/** @file Create-page controller for Asset Receive Register. */
-import { useRef, useState } from 'react'
+/** @file Create-page controller for the API-backed Asset Receive Register. */
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { assetReceivesApi } from '../../../../api/assetReceive'
 import FormPage from '../../../../components/shared/FormPage'
-import AssetReceiveRegisterForm from '../components/AssetReceiveRegisterForm'
-import { updateAssetReceiveField } from '../data/assetReceiveRegisterFormState'
-import { getAssetReceiveReferences } from '../data/assetReceiveRegisterOptions'
-import { createAssetReceive, createReceiveNumbers, listAssetReceives } from '../data/assetReceiveRegisterStore'
-import { ASSET_RECEIVE_REGISTER_TABLE, createInitialAssetReceiveValues, validateAssetReceive } from '../validation/assetReceiveRegisterValidation'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { formatIsoDate } from '../../../../utils/dateFormat'
+import AssetReceiveApiForm from '../components/AssetReceiveApiForm'
+import { mapAssetReceiveToApi } from '../data/assetReceiveApiMapper'
+import { buildAssetReceiveOptions, findSelectedLocation } from '../data/assetReceiveOptions'
+import { receiveBusinessGroup } from '../data/assetReceiveScope'
+import useAssetReceiveForm from '../data/useAssetReceiveForm'
+import useAssetReceiveReferences from '../data/useAssetReceiveReferences'
+import {
+  ASSET_RECEIVE_TABLE,
+  calculateAmounts,
+  createInitialAssetReceiveValues,
+} from '../validation/assetReceiveApiValidation'
 
 const listPath = '/asset/asset-receive-register'
 
 function AssetReceiveRegisterCreate() {
   const navigate = useNavigate()
-  const grnRef = useRef(null)
-  const references = getAssetReceiveReferences()
-  const [values, setValues] = useState(() => createInitialAssetReceiveValues(createReceiveNumbers()))
-  const [errors, setErrors] = useState({})
+  const firstFieldRef = useRef(null)
+  const refsRef = useRef(null)
+  const [submitting, setSubmitting] = useState(false)
+  const form = useAssetReceiveForm(createInitialAssetReceiveValues(), refsRef)
+  const { businessUnitOptions, unitsLoading } = useBusinessOptions(receiveBusinessGroup.ID)
+  const refs = useAssetReceiveReferences({ buId: form.values.BU_ID })
+  useEffect(() => {
+    refsRef.current = refs
+  })
+  const location = findSelectedLocation(refs, form.values.LOCATION_ID)
 
-  const handleChange = (event) => {
-    const { name, type, value, checked } = event.target
-    const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
-    setValues((current) => updateAssetReceiveField(current, name, nextValue, references))
-    setErrors((current) => ({ ...current, [name]: undefined }))
-  }
-
-  const handleSpecificationChange = (specificationId, value) => {
-    setValues((current) => ({
-      ...current,
-      SPECIFICATIONS: current.SPECIFICATIONS.map((row) => (
-        row.SPECIFICATION_ID === specificationId ? { ...row, EQUIPMENT_VALUE: value } : row
-      )),
-    }))
-    setErrors((current) => ({
-      ...current,
-      SPECIFICATIONS: { ...current.SPECIFICATIONS, [specificationId]: undefined },
-    }))
-  }
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAssetReceive(values, listAssetReceives(), references)
-    setValues(result.values)
-    setErrors(result.errors)
-    if (!result.isValid) {
-      requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
-      return
+    const result = form.validate()
+    if (!result.isValid) return
+
+    setSubmitting(true)
+    try {
+      await assetReceivesApi.create(mapAssetReceiveToApi(result.values, result.rows))
+      navigate(listPath)
+    } catch (error) {
+      await form.failWithApiError(error, 'Unable to create Asset Receive.')
+    } finally {
+      setSubmitting(false)
     }
-    createAssetReceive(result.values)
-    navigate(listPath)
   }
 
   const handleReset = () => {
-    setValues(createInitialAssetReceiveValues(createReceiveNumbers()))
-    setErrors({})
-    requestAnimationFrame(() => grnRef.current?.focus())
+    form.reset(createInitialAssetReceiveValues(), [])
+    requestAnimationFrame(() => firstFieldRef.current?.focus())
   }
 
   return (
-    <FormPage title={'Asset Receive Register Create'} listTo={listPath} tableName={ASSET_RECEIVE_REGISTER_TABLE} onSubmit={handleSubmit} onReset={handleReset}>
-      <AssetReceiveRegisterForm values={values} errors={errors} references={references} grnRef={grnRef} onChange={handleChange} onSpecificationChange={handleSpecificationChange} />
+    <FormPage
+      title={'Asset Receive Register Create'}
+      listTo={listPath}
+      tableName={ASSET_RECEIVE_TABLE}
+      onSubmit={handleSubmit}
+      onValidate={() => form.validate().isValid}
+      onReset={handleReset}
+      submitting={submitting}
+    >
+      <AssetReceiveApiForm
+        values={form.values}
+        errors={form.errors}
+        rows={form.rows}
+        groupName={receiveBusinessGroup.GROUP_NAME}
+        options={buildAssetReceiveOptions(refs, form.values)}
+        referencesLoading={refs.loading}
+        businessUnitOptions={businessUnitOptions}
+        unitsLoading={unitsLoading}
+        amounts={calculateAmounts(form.values)}
+        place={{ building: location?.BUILDING ?? '', floor: location?.FLOOR ?? '', room: location?.ROOM ?? '' }}
+        today={formatIsoDate(new Date())}
+        firstFieldRef={firstFieldRef}
+        onChange={form.handleChange}
+        onRowChange={form.handleRowChange}
+        onAddRow={form.handleAddRow}
+        onRemoveRow={form.handleRemoveRow}
+      />
     </FormPage>
   )
 }

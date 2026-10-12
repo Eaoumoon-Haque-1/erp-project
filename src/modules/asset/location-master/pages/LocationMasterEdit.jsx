@@ -1,11 +1,21 @@
-/** @file Edit-page controller for temporary Location Master records. */
-import { useRef, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+/** @file Edit-page controller for Location Master. */
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { assetLocationsApi } from '../../../../api/assetLocation'
+import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import LocationMasterForm from '../components/LocationMasterForm'
-import { getLocationMasterReferences, getSubCustodianOptions } from '../data/locationMasterOptions'
-import { getLocationMaster, listLocationMasters, updateLocationMaster } from '../data/locationMasterStore'
-import { ASSET_LOCATION_TABLE, validateLocationMaster } from '../validation/locationMasterValidation'
+import { mapLocationMasterFromApi, mapLocationMasterToApi } from '../data/locationMasterApiMapper'
+import {
+  buildCustodianOptions,
+  buildDepartmentOptions,
+  buildSubCustodianOptions,
+} from '../data/locationMasterOptions'
+import { locationBusinessGroup } from '../data/locationMasterScope'
+import useLocationMasterForm from '../data/useLocationMasterForm'
+import useLocationReferences from '../data/useLocationReferences'
+import { ASSET_LOCATION_TABLE, createInitialLocationMasterValues } from '../validation/locationMasterValidation'
 
 const listPath = '/asset/location-master'
 
@@ -13,52 +23,82 @@ function LocationMasterEdit() {
   const { locationMasterId } = useParams()
   const navigate = useNavigate()
   const locationNameRef = useRef(null)
-  const record = getLocationMaster(locationMasterId)
-  const [values, setValues] = useState(record)
-  const [errors, setErrors] = useState({})
-  const references = getLocationMasterReferences()
+  const [submitting, setSubmitting] = useState(false)
+  const [original, setOriginal] = useState(null)
+  const form = useLocationMasterForm(createInitialLocationMasterValues())
+  const { reset } = form
+  const { businessUnitOptions, unitsLoading } = useBusinessOptions(locationBusinessGroup.ID, {
+    preserveUnitId: form.values.BU_ID,
+  })
+  const refs = useLocationReferences({ buId: form.values.BU_ID, requireBu: true })
 
-  if (!record || !values) return <Navigate to={listPath} replace />
-
-  const handleChange = (event) => {
-    const { name, type, value, checked } = event.target
-    setValues((current) => {
-      if (name === 'CUSTODIAN_ID') {
-        const custodian = references.custodians.find((item) => item.ID === value)
-        return { ...current, CUSTODIAN_ID: value, CUSTODIAN_NAME: custodian?.CUSTODIAN_NAME || '', SUB_CUSTODIAN_ID: '', SUB_CUSTODIAN_NAME: '' }
-      }
-      if (name === 'SUB_CUSTODIAN_ID') {
-        const subCustodian = getSubCustodianOptions(current.CUSTODIAN_ID, references.custodians).find((item) => item.ID === value)
-        return { ...current, SUB_CUSTODIAN_ID: value, SUB_CUSTODIAN_NAME: subCustodian?.SUB_CUSTODIAN_NAME || '' }
-      }
-      return { ...current, [name]: type === 'checkbox' ? (checked ? '1' : '0') : value }
-    })
-    setErrors((current) => ({ ...current, [name]: undefined, ...(name === 'CUSTODIAN_ID' ? { SUB_CUSTODIAN_ID: undefined } : {}) }))
-  }
-
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    const otherRecords = listLocationMasters().filter((item) => item.ID !== record.ID)
-    const result = validateLocationMaster(values, otherRecords, references)
-    setValues({ ...values, ...result.values })
-    setErrors(result.errors)
-    if (!result.isValid) {
-      requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
-      return
+  useEffect(() => {
+    let active = true
+    assetLocationsApi.get(locationMasterId)
+      .then((record) => {
+        if (!active) return
+        const { ID, ...values } = mapLocationMasterFromApi(record)
+        void ID
+        setOriginal(values)
+        reset(values)
+      })
+      .catch((error) => {
+        if (!active) return
+        getApiErrorMessage(error, 'Unable to load Location.')
+        navigate(listPath, { replace: true })
+      })
+    return () => {
+      active = false
     }
-    updateLocationMaster(record.ID, result.values)
-    navigate(listPath)
+  }, [locationMasterId, navigate, reset])
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    const result = form.validate()
+    if (!result.isValid) return
+
+    setSubmitting(true)
+    try {
+      await assetLocationsApi.update(locationMasterId, mapLocationMasterToApi(result.values))
+      navigate(listPath)
+    } catch (error) {
+      await form.failWithApiError(error, 'Unable to update Location.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReset = () => {
-    setValues(record)
-    setErrors({})
+    if (original) form.reset(original)
     requestAnimationFrame(() => locationNameRef.current?.focus())
   }
 
   return (
-    <FormPage title={'Location Master Edit'} listTo={listPath} tableName={ASSET_LOCATION_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset}>
-      <LocationMasterForm values={values} errors={errors} references={references} locationNameRef={locationNameRef} onChange={handleChange} />
+    <FormPage
+      title={'Location Master Edit'}
+      listTo={listPath}
+      tableName={ASSET_LOCATION_TABLE}
+      submitLabel={'Update'}
+      onSubmit={handleSubmit}
+      onValidate={() => form.validate().isValid}
+      onReset={handleReset}
+      submitting={submitting}
+    >
+      <LocationMasterForm
+        values={form.values}
+        errors={form.errors}
+        groupName={locationBusinessGroup.GROUP_NAME}
+        businessUnitOptions={businessUnitOptions}
+        unitsLoading={unitsLoading}
+        businessUnitLocked
+        custodianOptions={buildCustodianOptions(refs.custodians, form.values.CUSTODIAN_ID, refs.custodiansLoading)}
+        custodiansLoading={refs.custodiansLoading}
+        subCustodianOptions={buildSubCustodianOptions(refs.custodians, form.values.CUSTODIAN_ID, form.values.SUB_CUSTODIAN_ID, refs.custodiansLoading)}
+        departmentOptions={buildDepartmentOptions(refs.departments, form.values.DEPT_ID, refs.departmentsLoading)}
+        departmentsLoading={refs.departmentsLoading}
+        locationNameRef={locationNameRef}
+        onChange={form.handleChange}
+      />
     </FormPage>
   )
 }

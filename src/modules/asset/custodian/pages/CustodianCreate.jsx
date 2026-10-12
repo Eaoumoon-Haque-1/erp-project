@@ -1,103 +1,67 @@
-/** @file Create-page controller for Custodian and Sub Custodian rows. */
+/** @file Create-page controller for Custodian and its Sub Custodian rows. */
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { custodiansApi } from '../../../../api/custodian'
 import FormPage from '../../../../components/shared/FormPage'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import CustodianForm from '../components/CustodianForm'
-import { createCustodian, listCustodians } from '../data/custodianStore'
-import {
-  ASSET_CUSTODIAN_TABLE,
-  initialCustodianValues,
-  initialSubCustodianValues,
-  validateCustodianSubmission,
-  validateSubCustodian,
-} from '../validation/custodianValidation'
+import { mapCustodianToApi } from '../data/custodianApiMapper'
+import { custodianBusinessGroup } from '../data/custodianScope'
+import useCustodianForm from '../data/useCustodianForm'
+import { ASSET_CUSTODIAN_TABLE, createInitialCustodianValues } from '../validation/custodianValidation'
 
 const listPath = '/asset/custodian'
 
 function CustodianCreate() {
   const navigate = useNavigate()
   const custodianNameRef = useRef(null)
-  const subCustodianNameRef = useRef(null)
-  const [values, setValues] = useState(initialCustodianValues)
-  const [entryValues, setEntryValues] = useState(initialSubCustodianValues)
-  const [rows, setRows] = useState([])
-  const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const form = useCustodianForm(createInitialCustodianValues())
+  const { businessUnitOptions, unitsLoading } = useBusinessOptions(custodianBusinessGroup.ID)
 
-  const handleChange = (event) => {
-    const { name, type, value, checked } = event.target
-    setValues((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
-    }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
-  }
-
-  const handleEntryChange = (event) => {
-    const { name, type, value, checked } = event.target
-    setEntryValues((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
-    }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
-  }
-
-  const handleAdd = () => {
-    const result = validateSubCustodian(entryValues, rows, values.CUSTODIAN_NAME)
-    setEntryValues(result.values)
-    setErrors((current) => ({ ...current, ...result.errors }))
-    if (!result.isValid) {
-      requestAnimationFrame(() => subCustodianNameRef.current?.focus())
-      return
-    }
-
-    setRows((current) => [
-      ...current,
-      { ID: `${Date.now()}-${current.length}`, ...result.values },
-    ])
-    setEntryValues(initialSubCustodianValues)
-    setErrors((current) => ({
-      ...current,
-      SUB_CUSTODIAN_NAME: undefined,
-      SUB_CUSTODIANS: undefined,
-    }))
-    requestAnimationFrame(() => subCustodianNameRef.current?.focus())
-  }
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateCustodianSubmission(values, rows, listCustodians())
-    setValues(result.values)
-    setErrors(result.errors)
-    if (!result.isValid) {
-      requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
-      return
-    }
+    const result = form.validate()
+    if (!result.isValid) return
 
-    createCustodian({ ...result.values, SUB_CUSTODIANS: rows })
-    navigate(listPath)
+    setSubmitting(true)
+    try {
+      await custodiansApi.create(mapCustodianToApi(result.values, result.rows))
+      navigate(listPath)
+    } catch (error) {
+      await form.failWithApiError(error, 'Unable to create Custodian.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReset = () => {
-    setValues(initialCustodianValues)
-    setEntryValues(initialSubCustodianValues)
-    setRows([])
-    setErrors({})
+    form.reset(createInitialCustodianValues(), [])
     requestAnimationFrame(() => custodianNameRef.current?.focus())
   }
 
   return (
-    <FormPage title={'Custodian Create'} listTo={listPath} tableName={ASSET_CUSTODIAN_TABLE} onSubmit={handleSubmit} onReset={handleReset}>
+    <FormPage
+      title={'Custodian Create'}
+      listTo={listPath}
+      tableName={ASSET_CUSTODIAN_TABLE}
+      onSubmit={handleSubmit}
+      onValidate={() => form.validate().isValid}
+      onReset={handleReset}
+      submitting={submitting}
+    >
       <CustodianForm
-        values={values}
-        entryValues={entryValues}
-        errors={errors}
-        rows={rows}
+        values={form.values}
+        errors={form.errors}
+        rows={form.rows}
+        groupName={custodianBusinessGroup.GROUP_NAME}
+        businessUnitOptions={businessUnitOptions}
+        unitsLoading={unitsLoading}
         custodianNameRef={custodianNameRef}
-        subCustodianNameRef={subCustodianNameRef}
-        onChange={handleChange}
-        onEntryChange={handleEntryChange}
-        onAdd={handleAdd}
-        onRemove={(id) => setRows((current) => current.filter((row) => row.ID !== id))}
+        onChange={form.handleChange}
+        onRowChange={form.handleRowChange}
+        onAddRow={form.handleAddRow}
+        onRemoveRow={form.handleRemoveRow}
       />
     </FormPage>
   )
