@@ -5,22 +5,9 @@
  */
 export const LOOKUP_VALUE_TABLE = 'HR_LOOKUP_VALUE'
 
-export const temporaryHrLookupValueBusinessGroup = {
-  ID: '1',
-  GROUP_NAME: 'Demo Business Group',
-}
-
-export const temporaryHrLookupTypeOptions = [
-  { value: 'Gender', label: 'Gender' },
-  { value: 'Religion', label: 'Religion' },
-  { value: 'Nationality', label: 'Nationality' },
-  { value: 'Education Level', label: 'Education Level' },
-  { value: 'Country', label: 'Country' },
-]
-
 export const initialHrLookupValueValues = {
-  BG_ID: temporaryHrLookupValueBusinessGroup.ID,
-  TYPE_NAME: '',
+  BG_ID: '',
+  TYPE_ID: '',
   VALUE: '',
   SORT_ORDER: '',
   STATUS: '1',
@@ -29,7 +16,7 @@ export const initialHrLookupValueValues = {
 export function validateHrLookupValue(values) {
   const normalizedValues = {
     BG_ID: String(values.BG_ID ?? '').trim(),
-    TYPE_NAME: String(values.TYPE_NAME ?? '').trim(),
+    TYPE_ID: String(values.TYPE_ID ?? '').trim(),
     VALUE: String(values.VALUE ?? '').trim(),
     SORT_ORDER: String(values.SORT_ORDER ?? '').trim(),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
@@ -40,12 +27,8 @@ export function validateHrLookupValue(values) {
     errors.BG_ID = 'Group Name is required.'
   }
 
-  if (!normalizedValues.TYPE_NAME) {
-    errors.TYPE_NAME = 'Type is required.'
-  } else if (normalizedValues.TYPE_NAME.length < 2) {
-    errors.TYPE_NAME = 'Type must be at least 2 characters.'
-  } else if (normalizedValues.TYPE_NAME.length > 50) {
-    errors.TYPE_NAME = 'Type must not exceed 50 characters.'
+  if (!normalizedValues.TYPE_ID) {
+    errors.TYPE_ID = 'Type is required.'
   }
 
   if (!normalizedValues.VALUE) {

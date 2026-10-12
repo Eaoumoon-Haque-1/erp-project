@@ -1,18 +1,23 @@
-﻿/**
- * @file List-page controller for Level Of Education.
- * Sections: filter/column/temporary-row configuration, row handlers, and ListPage composition.
- * Edit here when list columns, filters, navigation, API rows, or enabled actions change.
- */
+/** @file API-backed Level of Education list page. */
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { levelOfEducationsApi } from '../api/levelOfEducationApi'
+import {
+  mapLevelOfEducationFromApi,
+  mapLevelOfEducationToApi,
+} from '../data/levelOfEducationApiMapper'
 
-const levelOfEduFilters = [
+const basePath = '/hris/employee-settings/level-of-education'
+
+const filters = [
   {
     key: 'LEVEL_OF_EDU',
     label: 'Level of Education',
     placeholder: '--Search by Level of Education--',
-    matches: (row, value) =>
-      String(row.LEVEL_OF_EDU ?? '').toLowerCase().includes(value.toLowerCase()),
+    matches: (row, value) => String(row.LEVEL_OF_EDU ?? '').toLowerCase().includes(value.toLowerCase()),
   },
   {
     key: 'STATUS',
@@ -25,52 +30,89 @@ const levelOfEduFilters = [
   },
 ]
 
-const levelOfEduColumns = [
-  {
-    key: 'LEVEL_OF_EDU',
-    label: 'Level of Education',
-  },
-  {
-    key: 'SHORT_NAME',
-    label: 'Short Name',
-  },
-  {
-    key: 'SORT_ORDER',
-    label: 'Sort Order',
-  },
+const columns = [
+  { key: 'LEVEL_OF_EDU', label: 'Level of Education' },
+  { key: 'SHORT_NAME', label: 'Short Name' },
+  { key: 'SORT_ORDER', label: 'Sort Order' },
   {
     key: 'STATUS',
     label: 'Status',
     render: (value) => (
-      <span
-        className={[
-          'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
-          String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
-        ].join(' ')}
-      >
+      <span className={[
+        'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
+        String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
+      ].join(' ')}>
         {String(value) === '1' ? 'Active' : 'Inactive'}
       </span>
     ),
   },
 ]
 
-const initialRows = [
-  { ID: '1', LEVEL_OF_EDU: 'Secondary (SSC)', SHORT_NAME: 'SSC', SORT_ORDER: '1', STATUS: '1' },
-  { ID: '2', LEVEL_OF_EDU: 'Higher Secondary (HSC)', SHORT_NAME: 'HSC', SORT_ORDER: '2', STATUS: '1' },
-  { ID: '3', LEVEL_OF_EDU: 'Bachelor / Honors', SHORT_NAME: 'BSc', SORT_ORDER: '3', STATUS: '1' },
-  { ID: '4', LEVEL_OF_EDU: 'Master Degree', SHORT_NAME: 'MSc', SORT_ORDER: '4', STATUS: '1' },
-]
-
 function LevelOfEducationList() {
+  const navigate = useNavigate()
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let active = true
+    levelOfEducationsApi.list()
+      .then((records) => {
+        if (active) setRows(records.map(mapLevelOfEducationFromApi))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Levels of Education.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const handleDelete = async (row) => {
+    try {
+      await levelOfEducationsApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to delete Level of Education.'))
+    }
+  }
+
+  const handleStatusChange = async (row) => {
+    try {
+      const updated = await levelOfEducationsApi.update(
+        row.ID,
+        mapLevelOfEducationToApi({ ...row, STATUS: row.STATUS === '1' ? '0' : '1' }),
+      )
+      setRows((current) => current.map((item) => (
+        item.ID === row.ID ? mapLevelOfEducationFromApi(updated) : item
+      )))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to update Level of Education status.'))
+    }
+  }
+
   return (
     <ListPage
       title={'Level of Education List'}
       createLabel={'New'}
-      createTo={'/hris/employee-settings/level-of-education/create'}
-      filters={levelOfEduFilters}
-      columns={levelOfEduColumns}
-      rows={initialRows}
-      renderActions={(row) => <ListRowActions row={row} editTo={`/hris/employee-settings/level-of-education/${row.ID}/edit`} />}
+      createTo={`${basePath}/create`}
+      filters={filters}
+      columns={columns}
+      rows={rows}
+      loading={loading}
+      message={message}
+      renderActions={(row) => (
+        <ListRowActions
+          row={row}
+          onView={() => navigate(`${basePath}/${row.ID}/view`)}
+          onEdit={() => navigate(`${basePath}/${row.ID}/edit`)}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     />
   )
 }

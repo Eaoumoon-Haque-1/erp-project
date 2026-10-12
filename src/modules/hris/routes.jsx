@@ -19,6 +19,8 @@ import DegreeEducationMappingList from "./degree-education-mapping/pages/DegreeE
 import DegreeEducationMappingCreate from "./degree-education-mapping/pages/DegreeEducationMappingCreate";
 import LevelOfEducationList from "./level-of-education/pages/LevelOfEducationList";
 import LevelOfEducationCreate from "./level-of-education/pages/LevelOfEducationCreate";
+import LevelOfEducationEdit from "./level-of-education/pages/LevelOfEducationEdit";
+import LevelOfEducationView from "./level-of-education/pages/LevelOfEducationView";
 import LeaveTypeList from "./leave-type/pages/LeaveTypeList";
 import LeaveTypeCreate from "./leave-type/pages/LeaveTypeCreate";
 import LeaveTypeAssignList from "./leave-type-assign/pages/LeaveTypeAssignList";
@@ -34,6 +36,8 @@ import HrLookupTypeEdit from "./hr-lookup-type/pages/HrLookupTypeEdit";
 import HrLookupTypeView from "./hr-lookup-type/pages/HrLookupTypeView";
 import HrLookupValueList from "./hr-lookup-value/pages/HrLookupValueList";
 import HrLookupValueCreate from "./hr-lookup-value/pages/HrLookupValueCreate";
+import HrLookupValueEdit from "./hr-lookup-value/pages/HrLookupValueEdit";
+import HrLookupValueView from "./hr-lookup-value/pages/HrLookupValueView";
 import LeaveApplicationList from "./leave-application/pages/LeaveApplicationList";
 import LeaveApplicationCreate from "./leave-application/pages/LeaveApplicationCreate";
 import EmployeeAttendanceConfigList from "./employee-attendance-config/pages/EmployeeAttendanceConfigList";
@@ -126,6 +130,14 @@ export const hrisRoutes = [
     path: "hris/employee-settings/level-of-education/create",
     element: <LevelOfEducationCreate />,
   },
+  {
+    path: "hris/employee-settings/level-of-education/:levelOfEducationId/edit",
+    element: <LevelOfEducationEdit />,
+  },
+  {
+    path: "hris/employee-settings/level-of-education/:levelOfEducationId/view",
+    element: <LevelOfEducationView />,
+  },
   // {
   //   path: "hris/employee-settings/payscale",
   //   element: <PayscaleList />,
@@ -167,6 +179,14 @@ export const hrisRoutes = [
   {
     path: "hris/hr-lookup-settings/hr-lookup-value/create",
     element: <HrLookupValueCreate />,
+  },
+  {
+    path: "hris/hr-lookup-settings/hr-lookup-value/:lookupValueId/edit",
+    element: <HrLookupValueEdit />,
+  },
+  {
+    path: "hris/hr-lookup-settings/hr-lookup-value/:lookupValueId/view",
+    element: <HrLookupValueView />,
   },
 
   // Leave Settings

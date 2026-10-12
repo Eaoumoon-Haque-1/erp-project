@@ -12,7 +12,7 @@ export const initialLevelOfEducationValues = {
   STATUS: '1',
 }
 
-export function validateLevelOfEducation(values) {
+export function validateLevelOfEducation(values, existingLevelNames = []) {
   const errors = {}
 
   const trimmedLevel = (values.LEVEL_OF_EDU || '').trim()
@@ -22,6 +22,10 @@ export function validateLevelOfEducation(values) {
     errors.LEVEL_OF_EDU = 'Level of Education must be at least 2 characters.'
   } else if (trimmedLevel.length > 50) {
     errors.LEVEL_OF_EDU = 'Level of Education cannot exceed 50 characters.'
+  } else if (existingLevelNames.some(
+    (name) => String(name).trim().toLowerCase() === trimmedLevel.toLowerCase(),
+  )) {
+    errors.LEVEL_OF_EDU = 'Level of Education must be unique.'
   }
 
   const trimmedShort = (values.SHORT_NAME || '').trim()

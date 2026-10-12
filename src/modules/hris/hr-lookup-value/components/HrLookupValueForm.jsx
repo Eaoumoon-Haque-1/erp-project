@@ -15,7 +15,7 @@ function fieldClass(error) {
 function HrLookupValueForm({
   values,
   errors,
-  businessGroup,
+  businessGroupOptions,
   hrLookupTypeOptions,
   typeRef,
   onChange,
@@ -23,36 +23,42 @@ function HrLookupValueForm({
   return (
     <div className={'erp-form-grid'}>
       <div>
-        <label className={'erp-field-label'} htmlFor={'LOOKUP_VALUE_BG_ID-display'}>
+        <label className={'erp-field-label'} htmlFor={'BG_ID'}>
           Group Name
           <span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
-        <input type={'hidden'} name={'BG_ID'} value={values.BG_ID} />
-        <input
-          id={'LOOKUP_VALUE_BG_ID-display'}
-          type={'text'}
-          className={'erp-form-control erp-readonly'}
-          value={businessGroup.GROUP_NAME}
-          readOnly
+        <select
+          id={'BG_ID'}
+          name={'BG_ID'}
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          aria-invalid={Boolean(errors.BG_ID)}
           aria-describedby={errors.BG_ID ? 'LOOKUP_VALUE_BG_ID-error' : undefined}
-        />
+          onChange={onChange}
+        >
+          <option value={''}>--Select Group Name--</option>
+          {businessGroupOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
         <FieldError id={'LOOKUP_VALUE_BG_ID-error'} message={errors.BG_ID} />
       </div>
 
       <div>
-        <label className={'erp-field-label'} htmlFor={'TYPE_NAME'}>
+        <label className={'erp-field-label'} htmlFor={'TYPE_ID'}>
           Type
           <span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
         <select
           ref={typeRef}
-          id={'TYPE_NAME'}
-          name={'TYPE_NAME'}
-          className={fieldClass(errors.TYPE_NAME)}
-          value={values.TYPE_NAME}
+          id={'TYPE_ID'}
+          name={'TYPE_ID'}
+          className={fieldClass(errors.TYPE_ID)}
+          value={values.TYPE_ID}
           required
-          aria-invalid={Boolean(errors.TYPE_NAME)}
-          aria-describedby={errors.TYPE_NAME ? 'LOOKUP_VALUE_TYPE_NAME-error' : undefined}
+          aria-invalid={Boolean(errors.TYPE_ID)}
+          aria-describedby={errors.TYPE_ID ? 'LOOKUP_VALUE_TYPE_ID-error' : undefined}
           onChange={onChange}
         >
           <option value={''}>--Select Type--</option>
@@ -60,7 +66,7 @@ function HrLookupValueForm({
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
-        <FieldError id={'LOOKUP_VALUE_TYPE_NAME-error'} message={errors.TYPE_NAME} />
+        <FieldError id={'LOOKUP_VALUE_TYPE_ID-error'} message={errors.TYPE_ID} />
       </div>
 
       <div>
