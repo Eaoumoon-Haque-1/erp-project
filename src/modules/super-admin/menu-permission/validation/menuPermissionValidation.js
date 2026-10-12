@@ -41,3 +41,33 @@ export function validateMenuPermission(values, existingPermissionNames = []) {
     isValid: Object.keys(errors).length === 0,
   }
 }
+
+/** Validates repeatable Create rows while enforcing uniqueness across the batch. */
+export function validateMenuPermissionRows(moduleId, rows, existingPermissionNames = []) {
+  const normalizedModuleId = String(moduleId ?? '')
+  const knownNames = new Set(
+    existingPermissionNames.map((name) => String(name).trim().toLowerCase()),
+  )
+  const rowErrors = {}
+  const normalizedRows = rows.map((row) => {
+    const result = validateMenuPermission(
+      { ...row, MODULE_ID: normalizedModuleId },
+      [...knownNames],
+    )
+    const normalizedName = result.values.PERMISSION_NAME.toLowerCase()
+    if (normalizedName && !result.errors.PERMISSION_NAME) knownNames.add(normalizedName)
+    if (result.errors.PERMISSION_NAME) {
+      rowErrors[row.key] = { PERMISSION_NAME: result.errors.PERMISSION_NAME }
+    }
+    return { ...row, ...result.values, key: row.key }
+  })
+  const moduleError = normalizedModuleId ? '' : 'Module Name is required.'
+
+  return {
+    moduleId: normalizedModuleId,
+    rows: normalizedRows,
+    moduleError,
+    rowErrors,
+    isValid: !moduleError && Object.keys(rowErrors).length === 0,
+  }
+}

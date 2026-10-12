@@ -52,11 +52,10 @@ function MenuPermissionEdit() {
     }
   }, [permissionId])
 
-  const handleChange = (event) => {
-    const { name, type, value, checked } = event.target
+  const handleValueChange = (name, value) => {
     setValues((current) => ({
       ...current,
-      [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
+      [name]: value,
     }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
@@ -99,11 +98,13 @@ function MenuPermissionEdit() {
       message={message}
     >
       <MenuPermissionForm
-        values={values}
-        errors={errors}
+        moduleId={values.MODULE_ID}
         permissionNameRef={permissionNameRef}
         moduleOptions={moduleOptions}
-        onChange={handleChange}
+        entryValues={values}
+        errors={errors}
+        onModuleChange={(value) => handleValueChange('MODULE_ID', value)}
+        onEntryChange={handleValueChange}
       />
     </FormPage>
   )

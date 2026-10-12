@@ -3,24 +3,43 @@
  * Sections: controlled state/refs, change handlers, validation submit/reset, and form-page composition.
  * Future create API calls belong here; keep field markup in the matching form component.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import { hrLookupTypesApi } from '../api/hrLookupTypeApi'
 import HrLookupTypeForm from '../components/HrLookupTypeForm'
+import { mapHrLookupTypeToApi } from '../data/hrLookupTypeApiMapper'
 import {
   LOOKUP_TYPE_TABLE,
   initialHrLookupTypeValues,
   validateHrLookupType,
 } from '../validation/hrLookupTypeValidation'
 
-const existingTypeNames = []
-const existingCodes = []
+const listPath = '/hris/hr-lookup-settings/hr-lookup-type'
 
 function HrLookupTypeCreate() {
   const navigate = useNavigate()
   const typeNameRef = useRef(null)
   const [values, setValues] = useState(initialHrLookupTypeValues)
   const [errors, setErrors] = useState({})
+  const [existingRecords, setExistingRecords] = useState([])
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    hrLookupTypesApi.list()
+      .then((records) => {
+        if (active) setExistingRecords(records)
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing HR Lookup Types.'))
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -30,9 +49,13 @@ function HrLookupTypeCreate() {
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateHrLookupType(values, existingTypeNames, existingCodes)
+    const result = validateHrLookupType(
+      values,
+      existingRecords.map((record) => record.typeName),
+      existingRecords.map((record) => record.code).filter(Boolean),
+    )
 
     setValues(result.values)
     setErrors(result.errors)
@@ -42,22 +65,34 @@ function HrLookupTypeCreate() {
       return
     }
 
-    navigate('/hris/hr-lookup-settings/hr-lookup-type')
+    setSubmitting(true)
+    setMessage('')
+    try {
+      await hrLookupTypesApi.create(mapHrLookupTypeToApi(result.values))
+      navigate(listPath)
+    } catch (error) {
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create HR Lookup Type.'))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReset = () => {
     setValues(initialHrLookupTypeValues)
     setErrors({})
+    setMessage('')
     requestAnimationFrame(() => typeNameRef.current?.focus())
   }
 
   return (
     <FormPage
       title={'HR Lookup Type Create'}
-      listTo={'/hris/hr-lookup-settings/hr-lookup-type'}
+      listTo={listPath}
       tableName={LOOKUP_TYPE_TABLE}
       onSubmit={handleSubmit}
       onReset={handleReset}
+      message={message}
+      submitting={submitting}
     >
       <HrLookupTypeForm
         values={values}

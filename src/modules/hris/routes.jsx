@@ -30,6 +30,8 @@ import EmployeeInformationCreate from "./employee-information/pages/EmployeeInfo
 import UserCreationFromEmployeeCreate from "./user-creation-from-employee/pages/UserCreationFromEmployeeCreate";
 import HrLookupTypeList from "./hr-lookup-type/pages/HrLookupTypeList";
 import HrLookupTypeCreate from "./hr-lookup-type/pages/HrLookupTypeCreate";
+import HrLookupTypeEdit from "./hr-lookup-type/pages/HrLookupTypeEdit";
+import HrLookupTypeView from "./hr-lookup-type/pages/HrLookupTypeView";
 import HrLookupValueList from "./hr-lookup-value/pages/HrLookupValueList";
 import HrLookupValueCreate from "./hr-lookup-value/pages/HrLookupValueCreate";
 import LeaveApplicationList from "./leave-application/pages/LeaveApplicationList";
@@ -149,6 +151,14 @@ export const hrisRoutes = [
   {
     path: "hris/hr-lookup-settings/hr-lookup-type/create",
     element: <HrLookupTypeCreate />,
+  },
+  {
+    path: "hris/hr-lookup-settings/hr-lookup-type/:lookupTypeId/edit",
+    element: <HrLookupTypeEdit />,
+  },
+  {
+    path: "hris/hr-lookup-settings/hr-lookup-type/:lookupTypeId/view",
+    element: <HrLookupTypeView />,
   },
   {
     path: "hris/hr-lookup-settings/hr-lookup-value",

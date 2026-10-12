@@ -1301,6 +1301,23 @@
     cursor: pointer;
   }
 
+  .erp-menu-permission-module {
+    width: min(100%, 380px);
+  }
+
+  .erp-menu-permission-entry-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) 220px 48px;
+    gap: 30px;
+    align-items: start;
+    max-width: 820px;
+  }
+
+  .erp-menu-permission-entry-grid-single {
+    grid-template-columns: minmax(320px, 1fr) 220px;
+    max-width: 740px;
+  }
+
   .erp-role-list-heading {
     display: flex;
     align-items: center;
@@ -2521,6 +2538,15 @@
       grid-template-columns: minmax(0, 1fr) 180px 48px;
       gap: 18px;
     }
+
+    .erp-menu-permission-entry-grid {
+      grid-template-columns: minmax(0, 1fr) 180px 48px;
+      gap: 18px;
+    }
+
+    .erp-menu-permission-entry-grid-single {
+      grid-template-columns: minmax(0, 1fr) 180px;
+    }
   }
 
   @media (max-width: 575px) {
@@ -2557,6 +2583,17 @@
     .erp-user-type-group-assignment-grid {
       grid-template-columns: 1fr;
       gap: 12px;
+    }
+
+    .erp-menu-permission-entry-grid,
+    .erp-menu-permission-entry-grid-single {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: none;
+    }
+
+    .erp-menu-permission-entry-grid .erp-role-add-button {
+      margin-top: 0;
     }
 
     .erp-gate-pass-entry-grid {
