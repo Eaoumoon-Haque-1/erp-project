@@ -63,7 +63,9 @@ function ModuleEdit() {
       await modulesApi.update(moduleId, mapModuleToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Module.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Module.', {
+        moduleName: 'MODULE_NAME',
+      }))
     } finally {
       setSubmitting(false)
     }

@@ -51,7 +51,9 @@ function ModuleCreate() {
       await modulesApi.create(mapModuleToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Module.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Module.', {
+        moduleName: 'MODULE_NAME',
+      }))
     } finally {
       setSubmitting(false)
     }

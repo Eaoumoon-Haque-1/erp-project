@@ -3,16 +3,15 @@
  * Sections: controlled state/refs, change handlers, validation submit/reset, and form-page composition.
  * Future create API calls belong here; keep field markup in the matching form component.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { rolesApi } from '../api/roleApi'
-import { applyApiFormErrors } from '../../../../api/errors'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import RoleForm from '../components/RoleForm'
 import { mapRoleToApi } from '../data/roleApiMapper'
 import { ROLE_TABLE, initialRoleValues, validateRole } from '../validation/roleValidation'
 
-const existingRoleNames = ['Super Admin']
 const listPath = '/super-admin/role-creation/role'
 
 function RoleCreate() {
@@ -22,6 +21,19 @@ function RoleCreate() {
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [existingRoleNames, setExistingRoleNames] = useState([])
+
+  useEffect(() => {
+    let active = true
+    rolesApi.list()
+      .then((roles) => {
+        if (active) setExistingRoleNames(roles.map((role) => role.roleName))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing Roles.'))
+      })
+    return () => { active = false }
+  }, [])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target

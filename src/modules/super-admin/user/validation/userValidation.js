@@ -61,7 +61,8 @@ export const createInitialUserValues = (businessGroupId) => ({
   CONFIRM_PASSWORD: '',
   ROLE_ID: '',
   USER_TYPE_ID: '',
-  ANDROID_ID: '0',
+  IS_ANDROID_FIXED: '0',
+  ANDROID_ID: '',
   STATUS: '1',
 })
 
@@ -86,7 +87,8 @@ export function validateUser(
     TO_DATE: String(values.TO_DATE ?? ''),
     ROLE_ID: String(values.ROLE_ID ?? ''),
     USER_TYPE_ID: String(values.USER_TYPE_ID ?? ''),
-    ANDROID_ID: String(values.ANDROID_ID) === '1' ? '1' : '0',
+    IS_ANDROID_FIXED: String(values.IS_ANDROID_FIXED) === '1' ? '1' : '0',
+    ANDROID_ID: String(values.ANDROID_ID ?? '').trim(),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
   }
   const errors = {}
@@ -120,9 +122,7 @@ export function validateUser(
     errors.FULL_NAME = 'Full Name must not exceed 100 characters.'
   }
 
-  if (!normalizedValues.EMAIL) {
-    errors.EMAIL = 'Email is required.'
-  } else {
+  if (normalizedValues.EMAIL) {
     if (normalizedValues.EMAIL.length > 100) {
       errors.EMAIL = 'Email must not exceed 100 characters.'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedValues.EMAIL)) {
@@ -131,7 +131,7 @@ export function validateUser(
   }
 
   if (normalizedValues.MOBILE_NO) {
-    if (!/^01[3-9]\d{8}$/.test(normalizedValues.MOBILE_NO)) {
+    if (!/^01\d{9}$/.test(normalizedValues.MOBILE_NO)) {
       errors.MOBILE_NO = 'Enter a valid 11-digit Bangladesh mobile number.'
     } else if (existingMobileNumbers.some(
       (number) => String(number).trim() === normalizedValues.MOBILE_NO,
@@ -148,7 +148,7 @@ export function validateUser(
     errors.PASSWORD = 'Password must include uppercase, lowercase, number, and special characters.'
   }
 
-  if (requirePassword && !normalizedValues.CONFIRM_PASSWORD) {
+  if ((requirePassword || normalizedValues.PASSWORD) && !normalizedValues.CONFIRM_PASSWORD) {
     errors.CONFIRM_PASSWORD = 'Confirm Password is required.'
   } else if (normalizedValues.CONFIRM_PASSWORD && normalizedValues.CONFIRM_PASSWORD !== normalizedValues.PASSWORD) {
     errors.CONFIRM_PASSWORD = 'Confirm Password must match Password.'
@@ -156,6 +156,10 @@ export function validateUser(
 
   if (normalizedValues.FROM_DATE && normalizedValues.TO_DATE && normalizedValues.TO_DATE < normalizedValues.FROM_DATE) {
     errors.TO_DATE = 'To Date must be on or after From Date.'
+  }
+
+  if (normalizedValues.ANDROID_ID.length > 100) {
+    errors.ANDROID_ID = 'Android ID cannot exceed 100 characters.'
   }
 
   return {

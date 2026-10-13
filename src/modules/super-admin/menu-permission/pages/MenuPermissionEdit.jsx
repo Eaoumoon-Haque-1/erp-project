@@ -73,7 +73,10 @@ function MenuPermissionEdit() {
       await permissionsApi.update(permissionId, mapPermissionToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Permission.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Permission.', {
+        permissionName: 'PERMISSION_NAME',
+        moduleId: 'MODULE_ID',
+      }))
     } finally {
       setSubmitting(false)
     }

@@ -132,7 +132,10 @@ function MenuPermissionCreate() {
           const resolved = typeof update === 'function' ? update({}) : update
           setErrors((current) => ({ ...current, ...resolved }))
         }
-        setMessage(applyApiFormErrors(error, setCurrentRowErrors, fallback))
+        setMessage(applyApiFormErrors(error, setCurrentRowErrors, fallback, {
+          permissionName: 'PERMISSION_NAME',
+          moduleId: 'MODULE_ID',
+        }))
         if (savedCount > 0) setRows(result.rows.slice(index))
         setSubmitting(false)
         return

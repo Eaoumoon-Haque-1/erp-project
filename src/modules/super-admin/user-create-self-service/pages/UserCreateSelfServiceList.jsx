@@ -1,7 +1,7 @@
 /**
  * @file User self-service setup list backed by User CRUD APIs.
- * Pending employee rows remain temporary because Swagger has no Employee
- * endpoint; created user accounts are loaded and persisted through `/users`.
+ * Pending employee rows remain temporary because the newly documented Employee
+ * integration is deferred; created user accounts use the `/users` API.
  */
 import { useEffect, useState } from 'react'
 import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
@@ -48,16 +48,17 @@ function UserCreateSelfServiceList() {
     try {
       const [users, roles, userTypes, units] = await Promise.all([usersApi.list(), rolesApi.list(), userTypesApi.list(), businessUnitsApi.list()])
       const unitMap = new Map(units.map((unit) => [String(unit.id), unit.businessUnit]))
+      const unitGroupMap = new Map(units.map((unit) => [String(unit.id), String(unit.bgId ?? '')]))
       const roleMap = new Map(roles.map((role) => [String(role.id), role.roleName]))
-      const typeMap = new Map(userTypes.map((type) => [String(type.id), type.userType]))
+      const typeMap = new Map(userTypes.map((type) => [String(type.id), type.typeName]))
       const apiRows = users.map((user) => ({
-        ID: String(user.id), EMPLOYEE_ID: user.refCode || '-', EMPLOYEE_NAME: user.fullName || user.userName, BUSINESS_UNIT_NAME: unitMap.get(String(user.buId)) || String(user.buId || '-'), BU_ID: String(user.buId || ''),
+        ID: String(user.id), EMPLOYEE_ID: '-', EMPLOYEE_NAME: user.fullName || user.userName, BUSINESS_UNIT_NAME: unitMap.get(String(user.buId)) || String(user.buId || '-'), BG_ID: String(user.bgId ?? unitGroupMap.get(String(user.buId)) ?? ''), BU_ID: String(user.buId || ''),
         DEPARTMENT_NAME: '-', DESIGNATION_NAME: '-', USER_NAME: user.userName, USER_ROLE: String(user.roleId || ''), USER_TYPE: String(user.userTypeId || ''), ROLE_NAME: roleMap.get(String(user.roleId)) || '', USER_TYPE_NAME: typeMap.get(String(user.userTypeId)) || '',
-        VALID_FROM_DATE: dateOnly(user.fromDate), VALID_TO_DATE: dateOnly(user.toDate), IS_ANDROID_ID_FIXED: String(user.isAndroidFixed ?? 0), HAS_USER: '1', IS_ACTIVE: String(user.isActive ?? 1), API_RECORD: user,
+        VALID_FROM_DATE: dateOnly(user.fromDate), VALID_TO_DATE: dateOnly(user.toDate), IS_ANDROID_ID_FIXED: String(user.isAndroidFixed ?? 0), HAS_USER: '1', IS_ACTIVE: String(user.status ?? 1), API_RECORD: user,
       }))
       setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
-      setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.userType })))
-      setRows([...pendingEmployeeRows, ...apiRows])
+      setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.typeName })))
+      setRows([...pendingEmployeeRows.map((row) => ({ ...row, BG_ID: unitGroupMap.get(row.BU_ID) || '' })), ...apiRows])
       setMessage('')
     } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to load user setup records.')) }
     finally { setLoading(false) }
@@ -69,16 +70,17 @@ function UserCreateSelfServiceList() {
       .then(([users, roles, userTypes, units]) => {
         if (!active) return
         const unitMap = new Map(units.map((unit) => [String(unit.id), unit.businessUnit]))
+        const unitGroupMap = new Map(units.map((unit) => [String(unit.id), String(unit.bgId ?? '')]))
         const roleMap = new Map(roles.map((role) => [String(role.id), role.roleName]))
-        const typeMap = new Map(userTypes.map((type) => [String(type.id), type.userType]))
+        const typeMap = new Map(userTypes.map((type) => [String(type.id), type.typeName]))
         const apiRows = users.map((user) => ({
-          ID: String(user.id), EMPLOYEE_ID: user.refCode || '-', EMPLOYEE_NAME: user.fullName || user.userName, BUSINESS_UNIT_NAME: unitMap.get(String(user.buId)) || String(user.buId || '-'), BU_ID: String(user.buId || ''),
+          ID: String(user.id), EMPLOYEE_ID: '-', EMPLOYEE_NAME: user.fullName || user.userName, BUSINESS_UNIT_NAME: unitMap.get(String(user.buId)) || String(user.buId || '-'), BG_ID: String(user.bgId ?? unitGroupMap.get(String(user.buId)) ?? ''), BU_ID: String(user.buId || ''),
           DEPARTMENT_NAME: '-', DESIGNATION_NAME: '-', USER_NAME: user.userName, USER_ROLE: String(user.roleId || ''), USER_TYPE: String(user.userTypeId || ''), ROLE_NAME: roleMap.get(String(user.roleId)) || '', USER_TYPE_NAME: typeMap.get(String(user.userTypeId)) || '',
-          VALID_FROM_DATE: dateOnly(user.fromDate), VALID_TO_DATE: dateOnly(user.toDate), IS_ANDROID_ID_FIXED: String(user.isAndroidFixed ?? 0), HAS_USER: '1', IS_ACTIVE: String(user.isActive ?? 1), API_RECORD: user,
+          VALID_FROM_DATE: dateOnly(user.fromDate), VALID_TO_DATE: dateOnly(user.toDate), IS_ANDROID_ID_FIXED: String(user.isAndroidFixed ?? 0), HAS_USER: '1', IS_ACTIVE: String(user.status ?? 1), API_RECORD: user,
         }))
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
-        setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.userType })))
-        setRows([...pendingEmployeeRows, ...apiRows])
+        setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.typeName })))
+        setRows([...pendingEmployeeRows.map((row) => ({ ...row, BG_ID: unitGroupMap.get(row.BU_ID) || '' })), ...apiRows])
         setMessage('')
       })
       .catch((error) => { if (active) setMessage(getApiErrorMessage(error, 'Unable to load user setup records.')) })
@@ -88,9 +90,21 @@ function UserCreateSelfServiceList() {
 
   const save = async (values) => {
     const payload = {
-      ...(selectedEmployee.API_RECORD || {}), userName: values.USER_NAME, fullName: selectedEmployee.EMPLOYEE_NAME,
-      fromDate: asIsoDateTime(values.VALID_FROM_DATE), toDate: asIsoDateTime(values.VALID_TO_DATE), roleId: Number(values.USER_ROLE), userTypeId: Number(values.USER_TYPE), buId: selectedEmployee.BU_ID,
-      isAndroidFixed: Number(values.IS_ANDROID_ID_FIXED), isActive: Number(values.IS_ACTIVE), refCode: selectedEmployee.EMPLOYEE_ID,
+      bgId: Number(selectedEmployee.BG_ID),
+      buId: Number(selectedEmployee.BU_ID),
+      deptId: selectedEmployee.API_RECORD?.deptId ?? null,
+      desigId: selectedEmployee.API_RECORD?.desigId ?? null,
+      userName: values.USER_NAME,
+      fullName: selectedEmployee.EMPLOYEE_NAME,
+      email: selectedEmployee.API_RECORD?.email ?? null,
+      mobileNo: selectedEmployee.API_RECORD?.mobileNo ?? null,
+      fromDate: asIsoDateTime(values.VALID_FROM_DATE),
+      toDate: asIsoDateTime(values.VALID_TO_DATE),
+      roleId: Number(values.USER_ROLE),
+      userTypeId: Number(values.USER_TYPE),
+      isAndroidFixed: Number(values.IS_ANDROID_ID_FIXED),
+      androidId: selectedEmployee.API_RECORD?.androidId ?? null,
+      status: Number(values.IS_ACTIVE),
     }
     // Never echo a stored password/hash back to the API. A password is sent
     // only when the operator explicitly entered a new one in the modal.
@@ -103,7 +117,7 @@ function UserCreateSelfServiceList() {
   }
 
   const remove = async (row) => { try { await usersApi.remove(row.ID); await load() } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to remove user.')) } }
-  const toggle = async (row) => { try { await usersApi.update(row.ID, { ...row.API_RECORD, isActive: row.IS_ACTIVE === '1' ? 0 : 1 }); await load() } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to change user status.')) } }
+  const toggle = async (row) => { try { await usersApi.update(row.ID, { ...row.API_RECORD, status: row.IS_ACTIVE === '1' ? 0 : 1 }); await load() } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to change user status.')) } }
 
   return <><ListPage title={'User Create Self Service List'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => row.HAS_USER === '1' ? <ListRowActions row={row} onView={setSelectedEmployee} onEdit={setSelectedEmployee} onDelete={remove} onStatusChange={toggle} /> : <ProfileAction onClick={() => setSelectedEmployee(row)} />} />{selectedEmployee && <UserCreateSelfServiceModal key={selectedEmployee.ID} open employee={selectedEmployee} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onClose={() => setSelectedEmployee(null)} onSave={save} />}</>
 }

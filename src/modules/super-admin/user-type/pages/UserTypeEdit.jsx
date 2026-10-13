@@ -69,7 +69,13 @@ function UserTypeEdit() {
       await userTypesApi.update(userTypeId, mapUserTypeToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update User Type.', { userType: 'TYPE_NAME' }))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update User Type.', {
+        typeName: 'TYPE_NAME',
+        shortName: 'SHORT_NAME',
+        sortOrder: 'SORT_ORDER',
+        bgId: 'BG_ID',
+        businessGroup: 'BG_ID',
+      }))
     } finally {
       setSubmitting(false)
     }

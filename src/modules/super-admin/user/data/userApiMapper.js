@@ -10,7 +10,7 @@ function toDateTime(value) {
 export function mapUserFromApi(record = {}, lookups = {}) {
   return {
     ID: String(record.id ?? ''),
-    BG_ID: String(lookups.businessGroupId ?? ''),
+    BG_ID: String(record.bgId ?? lookups.businessGroupId ?? ''),
     BU_ID: String(record.buId ?? ''),
     USER_NAME: record.userName ?? '',
     FULL_NAME: record.fullName ?? '',
@@ -22,8 +22,9 @@ export function mapUserFromApi(record = {}, lookups = {}) {
     TO_DATE: dateOnly(record.toDate),
     ROLE_ID: String(record.roleId ?? ''),
     USER_TYPE_ID: String(record.userTypeId ?? ''),
-    ANDROID_ID: String(record.isAndroidFixed ?? 0),
-    STATUS: String(record.isActive ?? 1),
+    IS_ANDROID_FIXED: String(record.isAndroidFixed ?? 0),
+    ANDROID_ID: record.androidId ?? '',
+    STATUS: String(record.status ?? 1),
     BUSINESS_UNIT_NAME:
       lookups.businessUnits?.get(String(record.buId)) || String(record.buId || ''),
     ROLE_NAME:
@@ -38,7 +39,10 @@ export function mapUserFromApi(record = {}, lookups = {}) {
 
 export function mapUserToApi(values, originalRecord = {}) {
   const payload = {
-    ...originalRecord,
+    bgId: Number(values.BG_ID),
+    buId: Number(values.BU_ID),
+    deptId: originalRecord.deptId ?? null,
+    desigId: originalRecord.desigId ?? null,
     userName: values.USER_NAME,
     fullName: values.FULL_NAME,
     email: values.EMAIL,
@@ -47,9 +51,9 @@ export function mapUserToApi(values, originalRecord = {}) {
     toDate: toDateTime(values.TO_DATE),
     roleId: Number(values.ROLE_ID),
     userTypeId: Number(values.USER_TYPE_ID),
-    buId: values.BU_ID,
-    isActive: Number(values.STATUS),
-    isAndroidFixed: Number(values.ANDROID_ID),
+    isAndroidFixed: Number(values.IS_ANDROID_FIXED),
+    androidId: values.ANDROID_ID || null,
+    status: Number(values.STATUS),
   }
 
   if (values.PASSWORD) payload.password = values.PASSWORD

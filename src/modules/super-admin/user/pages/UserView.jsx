@@ -24,9 +24,9 @@ const viewConfig = {
     return {
       ...user,
       businessUnitName: unit?.businessUnit,
-      groupName: groups.find((record) => String(record.id) === String(unit?.bgId))?.groupName,
+      groupName: groups.find((record) => String(record.id) === String(user.bgId ?? unit?.bgId))?.groupName,
       roleName: roles.find((record) => String(record.id) === String(user.roleId))?.roleName,
-      userTypeName: userTypes.find((record) => String(record.id) === String(user.userTypeId))?.userType,
+      userTypeName: userTypes.find((record) => String(record.id) === String(user.userTypeId))?.typeName,
     }
   },
   fields: [
@@ -41,6 +41,7 @@ const viewConfig = {
     { label: 'Validate From Date', value: (record) => record.fromDate ? String(record.fromDate).slice(0, 10) : '' },
     { label: 'Validate To Date', value: (record) => record.toDate ? String(record.toDate).slice(0, 10) : '' },
     { label: 'Android ID Fixed', key: 'isAndroidFixed', type: 'boolean' },
+    { label: 'Android ID', key: 'androidId' },
     { label: 'Status', value: getRecordStatus, type: 'status' },
   ],
 }

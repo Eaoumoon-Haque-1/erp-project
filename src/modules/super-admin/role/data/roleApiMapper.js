@@ -3,14 +3,13 @@ export function mapRoleFromApi(record = {}) {
   return {
     ID: String(record.id ?? ''),
     PERMISSION_NAME: record.roleName ?? '',
-    STATUS: String(record.isActive ?? record.status ?? 1),
+    STATUS: String(record.status ?? 1),
   }
 }
 
 export function mapRoleToApi(values) {
   return {
     roleName: values.PERMISSION_NAME,
-    isActive: Number(values.STATUS),
     status: Number(values.STATUS),
   }
 }

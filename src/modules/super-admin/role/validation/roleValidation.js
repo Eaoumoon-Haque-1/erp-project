@@ -13,7 +13,7 @@ export const initialRoleValues = {
 export const initialRoleAssignmentValues = {
   MODULE_ID: '',
   MENU_ID: '',
-  PERMISSION_ID: '',
+  PERMISSION_ID: [],
 }
 
 export function validateRole(values, existingRoleNames = []) {
@@ -46,22 +46,31 @@ export function validateRoleAssignment(values, existingAssignments = []) {
   const normalizedValues = {
     MODULE_ID: String(values.MODULE_ID ?? ''),
     MENU_ID: String(values.MENU_ID ?? ''),
-    PERMISSION_ID: String(values.PERMISSION_ID ?? ''),
+    PERMISSION_ID: Array.isArray(values.PERMISSION_ID)
+      ? values.PERMISSION_ID.map(String).filter(Boolean)
+      : String(values.PERMISSION_ID ?? '')
+        .split(',')
+        .map((permissionId) => permissionId.trim())
+        .filter(Boolean),
   }
   const errors = {}
 
   if (!normalizedValues.MODULE_ID) errors.MODULE_ID = 'Module Name is required.'
   if (!normalizedValues.MENU_ID) errors.MENU_ID = 'Menu Name is required.'
-  if (!normalizedValues.PERMISSION_ID) errors.PERMISSION_ID = 'Permission Name is required.'
+  if (normalizedValues.PERMISSION_ID.length === 0) {
+    errors.PERMISSION_ID = 'Select at least one Permission.'
+  }
 
-  const isDuplicate = existingAssignments.some((assignment) => (
-    String(assignment.MODULE_ID) === normalizedValues.MODULE_ID
-    && String(assignment.MENU_ID) === normalizedValues.MENU_ID
-    && String(assignment.PERMISSION_ID) === normalizedValues.PERMISSION_ID
+  const hasDuplicate = normalizedValues.PERMISSION_ID.some((permissionId) => (
+    existingAssignments.some((assignment) => (
+      String(assignment.MODULE_ID) === normalizedValues.MODULE_ID
+      && String(assignment.MENU_ID) === normalizedValues.MENU_ID
+      && String(assignment.PERMISSION_ID) === permissionId
+    ))
   ))
 
-  if (isDuplicate) {
-    errors.PERMISSION_ID = 'This module, menu, and permission combination is already assigned.'
+  if (hasDuplicate) {
+    errors.PERMISSION_ID = 'One or more selected Permissions are already assigned.'
   }
 
   return {

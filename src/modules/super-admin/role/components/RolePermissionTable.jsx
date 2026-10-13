@@ -12,7 +12,14 @@ function DeleteIcon() {
   )
 }
 
-function RolePermissionTable({ rows, query, onQueryChange, onDelete }) {
+function RolePermissionTable({
+  rows,
+  query = '',
+  onQueryChange = () => {},
+  onDelete,
+  title = 'Permission List',
+  searchPlaceholder = 'Search by Menu Name...',
+}) {
   const normalizedQuery = query.trim().toLowerCase()
   const visibleRows = rows.filter((row) => (
     !normalizedQuery || row.MENU_NAME.toLowerCase().includes(normalizedQuery)
@@ -21,8 +28,8 @@ function RolePermissionTable({ rows, query, onQueryChange, onDelete }) {
   return (
     <div className={'erp-role-permission-list'}>
       <div className={'erp-role-list-heading'}>
-        <h3>Permission List</h3>
-        <input className={'erp-list-control'} type={'search'} value={query} placeholder={'Search by Menu Name...'} aria-label={'Search permissions by menu name'} onChange={(event) => onQueryChange(event.target.value)} />
+        <h3>{title}</h3>
+        <input className={'erp-list-control'} type={'search'} value={query} placeholder={searchPlaceholder} aria-label={'Search permissions by menu name'} onChange={(event) => onQueryChange(event.target.value)} />
       </div>
       <div className={'erp-table-wrap'}>
         <table className={'erp-table erp-role-permission-table'}>

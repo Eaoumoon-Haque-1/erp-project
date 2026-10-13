@@ -109,6 +109,7 @@ function UserForm({
   businessUnitOptions = [],
   roleOptions = [],
   userTypeOptions = [],
+  requirePassword = true,
   onChange,
 }) {
   const [showPassword, setShowPassword] = useState(false)
@@ -121,20 +122,21 @@ function UserForm({
       <TextField name={'FULL_NAME'} label={'Full Name'} values={values} errors={errors} type={'text'} maxLength={100} placeholder={'Enter Full Name'} required onChange={onChange} />
       <SelectField name={'USER_TYPE_ID'} label={'User Type'} values={values} errors={errors} options={userTypeOptions} onChange={onChange} />
       <TextField name={'USER_NAME'} label={'User Name'} values={values} errors={errors} inputRef={userNameRef} type={'text'} maxLength={20} placeholder={'Enter User Name'} required onChange={onChange} />
-      <TextField name={'EMAIL'} label={'Email'} values={values} errors={errors} type={'email'} maxLength={100} placeholder={'Enter Email'} required onChange={onChange} />
+      <TextField name={'EMAIL'} label={'Email'} values={values} errors={errors} type={'email'} maxLength={100} placeholder={'Enter Email'} onChange={onChange} />
       <TextField name={'MOBILE_NO'} label={'Mobile No'} values={values} errors={errors} type={'tel'} inputMode={'numeric'} digitsOnly maxLength={11} placeholder={'01XXXXXXXXX'} onChange={onChange} />
-      <TextField name={'PASSWORD'} label={'Password'} values={values} errors={errors} type={'password'} minLength={8} maxLength={64} placeholder={'Enter Password'} required autoComplete={'new-password'} passwordVisible={showPassword} onTogglePassword={() => setShowPassword((current) => !current)} onChange={onChange} />
-      <TextField name={'CONFIRM_PASSWORD'} label={'Confirm Password'} values={values} errors={errors} type={'password'} inputMode={'numeric'} minLength={8} maxLength={64} placeholder={'Confirm Password'} required autoComplete={'new-password'} passwordVisible={showConfirmPassword} onTogglePassword={() => setShowConfirmPassword((current) => !current)} onChange={onChange} />
+      <TextField name={'PASSWORD'} label={'Password'} values={values} errors={errors} type={'password'} minLength={8} maxLength={64} placeholder={requirePassword ? 'Enter Password' : 'Leave blank to keep current password'} required={requirePassword} autoComplete={'new-password'} passwordVisible={showPassword} onTogglePassword={() => setShowPassword((current) => !current)} onChange={onChange} />
+      <TextField name={'CONFIRM_PASSWORD'} label={'Confirm Password'} values={values} errors={errors} type={'password'} minLength={8} maxLength={64} placeholder={requirePassword ? 'Confirm Password' : 'Confirm only a new password'} required={requirePassword} autoComplete={'new-password'} passwordVisible={showConfirmPassword} onTogglePassword={() => setShowConfirmPassword((current) => !current)} onChange={onChange} />
       <TextField name={'FROM_DATE'} label={'Validate From Date'} values={values} errors={errors} type={'date'} onChange={onChange} />
       <TextField name={'TO_DATE'} label={'Validate To Date'} values={values} errors={errors} type={'date'} min={values.FROM_DATE || undefined} onChange={onChange} />
       <SelectField name={'ROLE_ID'} label={'User Role'} values={values} errors={errors} options={roleOptions} onChange={onChange} />
       <div>
         <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
         <label className={'erp-checkbox-field'}>
-          <input type={'checkbox'} name={'ANDROID_ID'} checked={values.ANDROID_ID === '1'} onChange={onChange} />
+          <input type={'checkbox'} name={'IS_ANDROID_FIXED'} checked={values.IS_ANDROID_FIXED === '1'} onChange={onChange} />
           <span>Android ID Fixed</span>
         </label>
       </div>
+      <TextField name={'ANDROID_ID'} label={'Android ID'} values={values} errors={errors} type={'text'} maxLength={100} placeholder={'Enter Android ID'} onChange={onChange} />
       <div>
         <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
         <label className={'erp-switch-field'}>

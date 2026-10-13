@@ -25,6 +25,7 @@ function CreateMenuEdit() {
   const [moduleOptions, setModuleOptions] = useState([])
   const [parentMenuOptions, setParentMenuOptions] = useState([])
   const [permissionOptions, setPermissionOptions] = useState([])
+  const [existingMenus, setExistingMenus] = useState([])
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -43,31 +44,38 @@ function CreateMenuEdit() {
       menus
         .filter(
           (menu) =>
-            String(menu.id) !== String(menuId) && Number(menu.isParent) === 1,
+            String(menu.id) !== String(menuId) &&
+            Number(menu.isParent) === 1 &&
+            Number(menu.status ?? 1) === 1,
         )
         .map((menu) => ({ value: String(menu.id), label: menu.menuName })),
     )
     setPermissionOptions(
-      permissions.map((permission) => ({
-        value: String(permission.id),
-        label: permission.permissionName,
-      })),
+      permissions
+        .filter((permission) => Number(permission.status ?? 1) === 1)
+        .map((permission) => ({
+          value: String(permission.id),
+          label: permission.permissionName,
+        })),
     )
   }, [menuId])
 
   useEffect(() => {
     let active = true
-    Promise.all([menusApi.get(menuId), modulesApi.list()])
-      .then(async ([menu, modules]) => {
+    Promise.all([menusApi.get(menuId), modulesApi.list(), menusApi.list()])
+      .then(async ([menu, modules, menus]) => {
         const mapped = mapMenuFromApi(menu)
         if (!active) return
         setValues(mapped)
         setOriginalValues(mapped)
+        setExistingMenus(menus.filter((item) => String(item.id) !== String(menuId)))
         setModuleOptions(
-          modules.map((module) => ({
-            value: String(module.id),
-            label: module.moduleName,
-          })),
+          modules
+            .filter((module) => Number(module.status ?? 1) === 1 || String(module.id) === mapped.MODULE_ID)
+            .map((module) => ({
+              value: String(module.id),
+              label: module.moduleName,
+            })),
         )
         await loadDependencies(mapped.MODULE_ID)
       })
@@ -130,7 +138,10 @@ function CreateMenuEdit() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateMenu(values)
+    const existingMenuNames = existingMenus
+      .filter((menu) => String(menu.moduleId ?? '') === String(values.MODULE_ID ?? ''))
+      .map((menu) => menu.menuName)
+    const result = validateMenu(values, existingMenuNames)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) return
@@ -141,7 +152,14 @@ function CreateMenuEdit() {
       await menusApi.update(menuId, mapMenuToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Menu.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Menu.', {
+        menuName: 'MENU_NAME',
+        moduleId: 'MODULE_ID',
+        parentMenuId: 'PARENT_MENU_ID',
+        permissionId: 'PERMISSION_ID',
+        routeName: 'ROUTE_NAME',
+        sortOrder: 'SORT_ORDER',
+      }))
     } finally {
       setSubmitting(false)
     }

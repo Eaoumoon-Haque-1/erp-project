@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { currentUser } from '../../../../app/currentUser'
+import { businessGroupsApi } from '../../business-group/api/businessGroupApi'
 import { userTypesApi } from '../api/userTypeApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
@@ -54,13 +54,16 @@ function UserTypeList() {
 
   useEffect(() => {
     let active = true
-    userTypesApi.list()
-      .then((records) => {
+    Promise.all([userTypesApi.list(), businessGroupsApi.list()])
+      .then(([records, groups]) => {
         if (active) {
+          const groupNames = new Map(
+            groups.map((group) => [String(group.id), group.groupName]),
+          )
           setRows(
             records.map((record) => ({
-              ...mapUserTypeFromApi(record, currentUser.businessGroup.id),
-              GROUP_NAME: currentUser.businessGroup.name,
+              ...mapUserTypeFromApi(record),
+              GROUP_NAME: groupNames.get(String(record.bgId)) || 'N/A',
             })),
           )
         }
@@ -96,7 +99,8 @@ function UserTypeList() {
           item.ID === row.ID
             ? {
                 ...item,
-                ...mapUserTypeFromApi(updated, currentUser.businessGroup.id),
+                ...mapUserTypeFromApi(updated),
+                GROUP_NAME: item.GROUP_NAME,
               }
             : item,
         ),

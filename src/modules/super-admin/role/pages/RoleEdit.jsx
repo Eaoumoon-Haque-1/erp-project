@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { menusApi } from '../../create-menu/api/menuApi'
 import { modulesApi } from '../../module/api/moduleApi'
-import { roleDetailsApi, rolesApi } from '../api/roleApi'
+import { rolePermissionsApi, rolesApi } from '../api/roleApi'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import { runConfirmedAction } from '../../../../components/shared/actionAlerts'
 import ActionForm from '../../../../components/shared/ActionForm'
@@ -42,24 +42,32 @@ function RoleEdit() {
   const [menuOptions, setMenuOptions] = useState([])
   const [permissionOptions, setPermissionOptions] = useState([])
   const [query, setQuery] = useState('')
+  const [existingRoleNames, setExistingRoleNames] = useState([])
 
   const reloadAssignments = async () => {
-    const details = await rolesApi.getDetails(roleId)
+    const details = await rolePermissionsApi.getDetails(roleId)
     setAssignments(flattenRolePermissions(details))
   }
 
   useEffect(() => {
     let active = true
-    Promise.all([rolesApi.get(roleId), rolesApi.getDetails(roleId), modulesApi.list()])
-      .then(([role, details, modules]) => {
+    Promise.all([rolesApi.get(roleId), rolePermissionsApi.getDetails(roleId), modulesApi.list(), rolesApi.list()])
+      .then(([role, details, modules, roles]) => {
         if (!active) return
         setRoleValues(mapRoleFromApi(role))
         setAssignments(flattenRolePermissions(details))
+        setExistingRoleNames(
+          roles
+            .filter((item) => String(item.id) !== String(roleId))
+            .map((item) => item.roleName),
+        )
         setModuleOptions(
-          modules.map((module) => ({
+          modules
+            .filter((module) => Number(module.status ?? 1) === 1)
+            .map((module) => ({
             value: String(module.id),
             label: module.moduleName,
-          })),
+            })),
         )
       })
       .catch((error) => {
@@ -81,7 +89,7 @@ function RoleEdit() {
 
   const handleRoleUpdate = async (event) => {
     event.preventDefault()
-    const result = validateRole(roleValues)
+    const result = validateRole(roleValues, existingRoleNames)
     setRoleValues(result.values)
     setRoleErrors(result.errors)
     if (!result.isValid) return
@@ -99,8 +107,8 @@ function RoleEdit() {
     const nextValues = {
       ...assignmentValues,
       [name]: value,
-      ...(name === 'MODULE_ID' ? { MENU_ID: '', PERMISSION_ID: '' } : {}),
-      ...(name === 'MENU_ID' ? { PERMISSION_ID: '' } : {}),
+      ...(name === 'MODULE_ID' ? { MENU_ID: '', PERMISSION_ID: [] } : {}),
+      ...(name === 'MENU_ID' ? { PERMISSION_ID: [] } : {}),
     }
     setAssignmentValues(nextValues)
     setAssignmentErrors((current) => ({ ...current, [name]: undefined }))
@@ -114,10 +122,12 @@ function RoleEdit() {
         }
         const menus = await menusApi.listByModule(value)
         setMenuOptions(
-          menus.map((menu) => ({
+          menus
+            .filter((menu) => Number(menu.isParent ?? 0) === 0 && Number(menu.isTopMenu ?? 0) === 0 && Number(menu.status ?? 1) === 1)
+            .map((menu) => ({
             value: String(menu.id),
             label: menu.menuName,
-          })),
+            })),
         )
         setPermissionOptions([])
       }
@@ -126,7 +136,7 @@ function RoleEdit() {
           setPermissionOptions([])
           return
         }
-        const permissions = await rolesApi.getAvailablePermissions(
+        const permissions = await rolePermissionsApi.getAvailablePermissions(
           roleId,
           assignmentValues.MODULE_ID,
           value,
@@ -151,10 +161,10 @@ function RoleEdit() {
     if (!result.isValid) return
 
     try {
-      await rolesApi.assignPermissions(roleId, {
+      await rolePermissionsApi.assignPermissions(roleId, {
         moduleId: Number(result.values.MODULE_ID),
         menuId: Number(result.values.MENU_ID),
-        permissionIds: [Number(result.values.PERMISSION_ID)],
+        permissionIds: result.values.PERMISSION_ID.map(Number),
       })
       await reloadAssignments()
       setAssignmentValues(initialRoleAssignmentValues)
@@ -170,7 +180,7 @@ function RoleEdit() {
       { action: 'delete', entityName: 'Permission', successText: 'Permission removed successfully.' },
       async () => {
         try {
-          await roleDetailsApi.removePermission(
+          await rolePermissionsApi.removePermission(
             row.ROLE_DETAIL_ID,
             row.PERMISSION_ID,
           )

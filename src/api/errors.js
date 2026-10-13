@@ -25,6 +25,22 @@ function defaultFormField(field) {
     .toUpperCase()
 }
 
+function inferFieldError(message, fieldMap) {
+  const text = String(message || '').toLowerCase()
+  if (!text) return {}
+
+  for (const [backendField, formField] of Object.entries(fieldMap)) {
+    const words = String(backendField)
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[_.-]+/g, ' ')
+      .toLowerCase()
+    if (text.includes(String(backendField).toLowerCase()) || text.includes(words)) {
+      return { [formField]: String(message) }
+    }
+  }
+  return {}
+}
+
 export function normalizeApiError(error, fallbackMessage = 'Unable to complete the operation.', fieldMap = {}) {
   const responseData = error?.response?.data
   const rawFields = normalizeFieldCollection(
@@ -46,6 +62,10 @@ export function normalizeApiError(error, fallbackMessage = 'Unable to complete t
           ? 'Unable to connect to the server. Check the network connection and try again.'
           : fallbackMessage
     )
+  }
+
+  if (Object.keys(fieldErrors).length === 0 && (error?.response?.status === 400 || error?.response?.status === 409)) {
+    Object.assign(fieldErrors, inferFieldError(message, fieldMap))
   }
 
   return { status: error?.response?.status, message, fieldErrors }

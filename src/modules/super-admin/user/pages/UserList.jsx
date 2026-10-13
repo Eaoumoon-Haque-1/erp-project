@@ -52,7 +52,7 @@ function UserList() {
         const lookups = {
           businessGroupId: currentUser.businessGroup.id,
           roles: new Map(roles.map((role) => [String(role.id), role.roleName])),
-          userTypes: new Map(userTypes.map((type) => [String(type.id), type.userType])),
+          userTypes: new Map(userTypes.map((type) => [String(type.id), type.typeName])),
           businessUnits: new Map(units.map((unit) => [String(unit.id), unit.businessUnit])),
         }
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
@@ -82,12 +82,12 @@ function UserList() {
     try {
       const updated = await usersApi.update(row.ID, {
         ...row.API_RECORD,
-        isActive: row.STATUS === '1' ? 0 : 1,
+        status: row.STATUS === '1' ? 0 : 1,
       })
       setRows((current) =>
         current.map((item) =>
           item.ID === row.ID
-            ? { ...item, STATUS: String(updated.isActive ?? 1), API_RECORD: updated }
+            ? { ...item, STATUS: String(updated.status ?? 1), API_RECORD: updated }
             : item,
         ),
       )

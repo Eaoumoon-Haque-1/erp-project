@@ -14,7 +14,6 @@ import CreateMenuForm from '../components/CreateMenuForm'
 import { mapMenuToApi } from '../data/menuApiMapper'
 import { MENU_TABLE, initialMenuValues, validateMenu } from '../validation/createMenuValidation'
 
-const existingMenuNames = []
 const listPath = '/super-admin/menu-creation/create-menu'
 
 function CreateMenuCreate() {
@@ -25,19 +24,23 @@ function CreateMenuCreate() {
   const [moduleOptions, setModuleOptions] = useState([])
   const [parentMenuOptions, setParentMenuOptions] = useState([])
   const [permissionOptions, setPermissionOptions] = useState([])
+  const [existingMenus, setExistingMenus] = useState([])
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     let active = true
-    modulesApi.list()
-      .then((modules) => {
+    Promise.all([modulesApi.list(), menusApi.list()])
+      .then(([modules, menus]) => {
         if (active) {
+          setExistingMenus(menus)
           setModuleOptions(
-            modules.map((module) => ({
-              value: String(module.id),
-              label: module.moduleName,
-            })),
+            modules
+              .filter((module) => Number(module.status ?? 1) === 1)
+              .map((module) => ({
+                value: String(module.id),
+                label: module.moduleName,
+              })),
           )
         }
       })
@@ -62,17 +65,19 @@ function CreateMenuCreate() {
       ])
       setParentMenuOptions(
         menus
-          .filter((menu) => Number(menu.isParent) === 1)
+          .filter((menu) => Number(menu.isParent) === 1 && Number(menu.status ?? 1) === 1)
           .map((menu) => ({
             value: String(menu.id),
             label: menu.menuName,
           })),
       )
       setPermissionOptions(
-        permissions.map((permission) => ({
-          value: String(permission.id),
-          label: permission.permissionName,
-        })),
+        permissions
+          .filter((permission) => Number(permission.status ?? 1) === 1)
+          .map((permission) => ({
+            value: String(permission.id),
+            label: permission.permissionName,
+          })),
       )
     } catch (error) {
       setMessage(
@@ -129,6 +134,9 @@ function CreateMenuCreate() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    const existingMenuNames = existingMenus
+      .filter((menu) => String(menu.moduleId ?? '') === String(values.MODULE_ID ?? ''))
+      .map((menu) => menu.menuName)
     const result = validateMenu(values, existingMenuNames)
     setValues(result.values)
     setErrors(result.errors)
@@ -144,7 +152,14 @@ function CreateMenuCreate() {
       await menusApi.create(mapMenuToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Menu.'))
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Menu.', {
+        menuName: 'MENU_NAME',
+        moduleId: 'MODULE_ID',
+        parentMenuId: 'PARENT_MENU_ID',
+        permissionId: 'PERMISSION_ID',
+        routeName: 'ROUTE_NAME',
+        sortOrder: 'SORT_ORDER',
+      }))
     } finally {
       setSubmitting(false)
     }

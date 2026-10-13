@@ -54,7 +54,7 @@ function UserCreate() {
       .then(([roles, userTypes]) => {
         if (!active) return
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
-        setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.userType })))
+        setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.typeName })))
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load User options.'))
@@ -99,13 +99,22 @@ function UserCreate() {
       await usersApi.create(mapUserToApi(result.values))
       navigate(listPath)
     } catch (error) {
-      const apiMessage = applyApiFormErrors(error, setErrors, 'Unable to create User.')
-      if (/email/i.test(apiMessage)) {
-        setErrors((current) => ({ ...current, EMAIL: apiMessage }))
-        requestAnimationFrame(() => document.querySelector('[name="EMAIL"]')?.focus())
-      } else {
-        setMessage(apiMessage)
-      }
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create User.', {
+        userName: 'USER_NAME',
+        fullName: 'FULL_NAME',
+        bgId: 'BG_ID',
+        buId: 'BU_ID',
+        businessGroup: 'BG_ID',
+        businessUnit: 'BU_ID',
+        email: 'EMAIL',
+        mobileNo: 'MOBILE_NO',
+        password: 'PASSWORD',
+        fromDate: 'FROM_DATE',
+        toDate: 'TO_DATE',
+        roleId: 'ROLE_ID',
+        userTypeId: 'USER_TYPE_ID',
+        androidId: 'ANDROID_ID',
+      }))
     } finally {
       setSubmitting(false)
     }
@@ -122,7 +131,7 @@ function UserCreate() {
 
   return (
     <FormPage title={'User Create'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} messageTone={'error'} submitting={submitting}>
-      <UserForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} unitsLoading={unitsLoading} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} onChange={handleChange} />
+      <UserForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} unitsLoading={unitsLoading} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} requirePassword onChange={handleChange} />
       <UserAssignmentTabs
         employeeOptions={mockEmployeeListOptions}
         businessUnitOptions={businessUnitOptions}

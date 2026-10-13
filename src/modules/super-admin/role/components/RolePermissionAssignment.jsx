@@ -3,6 +3,8 @@
  * Sections: local display/interaction helpers and the exported controlled component.
  * Keep page navigation and API persistence in the owning page unless this component is the workflow boundary.
  */
+import MultiSelectField from '../../../../components/shared/MultiSelectField'
+
 function FieldError({ id, message }) {
   if (!message) return null
   return <p id={id} className={'erp-field-error'}>{message}</p>
@@ -19,6 +21,7 @@ function RolePermissionAssignment({
   menuOptions = [],
   permissionOptions = [],
   onChange,
+  onAdd,
 }) {
   return (
     <div className={'erp-role-assignment-grid'}>
@@ -44,18 +47,21 @@ function RolePermissionAssignment({
         <FieldError id={'role-MENU_ID-error'} message={errors.MENU_ID} />
       </div>
 
-      <div>
-        <label className={'erp-field-label'} htmlFor={'PERMISSION_ID'}>
-          Permission Name<span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <select id={'PERMISSION_ID'} name={'PERMISSION_ID'} className={fieldClass(errors.PERMISSION_ID)} value={values.PERMISSION_ID} required aria-invalid={Boolean(errors.PERMISSION_ID)} aria-describedby={errors.PERMISSION_ID ? 'role-PERMISSION_ID-error' : undefined} onChange={onChange}>
-          <option value={''}>Select...</option>
-          {permissionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-        <FieldError id={'role-PERMISSION_ID-error'} message={errors.PERMISSION_ID} />
-      </div>
+      <MultiSelectField
+        id={'PERMISSION_ID'}
+        name={'PERMISSION_ID'}
+        label={'Permission Name'}
+        placeholder={'--Select Permissions--'}
+        options={permissionOptions}
+        value={values.PERMISSION_ID}
+        error={errors.PERMISSION_ID}
+        disabled={!values.MENU_ID}
+        required
+        growWithContent
+        onChange={(name, value) => onChange({ target: { name, value } })}
+      />
 
-      <button type={'submit'} className={'erp-role-add-button'} aria-label={'Add permission'} title={'Add permission'}>
+      <button type={onAdd ? 'button' : 'submit'} className={'erp-role-add-button'} aria-label={'Add permission'} title={'Add permission'} onClick={onAdd}>
         <span aria-hidden={'true'}>+</span>
       </button>
     </div>
