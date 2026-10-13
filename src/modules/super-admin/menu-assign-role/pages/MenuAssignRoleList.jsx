@@ -69,12 +69,16 @@ function MenuAssignRoleList() {
 
   const changeStatus = async (row) => {
     try {
+      const nextStatus = row.STATUS === '1' ? 0 : 1
       const updated = await rolePermissionsApi.update(row.ID, {
         ...row.API_RECORD,
-        status: row.STATUS === '1' ? 0 : 1,
+        status: nextStatus,
       })
+      const updatedRecord = updated && typeof updated === 'object'
+        ? updated
+        : { ...row.API_RECORD, status: nextStatus }
       setRows((current) => current.map((item) => (
-        item.ID === row.ID ? mapRoleDetailFromApi(updated, lookups) : item
+        item.ID === row.ID ? mapRoleDetailFromApi(updatedRecord, lookups) : item
       )))
       return true
     } catch (error) {

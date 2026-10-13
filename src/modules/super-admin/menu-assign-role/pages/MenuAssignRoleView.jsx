@@ -1,6 +1,5 @@
 /** @file Dedicated read-only view for a RoleDetail menu-permission assignment. */
 import ApiRecordViewPage from '../../../../components/shared/ApiRecordViewPage'
-import { getRecordStatus } from '../../../../utils/recordValues'
 import { menusApi } from '../../create-menu/api/menuApi'
 import { permissionsApi } from '../../menu-permission/api/menuPermissionApi'
 import { modulesApi } from '../../module/api/moduleApi'
@@ -31,7 +30,7 @@ const viewConfig = {
     { label: 'Module Name', key: 'MODULE_NAME' },
     { label: 'Menu Name', key: 'MENU_NAME' },
     { label: 'Permissions', key: 'PERMISSION_NAME', wide: true },
-    { label: 'Status', value: getRecordStatus, type: 'status' },
+    { label: 'Status', key: 'STATUS', type: 'status' },
   ],
 }
 

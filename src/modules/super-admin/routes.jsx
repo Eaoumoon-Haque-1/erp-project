@@ -33,6 +33,7 @@ import AssignRoleBusinessUnitList from "./assign-role-business-unit/pages/Assign
 import AssignRoleBusinessUnitCreate from "./assign-role-business-unit/pages/AssignRoleBusinessUnitCreate";
 import MenuAssignRoleList from "./menu-assign-role/pages/MenuAssignRoleList";
 import MenuAssignRoleCreate from "./menu-assign-role/pages/MenuAssignRoleCreate";
+import MenuAssignRoleView from "./menu-assign-role/pages/MenuAssignRoleView";
 import UserTypeList from "./user-type/pages/UserTypeList";
 import UserTypeCreate from "./user-type/pages/UserTypeCreate";
 import UserTypeEdit from "./user-type/pages/UserTypeEdit";
@@ -40,6 +41,7 @@ import UserTypeView from "./user-type/pages/UserTypeView";
 import UserTypeGroupList from "./user-type-group/pages/UserTypeGroupList";
 import UserTypeGroupCreate from "./user-type-group/pages/UserTypeGroupCreate";
 import UserTypeGroupEdit from "./user-type-group/pages/UserTypeGroupEdit";
+import UserTypeGroupView from "./user-type-group/pages/UserTypeGroupView";
 import UserList from "./user/pages/UserList";
 import UserCreate from "./user/pages/UserCreate";
 import UserEdit from "./user/pages/UserEdit";
@@ -174,6 +176,10 @@ export const superAdminRoutes = [
         element: <MenuAssignRoleCreate />,
       },
       {
+        path: "role-creation/menu-assign-role/:menuAssignmentId/view",
+        element: <MenuAssignRoleView />,
+      },
+      {
         path: "role",
         element: <RoleList />,
       },
@@ -212,6 +218,10 @@ export const superAdminRoutes = [
       {
         path: "user-creation/user-type-group/:userTypeGroupId/edit",
         element: <UserTypeGroupEdit />,
+      },
+      {
+        path: "user-creation/user-type-group/:userTypeGroupId/view",
+        element: <UserTypeGroupView />,
       },
       {
         path: "user-creation/user",
@@ -254,6 +264,10 @@ export const superAdminRoutes = [
       {
         path: "user-type-group/:userTypeGroupId/edit",
         element: <UserTypeGroupEdit />,
+      },
+      {
+        path: "user-type-group/:userTypeGroupId/view",
+        element: <UserTypeGroupView />,
       },
       {
         path: "user",

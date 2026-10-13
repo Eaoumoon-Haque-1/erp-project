@@ -21,7 +21,7 @@ function DeleteIcon() {
   );
 }
 
-function BusinessUnitAssignmentTable({ rows, query, onQueryChange, onDelete }) {
+function BusinessUnitAssignmentTable({ rows, query, onQueryChange, onDelete, onStatusChange }) {
   const normalizedQuery = query.trim().toLowerCase();
   const visibleRows = rows.filter(
     (row) =>
@@ -63,16 +63,17 @@ function BusinessUnitAssignmentTable({ rows, query, onQueryChange, onDelete }) {
                 <tr key={row.ID}>
                   <td>{row.BUSINESS_UNIT_NAME}</td>
                   <td>
-                    <span
-                      className={[
-                        "inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm",
-                        row.STATUS === "1"
-                          ? "bg-action-success"
-                          : "bg-action-danger",
-                      ].join(" ")}
-                    >
-                      {row.STATUS === "1" ? "Active" : "Inactive"}
-                    </span>
+                    <label className={"erp-switch-field"}>
+                      <input
+                        className={"erp-switch-control"}
+                        type={"checkbox"}
+                        role={"switch"}
+                        checked={row.STATUS === "1"}
+                        aria-label={`${row.BUSINESS_UNIT_NAME} status`}
+                        onChange={() => onStatusChange(row.ID)}
+                      />
+                      <span>{row.STATUS === "1" ? "Active" : "Inactive"}</span>
+                    </label>
                   </td>
                   <td>
                     <button

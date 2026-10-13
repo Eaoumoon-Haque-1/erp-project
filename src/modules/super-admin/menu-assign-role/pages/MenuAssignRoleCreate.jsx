@@ -20,6 +20,7 @@ function groupAssignedPermissions(rows) {
     const key = `${row.MODULE_ID}:${row.MENU_ID}`
     const group = groups.get(key) || {
       ID: `assigned-${key}`,
+      ROLE_DETAIL_ID: row.ROLE_DETAIL_ID,
       MODULE_ID: row.MODULE_ID,
       MODULE_NAME: row.MODULE_NAME,
       MENU_ID: row.MENU_ID,
@@ -207,9 +208,7 @@ function MenuAssignRoleCreate() {
       { action: 'delete', entityName: 'Permission assignment', successText: 'Permission assignment removed successfully.' },
       async () => {
         try {
-          for (const permission of row.PERMISSIONS) {
-            await rolePermissionsApi.removePermission(permission.ROLE_DETAIL_ID, permission.PERMISSION_ID)
-          }
+          await rolePermissionsApi.remove(row.ROLE_DETAIL_ID)
           await reloadAssignments()
         } catch (error) { getApiErrorMessage(error, 'Unable to remove Permission assignment.'); return false }
         return true

@@ -3,8 +3,6 @@
  * Sections: field helpers, feature field groups, validation display, and exported form component.
  * Receive values/errors/callbacks through props; saving, navigation, and API calls stay in the page.
  */
-import { userTypeOptions } from "../data/userTypeGroupOptions";
-
 function FieldError({ id, message }) {
   if (!message) return null;
   return (
@@ -28,7 +26,12 @@ function UserTypeGroupForm({
   values,
   errors,
   groupOptions = [],
+  userTypeOptions = [],
   groupsLoading = false,
+  typesLoading = false,
+  fieldsDisabled = false,
+  groupReadOnly = false,
+  typeReadOnly = false,
   typeRef,
   onChange,
 }) {
@@ -47,7 +50,7 @@ function UserTypeGroupForm({
           className={fieldClass(errors.BG_ID)}
           value={values.BG_ID}
           required
-          disabled={groupsLoading}
+          disabled={groupsLoading || fieldsDisabled || groupReadOnly}
           aria-invalid={Boolean(errors.BG_ID)}
           aria-describedby={
             errors.BG_ID ? "user-type-group-BG_ID-error" : undefined
@@ -79,6 +82,7 @@ function UserTypeGroupForm({
           className={fieldClass(errors.USER_TYPE_ID)}
           value={values.USER_TYPE_ID}
           required
+          disabled={!values.BG_ID || typesLoading || fieldsDisabled || typeReadOnly}
           aria-invalid={Boolean(errors.USER_TYPE_ID)}
           aria-describedby={
             errors.USER_TYPE_ID
@@ -87,7 +91,9 @@ function UserTypeGroupForm({
           }
           onChange={onChange}
         >
-          <option value={""}>Select...</option>
+          <option value={""}>
+            {typesLoading ? "Loading User Types..." : "--Select Type Name--"}
+          </option>
           {userTypeOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

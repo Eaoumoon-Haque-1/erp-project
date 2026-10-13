@@ -61,7 +61,16 @@ function ActionIcon({ type }) {
   )
 }
 
-function ListRowActions({ row, onView, onEdit, onDelete, onStatusChange, entityName }) {
+function ListRowActions({
+  row,
+  onView,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  entityName,
+  editLabel = 'Edit',
+  showUnavailable = true,
+}) {
   const listEntityName = useContext(ListActionContext)
   const resolvedEntityName = entityName || listEntityName
   const runAction = async (action, handler) => {
@@ -85,34 +94,42 @@ function ListRowActions({ row, onView, onEdit, onDelete, onStatusChange, entityN
 
   return (
     <div className={'inline-flex items-center gap-1'}>
-      <ActionButton
-        label={'View'}
-        className={'bg-action-view'}
-        onClick={onView ? () => onView(row) : undefined}
-      >
-        <ActionIcon type={'view'} />
-      </ActionButton>
-      <ActionButton
-        label={'Edit'}
-        className={'bg-action-edit'}
-        onClick={onEdit ? () => onEdit(row) : undefined}
-      >
-        <ActionIcon type={'edit'} />
-      </ActionButton>
-      <ActionButton
-        label={'Delete'}
-        className={'bg-action-danger'}
-        onClick={onDelete ? () => runAction('delete', onDelete) : undefined}
-      >
-        <ActionIcon type={'delete'} />
-      </ActionButton>
-      <ActionButton
-        label={'Change status'}
-        className={'bg-action-success'}
-        onClick={onStatusChange ? () => runAction('status', onStatusChange) : undefined}
-      >
-        <ActionIcon type={'status'} />
-      </ActionButton>
+      {(showUnavailable || onView) && (
+        <ActionButton
+          label={'View'}
+          className={'bg-action-view'}
+          onClick={onView ? () => onView(row) : undefined}
+        >
+          <ActionIcon type={'view'} />
+        </ActionButton>
+      )}
+      {(showUnavailable || onEdit) && (
+        <ActionButton
+          label={editLabel}
+          className={'bg-action-edit'}
+          onClick={onEdit ? () => onEdit(row) : undefined}
+        >
+          <ActionIcon type={'edit'} />
+        </ActionButton>
+      )}
+      {(showUnavailable || onDelete) && (
+        <ActionButton
+          label={'Delete'}
+          className={'bg-action-danger'}
+          onClick={onDelete ? () => runAction('delete', onDelete) : undefined}
+        >
+          <ActionIcon type={'delete'} />
+        </ActionButton>
+      )}
+      {(showUnavailable || onStatusChange) && (
+        <ActionButton
+          label={'Change status'}
+          className={'bg-action-success'}
+          onClick={onStatusChange ? () => runAction('status', onStatusChange) : undefined}
+        >
+          <ActionIcon type={'status'} />
+        </ActionButton>
+      )}
     </div>
   )
 }

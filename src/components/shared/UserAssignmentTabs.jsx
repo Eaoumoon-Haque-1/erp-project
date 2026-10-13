@@ -49,6 +49,8 @@ function UserAssignmentTabs({
   businessUnitOptions,
   employeeRows,
   businessUnitRows,
+  maxEmployeeAssignments = Number.POSITIVE_INFINITY,
+  showEmployeeStatus = true,
   activeTab,
   generalError,
   onTabChange,
@@ -77,13 +79,17 @@ function UserAssignmentTabs({
       setEmployeeError("This Employee is already assigned.");
       return;
     }
+    if (employeeRows.length >= maxEmployeeAssignments) {
+      setEmployeeError("Only one Employee can be assigned to a User.");
+      return;
+    }
 
     onAddEmployee({
       id: `employee-map-${Date.now()}`,
       EMPL_ID: employee.value,
       CODE: employee.code,
       NAME: employee.name,
-      STATUS: employeeStatus,
+      STATUS: showEmployeeStatus ? employeeStatus : "1",
       DISPLAY_NAME:
         employee.label ??
         `${employee.name ?? employee.value} (${employee.code ?? employee.value})`,
@@ -179,7 +185,7 @@ function UserAssignmentTabs({
                   ))}
                 </select>
               </div>
-              <div>
+              {showEmployeeStatus && <div>
                 <span className={"erp-field-label"} aria-hidden={"true"}>
                   &nbsp;
                 </span>
@@ -195,7 +201,7 @@ function UserAssignmentTabs({
                   />
                   <span>Is Active?</span>
                 </label>
-              </div>
+              </div>}
             </div>
             <FieldError message={employeeError} />
 
@@ -205,14 +211,14 @@ function UserAssignmentTabs({
                   <tr>
                     <th className={"w-[60px]"}>#</th>
                     <th>Employee Name</th>
-                    <th className={"w-[150px]"}>Status</th>
+                    {showEmployeeStatus && <th className={"w-[150px]"}>Status</th>}
                     <th className={"w-[100px] text-center"}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {employeeRows.length === 0 ? (
                     <tr>
-                      <td className={"erp-empty-cell"} colSpan={4}>
+                      <td className={"erp-empty-cell"} colSpan={showEmployeeStatus ? 4 : 3}>
                         No employee assigned
                       </td>
                     </tr>
@@ -221,7 +227,7 @@ function UserAssignmentTabs({
                       <tr key={row.id ?? `${row.EMPL_ID}-${index}`}>
                         <td>{index + 1}</td>
                         <td>{row.DISPLAY_NAME || row.NAME}</td>
-                        <td>
+                        {showEmployeeStatus && <td>
                           <span
                             className={[
                               "inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm",
@@ -232,7 +238,7 @@ function UserAssignmentTabs({
                           >
                             {row.STATUS === "1" ? "Active" : "Inactive"}
                           </span>
-                        </td>
+                        </td>}
                         <td className={"text-center"}>
                           <RemoveButton
                             label={`Remove ${row.NAME}`}

@@ -40,6 +40,7 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields }) {
   const [record, setRecord] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const editPath = editTo && record ? editTo(id, record) : ''
 
   useEffect(() => {
     let active = true
@@ -64,7 +65,7 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields }) {
         title={title}
         actionLabel={'List'}
         actionTo={listTo}
-        actions={editTo ? [{ label: 'Edit', to: editTo(id), variant: 'secondary' }] : []}
+        actions={editPath ? [{ label: 'Edit', to: editPath, variant: 'secondary' }] : []}
       />
       <section className={'erp-form-card'}>
         {loading && <p className={'erp-record-view-message'}>Loading...</p>}
