@@ -17,13 +17,20 @@ function AuthProvider({ children }) {
 
   useEffect(() => {
     const handleSessionExpired = () => setSession(null)
+    const handleSessionRefreshed = (event) => setSession(event.detail)
     window.addEventListener('cloud-erp:session-expired', handleSessionExpired)
+    window.addEventListener('cloud-erp:session-refreshed', handleSessionRefreshed)
 
-    return () =>
+    return () => {
       window.removeEventListener(
         'cloud-erp:session-expired',
         handleSessionExpired,
       )
+      window.removeEventListener(
+        'cloud-erp:session-refreshed',
+        handleSessionRefreshed,
+      )
+    }
   }, [])
 
   const value = useMemo(

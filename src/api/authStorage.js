@@ -1,5 +1,5 @@
 /**
- * @file Browser-session storage for the authenticated API token.
+ * @file Browser-session storage for authenticated API tokens.
  * Keep token persistence in one place so API requests and React auth state use
  * the same expiry rules. This project intentionally uses sessionStorage, so a
  * token is cleared when the browser tab/session ends.
@@ -12,7 +12,14 @@ export function readAuthSession() {
     if (!rawSession) return null
 
     const session = JSON.parse(rawSession)
-    if (!session.accessToken || session.expiresAt <= Date.now()) {
+    if (!session.accessToken) {
+      clearAuthSession()
+      return null
+    }
+
+    // Keep an expired access token only when it can be renewed. The Axios
+    // interceptor will exchange the refresh token before retrying the request.
+    if (session.expiresAt <= Date.now() && !session.refreshToken) {
       clearAuthSession()
       return null
     }
@@ -24,13 +31,30 @@ export function readAuthSession() {
   }
 }
 
-export function saveAuthSession(response) {
+export function saveAuthSession(response, previousSession = {}) {
+  const expiresIn = Number(response.expiresIn)
+  const accessToken = response.accessToken || previousSession.accessToken
   const session = {
-    accessToken: response.accessToken,
-    tokenType: response.tokenType || 'Bearer',
-    expiresAt: Date.now() + Number(response.expiresIn || 0) * 1000,
-    username: response.username || '',
-    role: response.role || '',
+    accessToken,
+    // The current backend does not return a distinct refreshToken. Until that
+    // contract is expanded, use its access token as the refresh credential the
+    // /auth/refresh request body expects. A real/rotated refresh token always
+    // takes priority when the backend starts returning one.
+    refreshToken:
+      response.refreshToken
+      || response.accessToken
+      || previousSession.refreshToken
+      || '',
+    tokenType: response.tokenType || previousSession.tokenType || 'Bearer',
+    expiresAt: Number.isFinite(expiresIn) && expiresIn > 0
+      ? Date.now() + expiresIn * 1000
+      : previousSession.expiresAt || Date.now(),
+    username: response.username || previousSession.username || '',
+    role: response.role || previousSession.role || '',
+  }
+
+  if (!accessToken) {
+    throw new Error('Authentication response did not include an access token.')
   }
 
   sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session))

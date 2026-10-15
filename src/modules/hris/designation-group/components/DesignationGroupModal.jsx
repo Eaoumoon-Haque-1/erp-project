@@ -31,9 +31,12 @@ function DesignationGroupModal({
   businessGroup,
   designation,
   businessUnits,
+  mode = 'create',
+  record,
+  submitting = false,
 }) {
   const [values, setValues] = useState(() =>
-    createInitialDesignationGroupValues(businessGroup.ID, designation.ID),
+    record || createInitialDesignationGroupValues(businessGroup.ID, designation.ID),
   )
   const [errors, setErrors] = useState({})
   const businessUnitRef = useRef(null)
@@ -52,7 +55,7 @@ function DesignationGroupModal({
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     const result = validateDesignationGroup(values)
 
@@ -64,16 +67,22 @@ function DesignationGroupModal({
       return
     }
 
-    onSubmit(result.values)
+    await onSubmit(result.values)
   }
 
   const availableBusinessUnits = businessUnits.filter(
     (unit) => String(unit.BG_ID) === String(values.BG_ID),
   )
+  const readOnly = mode === 'view'
+  const title = mode === 'view'
+    ? 'View Designation Group'
+    : mode === 'edit'
+      ? 'Edit Designation Group'
+      : 'Assign Designation Group'
 
   return (
-    <Modal title={'Assign Designation Group'} open={open} onClose={onClose}>
-      <ActionForm entityName={'Designation Group'} data-table={DESIGNATION_GROUP_TABLE} onSubmit={handleSubmit} noValidate>
+    <Modal title={title} open={open} onClose={onClose}>
+      <ActionForm action={mode === 'edit' ? 'update' : 'create'} entityName={'Designation Group'} data-table={DESIGNATION_GROUP_TABLE} onSubmit={handleSubmit} noValidate>
         <div className={'erp-modal-form'}>
           <div>
             <label className={'erp-field-label'} htmlFor={'DESIG_GROUP_BG_ID-display'}>
@@ -121,6 +130,7 @@ function DesignationGroupModal({
               className={fieldClass(errors.BU_ID)}
               value={values.BU_ID}
               required
+              disabled={readOnly}
               aria-invalid={Boolean(errors.BU_ID)}
               aria-describedby={errors.BU_ID ? 'DESIG_GROUP_BU_ID-error' : undefined}
               onChange={handleChange}
@@ -140,17 +150,20 @@ function DesignationGroupModal({
               role={'switch'}
               name={'STATUS'}
               checked={values.STATUS === '1'}
+              disabled={readOnly}
               onChange={handleChange}
             />
             <span>Is Active</span>
           </label>
         </div>
 
-        <div className={'erp-modal-actions'}>
-          <button type={'submit'} className={'primary-button erp-modal-submit'}>
-            Submit
-          </button>
-        </div>
+        {!readOnly && (
+          <div className={'erp-modal-actions'}>
+            <button type={'submit'} className={'primary-button erp-modal-submit'} disabled={submitting}>
+              {submitting ? 'Saving...' : mode === 'edit' ? 'Update' : 'Submit'}
+            </button>
+          </div>
+        )}
       </ActionForm>
     </Modal>
   )

@@ -38,11 +38,13 @@ function RoleEdit() {
   )
   const [assignmentErrors, setAssignmentErrors] = useState({})
   const [assignments, setAssignments] = useState([])
+  const [stagedAssignments, setStagedAssignments] = useState([])
   const [moduleOptions, setModuleOptions] = useState([])
   const [menuOptions, setMenuOptions] = useState([])
   const [permissionOptions, setPermissionOptions] = useState([])
   const [query, setQuery] = useState('')
   const [existingRoleNames, setExistingRoleNames] = useState([])
+  const [submitting, setSubmitting] = useState(false)
 
   const reloadAssignments = async () => {
     const details = await rolePermissionsApi.getDetails(roleId)
@@ -94,12 +96,52 @@ function RoleEdit() {
     setRoleErrors(result.errors)
     if (!result.isValid) return
 
+    setSubmitting(true)
+    let updated
     try {
-      const updated = await rolesApi.update(roleId, mapRoleToApi(result.values))
-      setRoleValues(mapRoleFromApi(updated))
+      updated = await rolesApi.update(roleId, mapRoleToApi(result.values))
     } catch (error) {
       applyApiFormErrors(error, setRoleErrors, 'Unable to update Role.', { roleName: 'PERMISSION_NAME' })
+      setSubmitting(false)
+      return
     }
+
+    const savedRowIds = new Set()
+    for (const row of stagedAssignments) {
+      try {
+        await rolePermissionsApi.assignPermissions(roleId, {
+          moduleId: Number(row.MODULE_ID),
+          menuId: Number(row.MENU_ID),
+          permissionIds: row.PERMISSION_IDS.map(Number),
+        })
+        savedRowIds.add(row.ID)
+      } catch (error) {
+        setRoleValues(mapRoleFromApi(updated))
+        setStagedAssignments((current) =>
+          current.filter((item) => !savedRowIds.has(item.ID)),
+        )
+        await reloadAssignments().catch(() => {})
+        getApiErrorMessage(
+          error,
+          'The Role was updated, but not all Permission assignments were saved.',
+        )
+        setSubmitting(false)
+        return
+      }
+    }
+
+    setRoleValues(mapRoleFromApi(updated))
+    setStagedAssignments([])
+    setAssignmentValues(initialRoleAssignmentValues)
+    setAssignmentErrors({})
+    setMenuOptions([])
+    setPermissionOptions([])
+    try {
+      await reloadAssignments()
+    } catch (error) {
+      getApiErrorMessage(error, 'Role changes were saved, but assignments could not be reloaded.')
+    }
+    setSubmitting(false)
   }
 
   const handleAssignmentChange = async (event) => {
@@ -153,29 +195,81 @@ function RoleEdit() {
     }
   }
 
-  const handleAddPermission = async (event) => {
+  const handleAddPermission = (event) => {
     event.preventDefault()
-    const result = validateRoleAssignment(assignmentValues, assignments)
+    const stagedPermissionRows = stagedAssignments.flatMap((row) =>
+      row.PERMISSION_IDS.map((permissionId) => ({
+        MODULE_ID: row.MODULE_ID,
+        MENU_ID: row.MENU_ID,
+        PERMISSION_ID: permissionId,
+      })),
+    )
+    const result = validateRoleAssignment(
+      assignmentValues,
+      [...assignments, ...stagedPermissionRows],
+    )
     setAssignmentValues(result.values)
     setAssignmentErrors(result.errors)
     if (!result.isValid) return
 
-    try {
-      await rolePermissionsApi.assignPermissions(roleId, {
-        moduleId: Number(result.values.MODULE_ID),
-        menuId: Number(result.values.MENU_ID),
-        permissionIds: result.values.PERMISSION_ID.map(Number),
-      })
-      await reloadAssignments()
-      setAssignmentValues(initialRoleAssignmentValues)
-      setMenuOptions([])
-      setPermissionOptions([])
-    } catch (error) {
-      getApiErrorMessage(error, 'Unable to assign Permission.')
-    }
+    const moduleName = moduleOptions.find(
+      (option) => option.value === result.values.MODULE_ID,
+    )?.label || result.values.MODULE_ID
+    const menuName = menuOptions.find(
+      (option) => option.value === result.values.MENU_ID,
+    )?.label || result.values.MENU_ID
+    const selectedPermissions = result.values.PERMISSION_ID.map((permissionId) => ({
+      id: permissionId,
+      name: permissionOptions.find((option) => option.value === permissionId)?.label || permissionId,
+    }))
+
+    setStagedAssignments((current) => {
+      const existing = current.find((row) => (
+        row.MODULE_ID === result.values.MODULE_ID
+        && row.MENU_ID === result.values.MENU_ID
+      ))
+      if (existing) {
+        return current.map((row) => row.ID === existing.ID ? {
+          ...row,
+          PERMISSION_IDS: [
+            ...row.PERMISSION_IDS,
+            ...selectedPermissions.map((permission) => permission.id),
+          ],
+          PERMISSION_NAMES: [
+            ...row.PERMISSION_NAMES,
+            ...selectedPermissions.map((permission) => permission.name),
+          ],
+          PERMISSION_NAME: [
+            ...row.PERMISSION_NAMES,
+            ...selectedPermissions.map((permission) => permission.name),
+          ].join(', '),
+        } : row)
+      }
+
+      return [...current, {
+        ID: `pending-${result.values.MODULE_ID}-${result.values.MENU_ID}`,
+        MODULE_ID: result.values.MODULE_ID,
+        MODULE_NAME: moduleName,
+        MENU_ID: result.values.MENU_ID,
+        MENU_NAME: menuName,
+        PERMISSION_IDS: selectedPermissions.map((permission) => permission.id),
+        PERMISSION_NAMES: selectedPermissions.map((permission) => permission.name),
+        PERMISSION_NAME: selectedPermissions.map((permission) => permission.name).join(', '),
+        IS_STAGED: true,
+      }]
+    })
+    setAssignmentValues((current) => ({ ...current, PERMISSION_ID: [] }))
+    setAssignmentErrors({})
   }
 
   const handleDeletePermission = async (row) => {
+    if (row.IS_STAGED) {
+      setStagedAssignments((current) =>
+        current.filter((item) => item.ID !== row.ID),
+      )
+      return
+    }
+
     await runConfirmedAction(
       { action: 'delete', entityName: 'Permission', successText: 'Permission removed successfully.' },
       async () => {
@@ -198,18 +292,15 @@ function RoleEdit() {
     <div className={'erp-list-page'}>
       <PageHeader title={'Role Edit'} actionLabel={'List'} actionTo={listPath} />
       <section className={'erp-form-card erp-role-edit-card'}>
-        <ActionForm action={'update'} entityName={'Role'} onSubmit={handleRoleUpdate} noValidate>
+        <ActionForm id={'role-edit-form'} action={'update'} entityName={'Role'} onSubmit={handleRoleUpdate} noValidate>
           <RoleForm
             values={roleValues}
             errors={roleErrors}
             onChange={handleRoleChange}
           />
-          <div className={'erp-form-actions'}>
-            <button type={'submit'} className={'primary-button'}>Update</button>
-          </div>
         </ActionForm>
         <div className={'erp-role-divider'} />
-        <ActionForm entityName={'Permission assignment'} onSubmit={handleAddPermission} noValidate>
+        <div>
           <RolePermissionAssignment
             values={assignmentValues}
             errors={assignmentErrors}
@@ -217,14 +308,20 @@ function RoleEdit() {
             menuOptions={menuOptions}
             permissionOptions={permissionOptions}
             onChange={handleAssignmentChange}
+            onAdd={handleAddPermission}
           />
-        </ActionForm>
+        </div>
         <RolePermissionTable
-          rows={assignments}
+          rows={[...assignments, ...stagedAssignments]}
           query={query}
           onQueryChange={setQuery}
           onDelete={handleDeletePermission}
         />
+        <div className={'erp-form-actions'}>
+          <button type={'submit'} form={'role-edit-form'} className={'primary-button'} disabled={submitting}>
+            {submitting ? 'Updating...' : 'Update'}
+          </button>
+        </div>
       </section>
     </div>
   )

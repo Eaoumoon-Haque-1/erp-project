@@ -32,10 +32,12 @@ function DepartmentGroupModal({
   businessGroup,
   department,
   businessUnits,
+  mode = 'create',
+  record,
+  submitting = false,
 }) {
-  const initialValues = createInitialDepartmentGroupValues(
-    businessGroup.ID,
-    department.ID,
+  const initialValues = record || createInitialDepartmentGroupValues(
+    businessGroup.ID, department.ID,
   )
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
@@ -55,7 +57,7 @@ function DepartmentGroupModal({
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     const result = validateDepartmentGroup(values)
 
@@ -67,16 +69,22 @@ function DepartmentGroupModal({
       return
     }
 
-    onSubmit(result.values)
+    await onSubmit(result.values)
   }
 
   const availableBusinessUnits = businessUnits.filter(
     (unit) => String(unit.BG_ID) === String(values.BG_ID),
   )
+  const readOnly = mode === 'view'
+  const title = mode === 'view'
+    ? 'View Department Group'
+    : mode === 'edit'
+      ? 'Edit Department Group'
+      : 'Assign Department Group'
 
   return (
-    <Modal title={'Assign Department Group'} open={open} onClose={onClose}>
-      <ActionForm entityName={'Department Group'} data-table={DEPARTMENT_GROUP_TABLE} onSubmit={handleSubmit} noValidate>
+    <Modal title={title} open={open} onClose={onClose}>
+      <ActionForm action={mode === 'edit' ? 'update' : 'create'} entityName={'Department Group'} data-table={DEPARTMENT_GROUP_TABLE} onSubmit={handleSubmit} noValidate>
         <div className={'erp-modal-form'}>
           <div>
             <label className={'erp-field-label'} htmlFor={'DEPT_GROUP_BG_ID-display'}>
@@ -124,6 +132,7 @@ function DepartmentGroupModal({
               className={fieldClass(errors.BU_ID)}
               value={values.BU_ID}
               required
+              disabled={readOnly}
               aria-invalid={Boolean(errors.BU_ID)}
               aria-describedby={errors.BU_ID ? 'DEPT_GROUP_BU_ID-error' : undefined}
               onChange={handleChange}
@@ -143,17 +152,20 @@ function DepartmentGroupModal({
               role={'switch'}
               name={'STATUS'}
               checked={values.STATUS === '1'}
+              disabled={readOnly}
               onChange={handleChange}
             />
             <span>Is Active</span>
           </label>
         </div>
 
-        <div className={'erp-modal-actions'}>
-          <button type={'submit'} className={'primary-button erp-modal-submit'}>
-            Submit
-          </button>
-        </div>
+        {!readOnly && (
+          <div className={'erp-modal-actions'}>
+            <button type={'submit'} className={'primary-button erp-modal-submit'} disabled={submitting}>
+              {submitting ? 'Saving...' : mode === 'edit' ? 'Update' : 'Submit'}
+            </button>
+          </div>
+        )}
       </ActionForm>
     </Modal>
   )

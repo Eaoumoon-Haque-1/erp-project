@@ -28,45 +28,54 @@ function RequiredLabel({ htmlFor, children }) {
 function LeaveTypeAssignForm({
   values,
   errors,
-  businessGroup,
-  leaveType,
-  businessUnits,
+  groupOptions = [],
+  businessUnitOptions = [],
+  leaveTypeOptions = [],
+  groupsLoading = false,
+  unitsLoading = false,
+  leaveTypesLoading = false,
   onChange,
   businessUnitRef,
 }) {
-  const availableBusinessUnits = businessUnits.filter(
-    (unit) => String(unit.BG_ID) === String(values.BG_ID),
-  )
-
   return (
     <div className={'erp-form-grid'}>
       <div>
-        <RequiredLabel htmlFor={'LEAVE_GROUP_BG_ID-display'}>Group Name</RequiredLabel>
-        <input type={'hidden'} name={'BG_ID'} value={values.BG_ID} />
-        <input
-          id={'LEAVE_GROUP_BG_ID-display'}
-          className={'erp-form-control erp-readonly'}
-          type={'text'}
-          value={businessGroup.GROUP_NAME}
-          readOnly
+        <RequiredLabel htmlFor={'BG_ID'}>Group Name</RequiredLabel>
+        <select
+          id={'BG_ID'}
+          name={'BG_ID'}
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          disabled={groupsLoading}
+          aria-invalid={Boolean(errors.BG_ID)}
           aria-describedby={errors.BG_ID ? 'LEAVE_GROUP_BG_ID-error' : undefined}
-        />
+          onChange={onChange}
+        >
+          <option value={''}>{groupsLoading ? 'Loading...' : '--Select Group Name--'}</option>
+          {groupOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
         <FieldError id={'LEAVE_GROUP_BG_ID-error'} message={errors.BG_ID} />
       </div>
 
       <div>
-        <RequiredLabel htmlFor={'LEAVE_TYPE_ID-display'}>Leave Type</RequiredLabel>
-        <input type={'hidden'} name={'LEAVE_TYPE_ID'} value={values.LEAVE_TYPE_ID} />
-        <input
-          id={'LEAVE_TYPE_ID-display'}
-          className={'erp-form-control erp-readonly'}
-          type={'text'}
-          value={leaveType.TYPE_NAME}
-          readOnly
+        <RequiredLabel htmlFor={'LEAVE_TYPE_ID'}>Leave Type</RequiredLabel>
+        <select
+          id={'LEAVE_TYPE_ID'}
+          name={'LEAVE_TYPE_ID'}
+          className={fieldClass(errors.LEAVE_TYPE_ID)}
+          value={values.LEAVE_TYPE_ID}
+          required
+          disabled={!values.BG_ID || leaveTypesLoading}
+          aria-invalid={Boolean(errors.LEAVE_TYPE_ID)}
           aria-describedby={
             errors.LEAVE_TYPE_ID ? 'LEAVE_TYPE_ID-error' : undefined
           }
-        />
+          onChange={onChange}
+        >
+          <option value={''}>{leaveTypesLoading ? 'Loading...' : '--Select Leave Type--'}</option>
+          {leaveTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
         <FieldError id={'LEAVE_TYPE_ID-error'} message={errors.LEAVE_TYPE_ID} />
       </div>
 
@@ -79,13 +88,14 @@ function LeaveTypeAssignForm({
           className={fieldClass(errors.BU_ID)}
           value={values.BU_ID}
           required
+          disabled={!values.BG_ID || unitsLoading}
           aria-invalid={Boolean(errors.BU_ID)}
           aria-describedby={errors.BU_ID ? 'BU_ID-error' : undefined}
           onChange={onChange}
         >
-          <option value={''}>Select...</option>
-          {availableBusinessUnits.map((unit) => (
-            <option key={unit.ID} value={unit.ID}>{unit.BUSINESS_UNIT}</option>
+          <option value={''}>{unitsLoading ? 'Loading...' : '--Select Business Unit--'}</option>
+          {businessUnitOptions.map((unit) => (
+            <option key={unit.value} value={unit.value}>{unit.label}</option>
           ))}
         </select>
         <FieldError id={'BU_ID-error'} message={errors.BU_ID} />

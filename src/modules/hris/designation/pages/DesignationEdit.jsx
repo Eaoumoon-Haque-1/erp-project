@@ -7,10 +7,16 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import ActionForm from '../../../../components/shared/ActionForm'
+import ListRowActions from '../../../../components/shared/ListRowActions'
 import PageHeader from '../../../../components/shared/PageHeader'
 import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { designationGroupsApi } from '../../designation-group/api/designationGroupApi'
 import DesignationGroupModal from '../../designation-group/components/DesignationGroupModal'
-import { temporaryDesignationGroupBusinessUnits } from '../../designation-group/validation/designationGroupValidation'
+import {
+  mapDesignationGroupFromApi,
+  mapDesignationGroupToApi,
+} from '../../designation-group/data/designationGroupApiMapper'
 import { designationsApi } from '../api/designationApi'
 import DesignationForm from '../components/DesignationForm'
 import { mapDesignationFromApi, mapDesignationToApi } from '../data/designationApiMapper'
@@ -30,26 +36,34 @@ function DesignationEdit() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [groupModalOpen, setGroupModalOpen] = useState(false)
+  const [groupModal, setGroupModal] = useState({ open: false, mode: 'create', record: null })
+  const [groupSubmitting, setGroupSubmitting] = useState(false)
   const [designationGroups, setDesignationGroups] = useState([])
+  const [loadedBusinessUnits, setLoadedBusinessUnits] = useState({ groupId: '', records: [] })
   const { groupOptions, groupsLoading } = useBusinessOptions(values.BG_ID, {
     loadUnits: false,
     preserveGroupId: values.BG_ID,
   })
+  const assignmentGroupId = designation?.BG_ID || ''
   const businessGroup = {
-    ID: values.BG_ID,
-    GROUP_NAME: groupOptions.find((option) => option.value === values.BG_ID)?.label || 'N/A',
+    ID: assignmentGroupId,
+    GROUP_NAME: groupOptions.find((option) => option.value === assignmentGroupId)?.label || 'N/A',
   }
 
   useEffect(() => {
     let active = true
-    Promise.all([designationsApi.get(designationId), designationsApi.list()])
-      .then(([record, records]) => {
+    Promise.all([
+      designationsApi.get(designationId),
+      designationsApi.list(),
+      designationGroupsApi.list(designationId),
+    ])
+      .then(([record, records, groupRecords]) => {
         if (!active) return
         const mapped = mapDesignationFromApi(record)
         setDesignation(mapped)
         setValues(mapped)
         setExistingDesignations(records.filter((item) => String(item.id) !== String(designationId)))
+        setDesignationGroups(groupRecords.map(mapDesignationGroupFromApi))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Designation.')
@@ -57,6 +71,34 @@ function DesignationEdit() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [designationId])
+
+  useEffect(() => {
+    if (!assignmentGroupId) {
+      return undefined
+    }
+
+    let active = true
+    businessUnitsApi.listByGroup(assignmentGroupId)
+      .then((records) => {
+        if (!active) return
+        setLoadedBusinessUnits({
+          groupId: String(assignmentGroupId),
+          records: records.map((record) => ({
+            ID: String(record.id ?? ''),
+            BG_ID: String(record.bgId ?? ''),
+            BUSINESS_UNIT: record.businessUnit ?? '',
+          })),
+        })
+      })
+      .catch((error) => {
+        if (active) {
+          setLoadedBusinessUnits({ groupId: String(assignmentGroupId), records: [] })
+          getApiErrorMessage(error, 'Unable to load Business Units.')
+        }
+      })
+
+    return () => { active = false }
+  }, [assignmentGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -91,31 +133,102 @@ function DesignationEdit() {
     }
   }
 
-  const handleGroupStatusChange = (groupId) => {
-    setDesignationGroups((current) =>
-      current.map((group) =>
-        group.ID === groupId
-          ? { ...group, STATUS: group.STATUS === '1' ? '0' : '1' }
-          : group,
-      ),
-    )
+  const handleGroupStatusChange = async (group) => {
+    const nextGroup = {
+      ...group,
+      STATUS: group.STATUS === '1' ? '0' : '1',
+    }
+
+    try {
+      const updated = await designationGroupsApi.update(
+        group.ID,
+        mapDesignationGroupToApi(nextGroup),
+      )
+      const mapped = updated ? mapDesignationGroupFromApi(updated) : nextGroup
+      setDesignationGroups((current) => current.map((item) =>
+        item.ID === group.ID ? mapped : item,
+      ))
+      return true
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to update Designation Group status.')
+      return false
+    }
   }
 
-  const handleDesignationGroupSubmit = (groupValues) => {
-    const businessUnit = temporaryDesignationGroupBusinessUnits.find(
-      (unit) => String(unit.ID) === String(groupValues.BU_ID),
-    )
-
-    setDesignationGroups((current) => [
-      ...current,
-      {
-        ID: String(current.length + 1),
-        ...groupValues,
-        BUSINESS_UNIT: businessUnit?.BUSINESS_UNIT ?? groupValues.BU_ID,
-      },
-    ])
-    setGroupModalOpen(false)
+  const handleDesignationGroupSubmit = async (groupValues) => {
+    setGroupSubmitting(true)
+    try {
+      if (groupModal.mode === 'edit') {
+        const updated = await designationGroupsApi.update(
+          groupModal.record.ID,
+          mapDesignationGroupToApi(groupValues),
+        )
+        const mapped = updated
+          ? mapDesignationGroupFromApi(updated)
+          : { ...groupValues, ID: groupModal.record.ID }
+        setDesignationGroups((current) => current.map((item) =>
+          item.ID === groupModal.record.ID ? mapped : item,
+        ))
+      } else {
+        const created = await designationGroupsApi.create(
+          mapDesignationGroupToApi(groupValues),
+        )
+        setDesignationGroups((current) => [
+          ...current,
+          mapDesignationGroupFromApi(created),
+        ])
+      }
+      setGroupModal({ open: false, mode: 'create', record: null })
+    } catch (error) {
+      getApiErrorMessage(
+        error,
+        groupModal.mode === 'edit'
+          ? 'Unable to update the Designation Group.'
+          : 'Unable to assign the Designation Group.',
+      )
+    } finally {
+      setGroupSubmitting(false)
+    }
   }
+
+  const handleOpenGroup = async (mode, group) => {
+    try {
+      const record = await designationGroupsApi.get(group.ID)
+      setGroupModal({
+        open: true,
+        mode,
+        record: mapDesignationGroupFromApi(record),
+      })
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to load the Designation Group.')
+    }
+  }
+
+  const handleGroupDelete = async (group) => {
+    try {
+      await designationGroupsApi.remove(group.ID)
+      setDesignationGroups((current) => current.filter((item) => item.ID !== group.ID))
+      return true
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to delete the Designation Group.')
+      return false
+    }
+  }
+
+  const unitsAreCurrent = loadedBusinessUnits.groupId === String(assignmentGroupId)
+  const businessUnits = unitsAreCurrent ? loadedBusinessUnits.records : []
+  const unitsLoading = Boolean(assignmentGroupId && !unitsAreCurrent)
+  const businessUnitNames = new Map(
+    businessUnits.map((unit) => [String(unit.ID), unit.BUSINESS_UNIT]),
+  )
+  const assignedBusinessUnitIds = new Set(
+    designationGroups.map((group) => String(group.BU_ID)),
+  )
+  const availableBusinessUnits = businessUnits.filter(
+    (unit) =>
+      String(unit.ID) === String(groupModal.record?.BU_ID) ||
+      !assignedBusinessUnitIds.has(String(unit.ID)),
+  )
 
   if (loading) {
     return (
@@ -171,7 +284,8 @@ function DesignationEdit() {
           <button
             type={'button'}
             className={'primary-button'}
-            onClick={() => setGroupModalOpen(true)}
+            onClick={() => setGroupModal({ open: true, mode: 'create', record: null })}
+            disabled={!assignmentGroupId || unitsLoading}
           >
             <span aria-hidden={'true'} className={'mr-1 text-lg leading-none'}>+</span>
             Assign Designation Group
@@ -197,8 +311,8 @@ function DesignationEdit() {
                 <tr key={group.ID}>
                   <td className={'erp-number-column'}>{index + 1}</td>
                   <td>{businessGroup.GROUP_NAME}</td>
-                  <td>{values.DESIGNATION_NAME}</td>
-                  <td>{group.BUSINESS_UNIT}</td>
+                  <td>{designation.DESIGNATION_NAME}</td>
+                  <td>{businessUnitNames.get(String(group.BU_ID)) || group.BU_ID}</td>
                   <td>
                     <span
                       className={[
@@ -212,47 +326,14 @@ function DesignationEdit() {
                     </span>
                   </td>
                   <td>
-                    <button
-                      type={'button'}
-                      className={[
-                        'inline-flex h-6 w-[34px] items-center justify-center rounded text-white shadow-sm transition',
-                        'hover:-translate-y-px hover:brightness-95 hover:shadow',
-                        group.STATUS === '1'
-                          ? 'bg-action-danger'
-                          : 'bg-action-success',
-                      ].join(' ')}
-                      aria-label={
-                        group.STATUS === '1'
-                          ? 'Deactivate designation group'
-                          : 'Activate designation group'
-                      }
-                      title={
-                        group.STATUS === '1'
-                          ? 'Deactivate designation group'
-                          : 'Activate designation group'
-                      }
-                      onClick={() => handleGroupStatusChange(group.ID)}
-                    >
-                      <svg
-                        viewBox={'0 0 24 24'}
-                        className={'size-4'}
-                        fill={'none'}
-                        stroke={'currentColor'}
-                        strokeWidth={'2'}
-                        strokeLinecap={'round'}
-                        strokeLinejoin={'round'}
-                        aria-hidden={'true'}
-                      >
-                        {group.STATUS === '1' ? (
-                          <>
-                            <circle cx={'12'} cy={'12'} r={'9'} />
-                            <path d={'m8 8 8 8'} />
-                          </>
-                        ) : (
-                          <path d={'m5 12 4 4L19 6'} />
-                        )}
-                      </svg>
-                    </button>
+                    <ListRowActions
+                      row={group}
+                      entityName={'Designation Group'}
+                      onView={(row) => handleOpenGroup('view', row)}
+                      onEdit={(row) => handleOpenGroup('edit', row)}
+                      onDelete={handleGroupDelete}
+                      onStatusChange={handleGroupStatusChange}
+                    />
                   </td>
                 </tr>
               ))}
@@ -261,14 +342,18 @@ function DesignationEdit() {
         </div>
       </section>
 
-      {groupModalOpen && (
+      {groupModal.open && (
         <DesignationGroupModal
-          open={groupModalOpen}
-          onClose={() => setGroupModalOpen(false)}
+          key={`${groupModal.mode}-${groupModal.record?.ID || 'new'}`}
+          open={groupModal.open}
+          onClose={() => setGroupModal({ open: false, mode: 'create', record: null })}
           onSubmit={handleDesignationGroupSubmit}
           businessGroup={businessGroup}
-          designation={{ ...designation, ...values }}
-          businessUnits={temporaryDesignationGroupBusinessUnits}
+          designation={designation}
+          businessUnits={availableBusinessUnits}
+          mode={groupModal.mode}
+          record={groupModal.record}
+          submitting={groupSubmitting}
         />
       )}
     </div>

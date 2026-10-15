@@ -141,20 +141,11 @@ function UserTypeGroupManage({ editing = false }) {
     if (name === 'USER_TYPE_ID') loadMapping(value, values.BG_ID).catch(() => {})
   }
 
-  const handleAssignmentChange = (event) => {
-    const { name, type, value, checked } = event.target
-    setAssignment((current) => ({ ...current, [name]: type === 'checkbox' ? (checked ? '1' : '0') : value }))
-    setAssignmentErrors((current) => ({ ...current, [name]: undefined }))
-  }
-
-  const handleAdd = () => {
-    const groupResult = validateUserTypeGroup(values)
-    const assignmentResult = validateBusinessUnitAssignment(assignment, rows)
-    setValues(groupResult.values)
-    setErrors(groupResult.errors)
+  const appendBusinessUnit = (nextAssignment) => {
+    const assignmentResult = validateBusinessUnitAssignment(nextAssignment, rows)
     setAssignment(assignmentResult.values)
     setAssignmentErrors(assignmentResult.errors)
-    if (!groupResult.isValid || !assignmentResult.isValid) return
+    if (!assignmentResult.isValid) return false
 
     const removed = removedRows.find((row) => row.BU_ID === assignmentResult.values.BU_ID)
     const option = businessUnitOptions.find((item) => item.value === assignmentResult.values.BU_ID)
@@ -162,8 +153,40 @@ function UserTypeGroupManage({ editing = false }) {
       ? { ...removed, STATUS: assignmentResult.values.STATUS }
       : { ID: `new-${assignmentResult.values.BU_ID}-${Date.now()}`, MAPPING_ID: null, ...assignmentResult.values, BUSINESS_UNIT_NAME: option?.label || '' }])
     if (removed) setRemovedRows((current) => current.filter((row) => row.ID !== removed.ID))
+    setErrors((current) => ({ ...current, BUSINESS_UNITS: undefined }))
+    return true
+  }
+
+  const handleAssignmentChange = (event) => {
+    const { name, type, value, checked } = event.target
+
+    if (name === 'BU_ID') {
+      if (!value) {
+        setAssignment(initialBusinessUnitAssignment)
+        setAssignmentErrors((current) => ({ ...current, BU_ID: undefined }))
+        return
+      }
+
+      const selectedUnit = businessUnits.find((unit) => String(unit.id) === String(value))
+      const nextAssignment = {
+        BU_ID: String(value),
+        STATUS: String(selectedUnit?.status ?? 1) === '0' ? '0' : '1',
+      }
+      if (appendBusinessUnit(nextAssignment)) {
+        setAssignment(initialBusinessUnitAssignment)
+        setAssignmentErrors({})
+      }
+      return
+    }
+
+    setAssignment((current) => ({ ...current, [name]: type === 'checkbox' ? (checked ? '1' : '0') : value }))
+    setAssignmentErrors((current) => ({ ...current, [name]: undefined }))
+  }
+
+  const handleNewRow = () => {
     setAssignment(initialBusinessUnitAssignment)
     setAssignmentErrors({})
+    requestAnimationFrame(() => document.getElementById('BU_ID')?.focus())
   }
 
   const handleDelete = (id) => {
@@ -231,7 +254,7 @@ function UserTypeGroupManage({ editing = false }) {
     >
       <UserTypeGroupForm values={values} errors={errors} groupOptions={groupOptions} userTypeOptions={userTypeOptions} groupsLoading={loading} typesLoading={loading} fieldsDisabled={mappingLoading || (editing && loading)} groupReadOnly={editing} typeReadOnly={editing} typeRef={typeRef} onChange={handleChange} />
       <div className={'erp-role-divider'} />
-      <BusinessUnitAssignment values={assignment} errors={{ ...assignmentErrors, BU_ID: assignmentErrors.BU_ID || errors.BUSINESS_UNITS }} businessUnitOptions={businessUnitOptions} unitsLoading={unitsLoading || mappingLoading} groupSelected={Boolean(values.BG_ID && values.USER_TYPE_ID)} onChange={handleAssignmentChange} onAdd={handleAdd} />
+      <BusinessUnitAssignment values={assignment} errors={{ ...assignmentErrors, BU_ID: assignmentErrors.BU_ID || errors.BUSINESS_UNITS }} businessUnitOptions={businessUnitOptions} unitsLoading={unitsLoading || mappingLoading} groupSelected={Boolean(values.BG_ID && values.USER_TYPE_ID)} hasAssignments={rows.length > 0} onChange={handleAssignmentChange} onNewRow={handleNewRow} />
       <BusinessUnitAssignmentTable rows={rows} query={query} onQueryChange={setQuery} onDelete={handleDelete} onStatusChange={handleStatusChange} />
     </FormPage>
   )

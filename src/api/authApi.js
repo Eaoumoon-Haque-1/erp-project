@@ -1,7 +1,7 @@
 /**
  * @file Authentication endpoint wrappers.
- * Login/logout are used now. Refresh remains available for when the backend
- * documents how the refresh token is delivered.
+ * Login/logout are called by AuthProvider. The refresh wrapper mirrors the
+ * endpoint used centrally by the shared Axios client's 401 retry flow.
  */
 import apiClient from './client'
 

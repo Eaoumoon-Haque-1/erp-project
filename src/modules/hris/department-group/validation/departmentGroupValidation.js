@@ -1,22 +1,9 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Department Group.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const DEPARTMENT_GROUP_TABLE = 'HR_DEPT_GROUP'
-
-export const temporaryDepartmentGroupBusinessUnits = [
-  {
-    ID: '1',
-    BG_ID: '1',
-    BUSINESS_UNIT: 'Demo Business Unit',
-  },
-  {
-    ID: '2',
-    BG_ID: '1',
-    BUSINESS_UNIT: 'Corporate Business Unit',
-  },
-]
 
 export function createInitialDepartmentGroupValues(groupId, departmentId) {
   return {

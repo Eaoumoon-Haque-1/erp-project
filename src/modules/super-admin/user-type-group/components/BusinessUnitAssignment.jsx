@@ -9,8 +9,9 @@ function BusinessUnitAssignment({
   businessUnitOptions = [],
   unitsLoading = false,
   groupSelected = false,
+  hasAssignments = false,
   onChange,
-  onAdd,
+  onNewRow,
 }) {
   return (
     <div className={"erp-user-type-group-assignment-grid"}>
@@ -31,7 +32,7 @@ function BusinessUnitAssignment({
             .filter(Boolean)
             .join(" ")}
           value={values.BU_ID}
-          required
+          required={!hasAssignments}
           disabled={!groupSelected || unitsLoading}
           aria-invalid={Boolean(errors.BU_ID)}
           aria-describedby={
@@ -71,11 +72,11 @@ function BusinessUnitAssignment({
         </label>
       </div>
       <button
-        type={onAdd ? "button" : "submit"}
+        type={"button"}
         className={"erp-role-add-button"}
-        aria-label={"Add Business Unit"}
-        title={"Add Business Unit"}
-        onClick={onAdd}
+        aria-label={"Create new Business Unit row"}
+        title={"Create new row"}
+        onClick={onNewRow}
       >
         <span aria-hidden={"true"}>+</span>
       </button>

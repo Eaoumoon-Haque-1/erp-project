@@ -18,26 +18,34 @@ function fieldClass(error) {
 function LeaveTypeForm({
   values,
   errors,
-  businessGroup,
+  groupOptions = [],
+  groupsLoading = false,
   onChange,
   typeNameRef,
 }) {
   return (
     <div className={'erp-form-grid'}>
       <div>
-        <label className={'erp-field-label'} htmlFor={'LEAVE_TYPE_BG_ID-display'}>
+        <label className={'erp-field-label'} htmlFor={'BG_ID'}>
           Group Name
           <span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
-        <input type={'hidden'} name={'BG_ID'} value={values.BG_ID} />
-        <input
-          id={'LEAVE_TYPE_BG_ID-display'}
-          className={'erp-form-control erp-readonly'}
-          type={'text'}
-          value={businessGroup.GROUP_NAME}
-          readOnly
+        <select
+          id={'BG_ID'}
+          name={'BG_ID'}
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          disabled={groupsLoading}
+          aria-invalid={Boolean(errors.BG_ID)}
           aria-describedby={errors.BG_ID ? 'LEAVE_TYPE_BG_ID-error' : undefined}
-        />
+          onChange={onChange}
+        >
+          <option value={''}>{groupsLoading ? 'Loading Group Names...' : '--Select Group Name--'}</option>
+          {groupOptions.map((group) => (
+            <option key={group.value} value={group.value}>{group.label}</option>
+          ))}
+        </select>
         <FieldError id={'LEAVE_TYPE_BG_ID-error'} message={errors.BG_ID} />
       </div>
 

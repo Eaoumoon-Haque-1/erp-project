@@ -17,6 +17,8 @@ import DesignationDepartmentMappingEdit from "./designation-department-mapping/p
 import DesignationDepartmentMappingView from "./designation-department-mapping/pages/DesignationDepartmentMappingView";
 import EmploymentTypeList from "./employment-type/pages/EmploymentTypeList";
 import EmploymentTypeCreate from "./employment-type/pages/EmploymentTypeCreate";
+import EmploymentTypeEdit from "./employment-type/pages/EmploymentTypeEdit";
+import EmploymentTypeView from "./employment-type/pages/EmploymentTypeView";
 import EmploymentStatusList from "./employment-status/pages/EmploymentStatusList";
 import EmploymentStatusCreate from "./employment-status/pages/EmploymentStatusCreate";
 import DegreeEducationMappingList from "./degree-education-mapping/pages/DegreeEducationMappingList";
@@ -29,8 +31,12 @@ import LevelOfEducationEdit from "./level-of-education/pages/LevelOfEducationEdi
 import LevelOfEducationView from "./level-of-education/pages/LevelOfEducationView";
 import LeaveTypeList from "./leave-type/pages/LeaveTypeList";
 import LeaveTypeCreate from "./leave-type/pages/LeaveTypeCreate";
+import LeaveTypeEdit from "./leave-type/pages/LeaveTypeEdit";
+import LeaveTypeView from "./leave-type/pages/LeaveTypeView";
 import LeaveTypeAssignList from "./leave-type-assign/pages/LeaveTypeAssignList";
 import LeaveTypeAssignCreate from "./leave-type-assign/pages/LeaveTypeAssignCreate";
+import LeaveTypeAssignEdit from "./leave-type-assign/pages/LeaveTypeAssignEdit";
+import LeaveTypeAssignView from "./leave-type-assign/pages/LeaveTypeAssignView";
 import LeaveAllocationList from "../super-admin/leave-allocation/pages/LeaveAllocationList";
 import LeaveAllocationCreate from "../super-admin/leave-allocation/pages/LeaveAllocationCreate";
 import EmployeeInformationList from "./employee-information/pages/EmployeeInformationList";
@@ -127,6 +133,14 @@ export const hrisRoutes = [
   {
     path: "hris/employee-settings/employment-type/create",
     element: <EmploymentTypeCreate />,
+  },
+  {
+    path: "hris/employee-settings/employment-type/:employmentTypeId/edit",
+    element: <EmploymentTypeEdit />,
+  },
+  {
+    path: "hris/employee-settings/employment-type/:employmentTypeId/view",
+    element: <EmploymentTypeView />,
   },
   {
     path: "hris/employee-settings/employment-status",
@@ -229,12 +243,28 @@ export const hrisRoutes = [
     element: <LeaveTypeCreate />,
   },
   {
+    path: "hris/leave-settings/leave-type/:leaveTypeId/edit",
+    element: <LeaveTypeEdit />,
+  },
+  {
+    path: "hris/leave-settings/leave-type/:leaveTypeId/view",
+    element: <LeaveTypeView />,
+  },
+  {
     path: "hris/leave-settings/leave-type-assign",
     element: <LeaveTypeAssignList />,
   },
   {
     path: "hris/leave-settings/leave-type-assign/create",
     element: <LeaveTypeAssignCreate />,
+  },
+  {
+    path: "hris/leave-settings/leave-type-assign/:assignmentId/edit",
+    element: <LeaveTypeAssignEdit />,
+  },
+  {
+    path: "hris/leave-settings/leave-type-assign/:assignmentId/view",
+    element: <LeaveTypeAssignView />,
   },
   {
     path: "hris/leave-settings/leave-allocation",
