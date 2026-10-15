@@ -26,31 +26,35 @@ function fieldClass(error, extra = '') {
 function DepartmentForm({
   values,
   errors,
-  businessGroup,
+  groupOptions = [],
+  groupsLoading = false,
   onChange,
   departmentNameRef,
 }) {
   return (
     // erp-form-grid supplies the project's responsive equal-width columns.
     <div className={'erp-form-grid'}>
-      {/*
-        API-derived/read-only pattern: submit the real ID in a hidden input and
-        show the readable name in a normal-size read-only control.
-      */}
       <div>
-        <label className={'erp-field-label'} htmlFor={'DEPT_BG_ID-display'}>
+        <label className={'erp-field-label'} htmlFor={'BG_ID'}>
           Group Name
           <span className={'erp-required'} aria-hidden={'true'}>*</span>
         </label>
-        <input type={'hidden'} name={'BG_ID'} value={values.BG_ID} />
-        <input
-          id={'DEPT_BG_ID-display'}
-          className={'erp-form-control erp-readonly'}
-          type={'text'}
-          value={businessGroup.GROUP_NAME}
-          readOnly
+        <select
+          id={'BG_ID'}
+          name={'BG_ID'}
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          disabled={groupsLoading}
+          aria-invalid={Boolean(errors.BG_ID)}
           aria-describedby={errors.BG_ID ? 'DEPT_BG_ID-error' : undefined}
-        />
+          onChange={onChange}
+        >
+          <option value={''}>{groupsLoading ? 'Loading Group Names...' : '--Select Group Name--'}</option>
+          {groupOptions.map((group) => (
+            <option key={group.value} value={group.value}>{group.label}</option>
+          ))}
+        </select>
         <FieldError id={'DEPT_BG_ID-error'} message={errors.BG_ID} />
       </div>
 
@@ -110,9 +114,9 @@ function DepartmentForm({
           className={fieldClass(errors.SORT_ORDER)}
           placeholder={'Enter sort order'}
           value={values.SORT_ORDER}
-          min={'0'}
-          step={'any'}
-          inputMode={'decimal'}
+          min={'1'}
+          step={'1'}
+          inputMode={'numeric'}
           aria-invalid={Boolean(errors.SORT_ORDER)}
           aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
           onChange={onChange}

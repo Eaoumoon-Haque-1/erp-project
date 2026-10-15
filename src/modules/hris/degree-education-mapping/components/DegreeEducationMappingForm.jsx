@@ -3,8 +3,6 @@
  * Sections: field helpers, feature field groups, validation display, and exported form component.
  * Receive values/errors/callbacks through props; saving, navigation, and API calls stay in the page.
  */
-import { levelOfEducationOptions } from "../validation/degreeEducationMappingValidation";
-
 function FieldError({ id, message }) {
   if (!message) return null;
   return (
@@ -52,7 +50,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function getEducationLevelLabel(levelId) {
+function getEducationLevelLabel(levelId, levelOfEducationOptions) {
   return (
     levelOfEducationOptions.find(
       (option) => String(option.value) === String(levelId),
@@ -70,6 +68,8 @@ function DegreeEducationMappingForm({
   onEntryChange,
   onAdd,
   onRemove,
+  levelOfEducationOptions = [],
+  levelsLoading = false,
 }) {
   return (
     <>
@@ -85,13 +85,14 @@ function DegreeEducationMappingForm({
             className={fieldClass(errors.LEVEL_OF_EDU_ID)}
             value={levelOfEducationId}
             required
+            disabled={levelsLoading || rows.length > 0}
             aria-invalid={Boolean(errors.LEVEL_OF_EDU_ID)}
             aria-describedby={
               errors.LEVEL_OF_EDU_ID ? "LEVEL_OF_EDU_ID-error" : undefined
             }
             onChange={onLevelChange}
           >
-            <option value={""}>--Select Level of Education--</option>
+            <option value={""}>{levelsLoading ? "Loading..." : "--Select Level of Education--"}</option>
             {levelOfEducationOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -167,9 +168,9 @@ function DegreeEducationMappingForm({
             className={fieldClass(errors.SORT_ORDER)}
             placeholder={"Enter sort order"}
             value={entryValues.SORT_ORDER}
-            min={"0"}
-            step={"any"}
-            inputMode={"decimal"}
+            min={"1"}
+            step={"1"}
+            inputMode={"numeric"}
             aria-invalid={Boolean(errors.SORT_ORDER)}
             aria-describedby={
               errors.SORT_ORDER ? "DEGREE_SORT_ORDER-error" : undefined
@@ -235,7 +236,7 @@ function DegreeEducationMappingForm({
               rows.map((row, index) => (
                 <tr key={row.ID}>
                   <td className={"erp-number-column"}>{index + 1}</td>
-                  <td>{getEducationLevelLabel(row.LEVEL_OF_EDU_ID)}</td>
+                  <td>{getEducationLevelLabel(row.LEVEL_OF_EDU_ID, levelOfEducationOptions)}</td>
                   <td>{row.DEGREE_NAME}</td>
                   <td>{row.SHORT_NAME || "â€”"}</td>
                   <td>{row.SORT_ORDER || "â€”"}</td>

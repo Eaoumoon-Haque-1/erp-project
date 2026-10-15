@@ -6,17 +6,23 @@
 import DepartmentList from "./department/pages/DepartmentList";
 import DepartmentCreate from "./department/pages/DepartmentCreate";
 import DepartmentEdit from "./department/pages/DepartmentEdit";
+import DepartmentView from "./department/pages/DepartmentView";
 import DesignationList from "./designation/pages/DesignationList";
 import DesignationCreate from "./designation/pages/DesignationCreate";
 import DesignationEdit from "./designation/pages/DesignationEdit";
+import DesignationView from "./designation/pages/DesignationView";
 import DesignationDepartmentMappingList from "./designation-department-mapping/pages/DesignationDepartmentMappingList";
 import DesignationDepartmentMappingCreate from "./designation-department-mapping/pages/DesignationDepartmentMappingCreate";
+import DesignationDepartmentMappingEdit from "./designation-department-mapping/pages/DesignationDepartmentMappingEdit";
+import DesignationDepartmentMappingView from "./designation-department-mapping/pages/DesignationDepartmentMappingView";
 import EmploymentTypeList from "./employment-type/pages/EmploymentTypeList";
 import EmploymentTypeCreate from "./employment-type/pages/EmploymentTypeCreate";
 import EmploymentStatusList from "./employment-status/pages/EmploymentStatusList";
 import EmploymentStatusCreate from "./employment-status/pages/EmploymentStatusCreate";
 import DegreeEducationMappingList from "./degree-education-mapping/pages/DegreeEducationMappingList";
 import DegreeEducationMappingCreate from "./degree-education-mapping/pages/DegreeEducationMappingCreate";
+import DegreeEducationMappingEdit from "./degree-education-mapping/pages/DegreeEducationMappingEdit";
+import DegreeEducationMappingView from "./degree-education-mapping/pages/DegreeEducationMappingView";
 import LevelOfEducationList from "./level-of-education/pages/LevelOfEducationList";
 import LevelOfEducationCreate from "./level-of-education/pages/LevelOfEducationCreate";
 import LevelOfEducationEdit from "./level-of-education/pages/LevelOfEducationEdit";
@@ -79,6 +85,10 @@ export const hrisRoutes = [
     element: <DepartmentEdit />,
   },
   {
+    path: "hris/employee-settings/department/:departmentId/view",
+    element: <DepartmentView />,
+  },
+  {
     path: "hris/employee-settings/designation",
     element: <DesignationList />,
   },
@@ -91,12 +101,24 @@ export const hrisRoutes = [
     element: <DesignationEdit />,
   },
   {
+    path: "hris/employee-settings/designation/:designationId/view",
+    element: <DesignationView />,
+  },
+  {
     path: "hris/employee-settings/designation-department-mapping",
     element: <DesignationDepartmentMappingList />,
   },
   {
     path: "hris/employee-settings/designation-department-mapping/create",
     element: <DesignationDepartmentMappingCreate />,
+  },
+  {
+    path: "hris/employee-settings/designation-department-mapping/:mappingId/edit",
+    element: <DesignationDepartmentMappingEdit />,
+  },
+  {
+    path: "hris/employee-settings/designation-department-mapping/:mappingId/view",
+    element: <DesignationDepartmentMappingView />,
   },
   {
     path: "hris/employee-settings/employment-type",
@@ -121,6 +143,14 @@ export const hrisRoutes = [
   {
     path: "hris/employee-settings/degree-education-mapping/create",
     element: <DegreeEducationMappingCreate />,
+  },
+  {
+    path: "hris/employee-settings/degree-education-mapping/:degreeId/edit",
+    element: <DegreeEducationMappingEdit />,
+  },
+  {
+    path: "hris/employee-settings/degree-education-mapping/:degreeId/view",
+    element: <DegreeEducationMappingView />,
   },
   {
     path: "hris/employee-settings/level-of-education",

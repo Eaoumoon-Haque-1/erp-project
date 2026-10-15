@@ -1,103 +1,88 @@
-﻿/**
- * @file List-page controller for Designation Department Mapping.
- * Sections: filter/column/temporary-row configuration, row handlers, and ListPage composition.
- * Edit here when list columns, filters, navigation, API rows, or enabled actions change.
- */
+/** @file API-backed Department–Designation mapping list page. */
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import {
-  temporaryDesignationDepartmentMappings,
-  temporaryMappingBusinessGroup,
-  temporaryMappingBusinessUnits,
-  temporaryMappingDepartments,
-  temporaryMappingDesignations,
-} from '../validation/designationDepartmentMappingValidation'
+import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { departmentsApi } from '../../department/api/departmentApi'
+import { designationsApi } from '../../designation/api/designationApi'
+import { designationDepartmentMappingsApi } from '../api/designationDepartmentMappingApi'
+import { mapDesignationDepartmentMappingFromApi, mapDesignationDepartmentMappingToApi } from '../data/designationDepartmentMappingApiMapper'
 
-function findLabel(items, value, labelKey) {
-  return items.find((item) => String(item.ID) === String(value))?.[labelKey] ?? value
-}
-
-const mappingFilters = [
-  {
-    key: 'BU_ID',
-    label: 'Search by Business Unit',
-    placeholder: '--Search by Business Unit--',
-    options: temporaryMappingBusinessUnits.map((unit) => ({
-      label: unit.BUSINESS_UNIT,
-      value: unit.ID,
-    })),
-  },
-  {
-    key: 'DEPT_ID',
-    label: 'Search by Department Name',
-    placeholder: '--Search by Department Name--',
-    options: temporaryMappingDepartments.map((department) => ({
-      label: department.DEPARTMENT_NAME,
-      value: department.ID,
-    })),
-  },
-  {
-    key: 'STATUS',
-    label: 'Search by Status',
-    placeholder: '--Search by Status--',
-    options: [
-      { label: 'Active', value: '1' },
-      { label: 'Inactive', value: '0' },
-    ],
-  },
-]
-
-const mappingColumns = [
-  {
-    key: 'BG_ID',
-    label: 'Group Name',
-    render: (value) =>
-      String(value) === temporaryMappingBusinessGroup.ID
-        ? temporaryMappingBusinessGroup.GROUP_NAME
-        : value,
-  },
-  {
-    key: 'BU_ID',
-    label: 'Business Unit',
-    render: (value) => findLabel(temporaryMappingBusinessUnits, value, 'BUSINESS_UNIT'),
-  },
-  {
-    key: 'DEPT_ID',
-    label: 'Department Name',
-    render: (value) => findLabel(temporaryMappingDepartments, value, 'DEPARTMENT_NAME'),
-  },
-  {
-    key: 'DESIG_ID',
-    label: 'Designation Name',
-    render: (value) => findLabel(temporaryMappingDesignations, value, 'DESIGNATION_NAME'),
-  },
-  {
-    key: 'STATUS',
-    label: 'Status',
-    render: (value) => (
-      <span
-        className={[
-          'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
-          String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
-        ].join(' ')}
-      >
-        {String(value) === '1' ? 'Active' : 'Inactive'}
-      </span>
-    ),
-  },
+const basePath = '/hris/employee-settings/designation-department-mapping'
+const columns = [
+  { key: 'GROUP_NAME', label: 'Group Name' },
+  { key: 'BUSINESS_UNIT', label: 'Business Unit' },
+  { key: 'DEPARTMENT_NAME', label: 'Department Name' },
+  { key: 'DESIGNATION_NAME', label: 'Designation Name' },
+  { key: 'STATUS', label: 'Status', render: (value) => <span className={['inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm', value === '1' ? 'bg-action-success' : 'bg-action-danger'].join(' ')}>{value === '1' ? 'Active' : 'Inactive'}</span> },
 ]
 
 function DesignationDepartmentMappingList() {
+  const navigate = useNavigate()
+  const [rows, setRows] = useState([])
+  const [filterOptions, setFilterOptions] = useState({ units: [], departments: [] })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      designationDepartmentMappingsApi.list(),
+      businessGroupsApi.list(),
+      businessUnitsApi.list(),
+      departmentsApi.list(),
+      designationsApi.list(),
+    ]).then(([mappings, groups, units, departments, designations]) => {
+      if (!active) return
+      const labels = {
+        groupNames: new Map(groups.map((row) => [String(row.id), row.groupName])),
+        unitNames: new Map(units.map((row) => [String(row.id), row.businessUnit])),
+        departmentNames: new Map(departments.map((row) => [String(row.id), row.departmentName])),
+        designationNames: new Map(designations.map((row) => [String(row.id), row.designationName])),
+      }
+      setRows(mappings.map((row) => mapDesignationDepartmentMappingFromApi(row, labels)))
+      setFilterOptions({
+        units: units.map((row) => ({ value: String(row.id), label: row.businessUnit })),
+        departments: departments.map((row) => ({ value: String(row.id), label: row.departmentName })),
+      })
+    }).catch((error) => {
+      if (active) getApiErrorMessage(error, 'Unable to load Department–Designation mappings.')
+    }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const filters = useMemo(() => [
+    { key: 'BU_ID', label: 'Search by Business Unit', placeholder: '--Search by Business Unit--', options: filterOptions.units },
+    { key: 'DEPT_ID', label: 'Search by Department Name', placeholder: '--Search by Department Name--', options: filterOptions.departments },
+    { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
+  ], [filterOptions])
+
+  const handleDelete = async (row) => {
+    try {
+      await designationDepartmentMappingsApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to delete mapping.')
+    }
+  }
+
+  const handleStatusChange = async (row) => {
+    try {
+      const updated = await designationDepartmentMappingsApi.update(row.ID, mapDesignationDepartmentMappingToApi({ ...row, STATUS: row.STATUS === '1' ? '0' : '1' }))
+      setRows((current) => current.map((item) => item.ID === row.ID
+        ? { ...item, ...mapDesignationDepartmentMappingFromApi(updated), GROUP_NAME: item.GROUP_NAME, BUSINESS_UNIT: item.BUSINESS_UNIT, DEPARTMENT_NAME: item.DEPARTMENT_NAME, DESIGNATION_NAME: item.DESIGNATION_NAME }
+        : item))
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to update mapping status.')
+    }
+  }
+
   return (
-    <ListPage
-      title={'Designation Department Mapping List'}
-      createLabel={'New'}
-      createTo={'/hris/employee-settings/designation-department-mapping/create'}
-      filters={mappingFilters}
-      columns={mappingColumns}
-      rows={temporaryDesignationDepartmentMappings}
-      renderActions={(row) => <ListRowActions row={row} />}
-    />
+    <ListPage title={'Designation Department Mapping List'} createLabel={'New'} createTo={`${basePath}/create`} filters={filters} columns={columns} rows={rows} loading={loading} renderActions={(row) => (
+      <ListRowActions row={row} onView={() => navigate(`${basePath}/${row.ID}/view`)} onEdit={() => navigate(`${basePath}/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+    )} />
   )
 }
 

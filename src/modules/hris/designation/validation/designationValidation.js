@@ -1,35 +1,19 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Designation.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const DESIGNATION_TABLE = 'HR_DESIG'
 
-export const temporaryDesignationBusinessGroup = {
-  ID: '1',
-  GROUP_NAME: 'Demo Business Group',
-}
-
 export const initialDesignationValues = {
-  BG_ID: temporaryDesignationBusinessGroup.ID,
+  BG_ID: '',
   DESIGNATION_NAME: '',
   SHORT_NAME: '',
   SORT_ORDER: '',
   STATUS: '1',
 }
 
-export const temporaryDesignations = [
-  {
-    ID: '1',
-    BG_ID: temporaryDesignationBusinessGroup.ID,
-    DESIGNATION_NAME: 'HR Manager',
-    SHORT_NAME: 'HRM',
-    SORT_ORDER: '1',
-    STATUS: '1',
-  },
-]
-
-export function validateDesignation(values) {
+export function validateDesignation(values, existingDesignations = []) {
   const normalizedValues = {
     BG_ID: String(values.BG_ID ?? '').trim(),
     DESIGNATION_NAME: values.DESIGNATION_NAME.trim(),
@@ -49,6 +33,11 @@ export function validateDesignation(values) {
     errors.DESIGNATION_NAME = 'Designation Name must be at least 2 characters.'
   } else if (normalizedValues.DESIGNATION_NAME.length > 50) {
     errors.DESIGNATION_NAME = 'Designation Name must not exceed 50 characters.'
+  } else if (existingDesignations.some((designation) =>
+    String(designation.bgId ?? designation.BG_ID) === normalizedValues.BG_ID &&
+    String(designation.designationName ?? designation.DESIGNATION_NAME).trim().toLowerCase() === normalizedValues.DESIGNATION_NAME.toLowerCase()
+  )) {
+    errors.DESIGNATION_NAME = 'Designation Name must be unique within the selected Business Group.'
   }
 
   if (

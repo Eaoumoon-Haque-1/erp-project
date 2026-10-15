@@ -3,18 +3,20 @@
  * Sections: record loading, controlled state, update/reset handlers, and form/assignment composition.
  * Future fetch/update API calls belong here; preserve route-parameter and list-link contracts.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import ActionForm from '../../../../components/shared/ActionForm'
 import PageHeader from '../../../../components/shared/PageHeader'
+import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import DesignationGroupModal from '../../designation-group/components/DesignationGroupModal'
 import { temporaryDesignationGroupBusinessUnits } from '../../designation-group/validation/designationGroupValidation'
+import { designationsApi } from '../api/designationApi'
 import DesignationForm from '../components/DesignationForm'
+import { mapDesignationFromApi, mapDesignationToApi } from '../data/designationApiMapper'
 import {
   DESIGNATION_TABLE,
   initialDesignationValues,
-  temporaryDesignationBusinessGroup,
-  temporaryDesignations,
   validateDesignation,
 } from '../validation/designationValidation'
 
@@ -22,25 +24,39 @@ function DesignationEdit() {
   const { designationId } = useParams()
   const navigate = useNavigate()
   const designationNameRef = useRef(null)
-  const designation = temporaryDesignations.find(
-    (item) => String(item.ID) === String(designationId),
-  )
-  const [values, setValues] = useState(() => ({
-    ...initialDesignationValues,
-    ...designation,
-  }))
+  const [designation, setDesignation] = useState(null)
+  const [values, setValues] = useState(initialDesignationValues)
+  const [existingDesignations, setExistingDesignations] = useState([])
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [groupModalOpen, setGroupModalOpen] = useState(false)
-  const [designationGroups, setDesignationGroups] = useState([
-    {
-      ID: '1',
-      BG_ID: temporaryDesignationBusinessGroup.ID,
-      DESIG_ID: designation?.ID ?? '',
-      BU_ID: '1',
-      BUSINESS_UNIT: 'Demo Business Unit',
-      STATUS: '1',
-    },
-  ])
+  const [designationGroups, setDesignationGroups] = useState([])
+  const { groupOptions, groupsLoading } = useBusinessOptions(values.BG_ID, {
+    loadUnits: false,
+    preserveGroupId: values.BG_ID,
+  })
+  const businessGroup = {
+    ID: values.BG_ID,
+    GROUP_NAME: groupOptions.find((option) => option.value === values.BG_ID)?.label || 'N/A',
+  }
+
+  useEffect(() => {
+    let active = true
+    Promise.all([designationsApi.get(designationId), designationsApi.list()])
+      .then(([record, records]) => {
+        if (!active) return
+        const mapped = mapDesignationFromApi(record)
+        setDesignation(mapped)
+        setValues(mapped)
+        setExistingDesignations(records.filter((item) => String(item.id) !== String(designationId)))
+      })
+      .catch((error) => {
+        if (active) getApiErrorMessage(error, 'Unable to load Designation.')
+      })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [designationId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -50,9 +66,9 @@ function DesignationEdit() {
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDesignation(values)
+    const result = validateDesignation(values, existingDesignations)
 
     setValues((current) => ({ ...current, ...result.values }))
     setErrors(result.errors)
@@ -62,7 +78,17 @@ function DesignationEdit() {
       return
     }
 
-    navigate('/hris/employee-settings/designation')
+    setSubmitting(true)
+    try {
+      await designationsApi.update(designationId, mapDesignationToApi(result.values))
+      navigate('/hris/employee-settings/designation')
+    } catch (error) {
+      applyApiFormErrors(error, setErrors, 'Unable to update Designation.', {
+        bgId: 'BG_ID', designationName: 'DESIGNATION_NAME', shortName: 'SHORT_NAME', sortOrder: 'SORT_ORDER', status: 'STATUS',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleGroupStatusChange = (groupId) => {
@@ -89,6 +115,15 @@ function DesignationEdit() {
       },
     ])
     setGroupModalOpen(false)
+  }
+
+  if (loading) {
+    return (
+      <div className={'erp-list-page'}>
+        <PageHeader title={'Designation Edit'} actionLabel={'Designation List'} actionTo={'/hris/employee-settings/designation'} />
+        <section className={'erp-form-card'}><p>Loading...</p></section>
+      </div>
+    )
   }
 
   if (!designation) {
@@ -119,12 +154,13 @@ function DesignationEdit() {
           <DesignationForm
             values={values}
             errors={errors}
-            businessGroup={temporaryDesignationBusinessGroup}
+            groupOptions={groupOptions}
+            groupsLoading={groupsLoading}
             onChange={handleChange}
             designationNameRef={designationNameRef}
           />
           <div className={'erp-form-actions'}>
-            <button type={'submit'} className={'primary-button'}>Update</button>
+            <button type={'submit'} className={'primary-button'} disabled={submitting}>{submitting ? 'Saving...' : 'Update'}</button>
           </div>
         </ActionForm>
       </section>
@@ -155,11 +191,13 @@ function DesignationEdit() {
               </tr>
             </thead>
             <tbody>
-              {designationGroups.map((group, index) => (
+              {designationGroups.length === 0 ? (
+                <tr><td className={'erp-empty-cell'} colSpan={6}>No data found</td></tr>
+              ) : designationGroups.map((group, index) => (
                 <tr key={group.ID}>
                   <td className={'erp-number-column'}>{index + 1}</td>
-                  <td>{temporaryDesignationBusinessGroup.GROUP_NAME}</td>
-                  <td>{designation.DESIGNATION_NAME}</td>
+                  <td>{businessGroup.GROUP_NAME}</td>
+                  <td>{values.DESIGNATION_NAME}</td>
                   <td>{group.BUSINESS_UNIT}</td>
                   <td>
                     <span
@@ -228,8 +266,8 @@ function DesignationEdit() {
           open={groupModalOpen}
           onClose={() => setGroupModalOpen(false)}
           onSubmit={handleDesignationGroupSubmit}
-          businessGroup={temporaryDesignationBusinessGroup}
-          designation={designation}
+          businessGroup={businessGroup}
+          designation={{ ...designation, ...values }}
           businessUnits={temporaryDesignationGroupBusinessUnits}
         />
       )}

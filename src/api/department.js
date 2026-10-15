@@ -1,7 +1,2 @@
-/** @file Department endpoint contract (read-only lookup for dropdowns). */
-import apiClient from './client'
-import { unwrapApiResponse } from './createCrudApi'
-
-export const departmentsApi = {
-  listByGroup: (bgId) => unwrapApiResponse(apiClient.get('/departments', { params: { bgId } })),
-}
+/** @file Compatibility export for Asset consumers of the HRIS Department API. */
+export { departmentsApi } from '../modules/hris/department/api/departmentApi'

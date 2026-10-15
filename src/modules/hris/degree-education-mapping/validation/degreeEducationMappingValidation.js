@@ -5,14 +5,6 @@
  */
 export const DEGREE_TABLE = "HR_DEGREE";
 
-// Temporary options until Level of Education data is supplied by the API.
-export const levelOfEducationOptions = [
-  { value: "1", label: "Secondary (SSC)" },
-  { value: "2", label: "Higher Secondary (HSC)" },
-  { value: "3", label: "Bachelor / Honors" },
-  { value: "4", label: "Master Degree" },
-];
-
 export const initialDegreeEntryValues = {
   DEGREE_NAME: "",
   SHORT_NAME: "",
@@ -56,10 +48,8 @@ export function validateDegreeEntry(values, rows = []) {
   }
 
   if (normalizedValues.SORT_ORDER) {
-    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalizedValues.SORT_ORDER)) {
-      errors.SORT_ORDER = "Sort Order must be a valid number.";
-    } else if (Number(normalizedValues.SORT_ORDER) <= 0) {
-      errors.SORT_ORDER = "Sort Order must be greater than 0.";
+    if (!/^\d+$/.test(normalizedValues.SORT_ORDER) || Number(normalizedValues.SORT_ORDER) < 1) {
+      errors.SORT_ORDER = "Sort Order must be a positive whole number.";
     }
   }
 
