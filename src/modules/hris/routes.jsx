@@ -39,6 +39,8 @@ import LeaveTypeAssignEdit from "./leave-type-assign/pages/LeaveTypeAssignEdit";
 import LeaveTypeAssignView from "./leave-type-assign/pages/LeaveTypeAssignView";
 import LeaveAllocationList from "../super-admin/leave-allocation/pages/LeaveAllocationList";
 import LeaveAllocationCreate from "../super-admin/leave-allocation/pages/LeaveAllocationCreate";
+import LeaveAllocationEdit from "../super-admin/leave-allocation/pages/LeaveAllocationEdit";
+import LeaveAllocationView from "../super-admin/leave-allocation/pages/LeaveAllocationView";
 import EmployeeInformationList from "./employee-information/pages/EmployeeInformationList";
 import EmployeeInformationCreate from "./employee-information/pages/EmployeeInformationCreate";
 import UserCreationFromEmployeeCreate from "./user-creation-from-employee/pages/UserCreationFromEmployeeCreate";
@@ -56,12 +58,18 @@ import EmployeeAttendanceConfigList from "./employee-attendance-config/pages/Emp
 import EmployeeAttendanceConfigCreate from "./employee-attendance-config/pages/EmployeeAttendanceConfigCreate";
 import ShiftList from "./shift/pages/ShiftList";
 import ShiftCreate from "./shift/pages/ShiftCreate";
+import ShiftEdit from "./shift/pages/ShiftEdit";
+import ShiftView from "./shift/pages/ShiftView";
 // import AssignEmplBuUserList from "./assign-empl-bu-user/pages/AssignEmplBuUserList";
 // import AssignEmplBuUserCreate from "./assign-empl-bu-user/pages/AssignEmplBuUserCreate";
 import WifiInformationList from "./wifi-information/pages/WifiInformationList";
 import WifiInformationCreate from "./wifi-information/pages/WifiInformationCreate";
+import WifiInformationEdit from "./wifi-information/pages/WifiInformationEdit";
+import WifiInformationView from "./wifi-information/pages/WifiInformationView";
 import GpsInformationList from "./gps-information/pages/GpsInformationList";
 import GpsInformationCreate from "./gps-information/pages/GpsInformationCreate";
+import GpsInformationEdit from "./gps-information/pages/GpsInformationEdit";
+import GpsInformationView from "./gps-information/pages/GpsInformationView";
 import MobileNotificationList from "./mobile-notification/pages/MobileNotificationList";
 import MobileNotificationCreate from "./mobile-notification/pages/MobileNotificationCreate";
 import OfficeNoticeList from "./office-notice/pages/OfficeNoticeList";
@@ -70,6 +78,8 @@ import ManualAttendanceUpdateList from "./manual-attendance-update/pages/ManualA
 import ManualAttendanceUpdateCreate from "./manual-attendance-update/pages/ManualAttendanceUpdateCreate";
 import OfficeCalendarList from "./office-calendar/pages/OfficeCalendarList";
 import OfficeCalendarCreate from "./office-calendar/pages/OfficeCalendarCreate";
+import OfficeCalendarEdit from "./office-calendar/pages/OfficeCalendarEdit";
+import OfficeCalendarView from "./office-calendar/pages/OfficeCalendarView";
 
 /**
  * HRIS route registry. Paths here are relative (no leading slash); menu and
@@ -274,6 +284,14 @@ export const hrisRoutes = [
     path: "hris/leave-settings/leave-allocation/create",
     element: <LeaveAllocationCreate />,
   },
+  {
+    path: "hris/leave-settings/leave-allocation/:leaveAllocationId/edit",
+    element: <LeaveAllocationEdit />,
+  },
+  {
+    path: "hris/leave-settings/leave-allocation/:leaveAllocationId/view",
+    element: <LeaveAllocationView />,
+  },
 
   // Attendance Settings
   {
@@ -285,12 +303,28 @@ export const hrisRoutes = [
     element: <WifiInformationCreate />,
   },
   {
+    path: "hris/attendance-settings/wifi-information/:wifiInformationId/edit",
+    element: <WifiInformationEdit />,
+  },
+  {
+    path: "hris/attendance-settings/wifi-information/:wifiInformationId/view",
+    element: <WifiInformationView />,
+  },
+  {
     path: "hris/attendance-settings/gps-information",
     element: <GpsInformationList />,
   },
   {
     path: "hris/attendance-settings/gps-information/create",
     element: <GpsInformationCreate />,
+  },
+  {
+    path: "hris/attendance-settings/gps-information/:gpsInformationId/edit",
+    element: <GpsInformationEdit />,
+  },
+  {
+    path: "hris/attendance-settings/gps-information/:gpsInformationId/view",
+    element: <GpsInformationView />,
   },
   {
     path: "hris/attendance-settings/shift",
@@ -301,12 +335,28 @@ export const hrisRoutes = [
     element: <ShiftCreate />,
   },
   {
+    path: "hris/attendance-settings/shift/:shiftId/edit",
+    element: <ShiftEdit />,
+  },
+  {
+    path: "hris/attendance-settings/shift/:shiftId/view",
+    element: <ShiftView />,
+  },
+  {
     path: "hris/attendance-settings/office-calendar",
     element: <OfficeCalendarList />,
   },
   {
     path: "hris/attendance-settings/office-calendar/create",
     element: <OfficeCalendarCreate />,
+  },
+  {
+    path: "hris/attendance-settings/office-calendar/:officeCalendarId/edit",
+    element: <OfficeCalendarEdit />,
+  },
+  {
+    path: "hris/attendance-settings/office-calendar/:officeCalendarId/view",
+    element: <OfficeCalendarView />,
   },
 
   // HRIS Forms

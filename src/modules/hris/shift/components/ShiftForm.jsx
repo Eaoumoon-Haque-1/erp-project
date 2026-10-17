@@ -115,7 +115,8 @@ function ToggleField({
 function ShiftForm({
   values,
   errors,
-  businessUnits = [],
+  businessUnitOptions = [],
+  businessUnitsLoading = false,
   onChange,
   shiftTitleRef,
 }) {
@@ -138,14 +139,15 @@ function ShiftForm({
               className={fieldClass(errors.BU_ID)}
               value={values.BU_ID}
               required
+              disabled={businessUnitsLoading}
               aria-invalid={Boolean(errors.BU_ID)}
               aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
               onChange={onChange}
             >
               <option value={""}>--Select Business Unit--</option>
-              {businessUnits.map((unit) => (
-                <option key={unit.ID} value={unit.ID}>
-                  {unit.BUSINESS_UNIT}
+              {businessUnitOptions.map((unit) => (
+                <option key={unit.value} value={unit.value}>
+                  {unit.label}
                 </option>
               ))}
             </select>
@@ -256,6 +258,14 @@ function ShiftForm({
             onChange={onChange}
           />
           <ToggleField
+            name={"ALLOW_LATE_IN_MSG"}
+            label={"Allow Late In Message?"}
+            checked={values.ALLOW_LATE_IN_MSG === "1"}
+            disabled={!isLateInEnabled}
+            className={"col-start-1"}
+            onChange={onChange}
+          />
+          <ToggleField
             name={"APPLY_EARLY_OUT"}
             label={"Apply Early Out Policy"}
             checked={isEarlyOutEnabled}
@@ -287,6 +297,14 @@ function ShiftForm({
             max={"1"}
             step={"0.01"}
             placeholder={"0.00"}
+            onChange={onChange}
+          />
+          <ToggleField
+            name={"ALLOW_EARLY_OUT_MSG"}
+            label={"Allow Early Out Message?"}
+            checked={values.ALLOW_EARLY_OUT_MSG === "1"}
+            disabled={!isEarlyOutEnabled}
+            className={"col-start-1"}
             onChange={onChange}
           />
         </div>
@@ -329,22 +347,10 @@ function ShiftForm({
           />
           <ToggleField
             name={"NOT_ALLOW_ATTN"}
-            label={"Not Allow Attn"}
+            label={"Do Not Allow Attendance"}
             checked={values.NOT_ALLOW_ATTN === "1"}
+            disabled={!isAttendancePolicyEnabled}
             className={"col-start-1"}
-            onChange={onChange}
-          />
-          <InputField
-            name={"NOT_ALLOW_ATTN_AFTER_MINUTES"}
-            label={"Not Allow Attn After (Minutes)"}
-            type={"number"}
-            value={values.NOT_ALLOW_ATTN_AFTER_MINUTES}
-            error={errors.NOT_ALLOW_ATTN_AFTER_MINUTES}
-            required={values.NOT_ALLOW_ATTN === "1"}
-            disabled={values.NOT_ALLOW_ATTN !== "1"}
-            min={"1"}
-            step={"1"}
-            placeholder={"Enter minutes"}
             onChange={onChange}
           />
         </div>

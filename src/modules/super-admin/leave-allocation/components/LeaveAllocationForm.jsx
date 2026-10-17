@@ -29,25 +29,6 @@ function RequiredLabel({ htmlFor, children }) {
   );
 }
 
-const businessUnitOptions = [
-  { value: "1", label: "Head Office" },
-  { value: "2", label: "Factory Unit" },
-  { value: "3", label: "Regional Office" },
-];
-
-const employeeTypeOptions = [
-  { value: "1", label: "Permanent" },
-  { value: "2", label: "Contractual" },
-  { value: "3", label: "Project Based" },
-];
-
-const leaveCategoryOptions = [
-  { value: "1", label: "Annual Leave" },
-  { value: "2", label: "Casual Leave" },
-  { value: "3", label: "Sick Leave" },
-  { value: "4", label: "Maternity Leave" },
-];
-
 const yesNoOptions = [
   { value: "1", label: "Yes" },
   { value: "0", label: "No" },
@@ -61,6 +42,7 @@ function SelectField({
   options,
   placeholder,
   inputRef,
+  disabled = false,
   onChange,
 }) {
   return (
@@ -73,6 +55,7 @@ function SelectField({
         className={fieldClass(error)}
         value={value}
         required
+        disabled={disabled}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${name}-error` : undefined}
         onChange={onChange}
@@ -93,6 +76,10 @@ export default function LeaveAllocationForm({
   values,
   errors,
   firstFieldRef,
+  businessUnitOptions = [],
+  employeeTypeOptions = [],
+  leaveCategoryOptions = [],
+  optionsLoading = false,
   onChange,
 }) {
   return (
@@ -105,6 +92,7 @@ export default function LeaveAllocationForm({
         options={businessUnitOptions}
         placeholder={"--Select Business Unit--"}
         inputRef={firstFieldRef}
+        disabled={optionsLoading}
         onChange={onChange}
       />
 
@@ -115,6 +103,7 @@ export default function LeaveAllocationForm({
         error={errors.EMP_TYPE_ID}
         options={employeeTypeOptions}
         placeholder={"--Select Employee Type--"}
+        disabled={optionsLoading}
         onChange={onChange}
       />
 
@@ -125,6 +114,7 @@ export default function LeaveAllocationForm({
         error={errors.LEAVE_CATEGORY_ID}
         options={leaveCategoryOptions}
         placeholder={"--Select Leave Category--"}
+        disabled={optionsLoading || !values.BU_ID}
         onChange={onChange}
       />
 
@@ -185,7 +175,7 @@ export default function LeaveAllocationForm({
 
       <SelectField
         name={"SANDWICH_LEAVE_APPLICABLE"}
-        label={"Sandwich Leave Applicable?"}
+        label={"Sandwich Leave Applicable"}
         value={values.SANDWICH_LEAVE_APPLICABLE}
         error={errors.SANDWICH_LEAVE_APPLICABLE}
         options={yesNoOptions}

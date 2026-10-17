@@ -1,138 +1,99 @@
-﻿/**
- * @file Create-page controller for Shift.
- * Sections: controlled state/refs, change handlers, validation submit/reset, and form-page composition.
- * Future create API calls belong here; keep field markup in the matching form component.
- */
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import FormPage from "../../../../components/shared/FormPage";
-import ShiftForm from "../components/ShiftForm";
-import {
-  SHIFT_TABLE,
-  createInitialShiftValues,
-  temporaryShiftBusinessUnits,
-  validateShift,
-} from "../validation/shiftValidation";
+/** @file API-backed Shift create page. */
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import FormPage from '../../../../components/shared/FormPage'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { shiftsApi } from '../api/shiftApi'
+import ShiftForm from '../components/ShiftForm'
+import { mapShiftToApi } from '../data/shiftApiMapper'
+import { clearShiftFieldErrors, getShiftValuePatch, shiftFieldMap } from '../data/shiftFormState'
+import { SHIFT_TABLE, createInitialShiftValues, validateShift } from '../validation/shiftValidation'
+
+const listPath = '/hris/attendance-settings/shift'
 
 function ShiftCreate() {
-  const navigate = useNavigate();
-  const shiftTitleRef = useRef(null);
-  const [values, setValues] = useState(createInitialShiftValues);
-  const [errors, setErrors] = useState({});
+  const navigate = useNavigate()
+  const shiftTitleRef = useRef(null)
+  const [values, setValues] = useState(createInitialShiftValues)
+  const [errors, setErrors] = useState({})
+  const [businessUnitOptions, setBusinessUnitOptions] = useState([])
+  const [businessUnitsLoading, setBusinessUnitsLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    businessUnitsApi.list()
+      .then((units) => {
+        if (!active) return
+        setBusinessUnitOptions(units
+          .filter((unit) => String(unit.status ?? 1) === '1')
+          .map((unit) => ({ value: String(unit.id), label: unit.businessUnit })))
+      })
+      .catch((error) => {
+        if (active) getApiErrorMessage(error, 'Unable to load Business Units.')
+      })
+      .finally(() => {
+        if (active) setBusinessUnitsLoading(false)
+      })
+    return () => { active = false }
+  }, [])
 
   const handleChange = (event) => {
-    if (!event || !event.target) return;
-    const { name, type, value, checked } = event.target;
-    let nextValue = value;
-    if (type === "checkbox" && typeof checked === "boolean" && name !== "WEEKEND_DAYS") {
-      nextValue = checked ? "1" : "0";
-    }
-    setValues((current) => ({
-      ...current,
-      [name]: nextValue,
-      ...(name === "APPLY_LATE_IN" && nextValue === "0"
-        ? {
-            LATE_IN_DAYS: "",
-            LATE_IN_DEDUCTION: "",
-          }
-        : {}),
-      ...(name === "APPLY_EARLY_OUT" && nextValue === "0"
-        ? {
-            EARLY_OUT_DAYS: "",
-            EARLY_OUT_DEDUCTION: "",
-          }
-        : {}),
-      ...(name === "ATTN_IN_OUT_POLICY" && nextValue === "0"
-        ? {
-            START_BEFORE: "",
-            CLOSE_AFTER: "",
-            IN_TIME_START: "",
-            IN_TIME_CLOSE: "",
-            OUT_TIME_START: "",
-            OUT_TIME_CLOSE: "",
-          }
-        : {}),
-      ...(name === "NOT_ALLOW_ATTN" && nextValue === "0"
-        ? { NOT_ALLOW_ATTN_AFTER_MINUTES: "" }
-        : {}),
-      ...(name === "ALLOW_OVERTIME" && nextValue === "0"
-        ? { MAX_OT_HOUR: "", EXTRA_OT_HOUR: "" }
-        : {}),
-    }));
-    setErrors((current) => ({
-      ...current,
-      [name]: undefined,
-      ...(name === "APPLY_LATE_IN"
-        ? {
-            LATE_IN_DAYS: undefined,
-            LATE_IN_DEDUCTION: undefined,
-          }
-        : {}),
-      ...(name === "APPLY_EARLY_OUT"
-        ? {
-            EARLY_OUT_DAYS: undefined,
-            EARLY_OUT_DEDUCTION: undefined,
-          }
-        : {}),
-      ...(name === "ATTN_IN_OUT_POLICY"
-        ? {
-            START_BEFORE: undefined,
-            CLOSE_AFTER: undefined,
-            IN_TIME_START: undefined,
-            IN_TIME_CLOSE: undefined,
-            OUT_TIME_START: undefined,
-            OUT_TIME_CLOSE: undefined,
-          }
-        : {}),
-      ...(name === "NOT_ALLOW_ATTN"
-        ? { NOT_ALLOW_ATTN_AFTER_MINUTES: undefined }
-        : {}),
-      ...(name === "ALLOW_OVERTIME"
-        ? { MAX_OT_HOUR: undefined, EXTRA_OT_HOUR: undefined }
-        : {}),
-    }));
-  };
+    if (!event?.target) return
+    const { name, type, value, checked } = event.target
+    const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
+    const patch = getShiftValuePatch(name, nextValue)
+    setValues((current) => ({ ...current, ...patch }))
+    setErrors((current) => clearShiftFieldErrors(current, Object.keys(patch)))
+  }
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const result = validateShift(values);
-
-    setValues(result.values);
-    setErrors(result.errors);
-
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    const result = validateShift(values)
+    setValues(result.values)
+    setErrors(result.errors)
     if (!result.isValid) {
-      requestAnimationFrame(() =>
-        document.querySelector("[aria-invalid=true]")?.focus(),
-      );
-      return;
+      requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
+      return
     }
 
-    navigate("/hris/attendance-settings/shift");
-  };
+    setSubmitting(true)
+    try {
+      await shiftsApi.create(mapShiftToApi(result.values))
+      navigate(listPath)
+    } catch (error) {
+      applyApiFormErrors(error, setErrors, 'Unable to create Shift.', shiftFieldMap)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleReset = () => {
-    setValues(createInitialShiftValues());
-    setErrors({});
-    requestAnimationFrame(() => shiftTitleRef.current?.focus());
-  };
+    setValues(createInitialShiftValues())
+    setErrors({})
+    requestAnimationFrame(() => shiftTitleRef.current?.focus())
+  }
 
   return (
     <FormPage
-      title={"Shift Create"}
-      listTo={"/hris/attendance-settings/shift"}
+      title={'Shift Create'}
+      listTo={listPath}
       tableName={SHIFT_TABLE}
       onSubmit={handleSubmit}
       onReset={handleReset}
+      submitting={submitting}
     >
       <ShiftForm
         values={values}
         errors={errors}
-        businessUnits={temporaryShiftBusinessUnits}
+        businessUnitOptions={businessUnitOptions}
+        businessUnitsLoading={businessUnitsLoading}
         onChange={handleChange}
         shiftTitleRef={shiftTitleRef}
       />
     </FormPage>
-  );
+  )
 }
 
-export default ShiftCreate;
+export default ShiftCreate

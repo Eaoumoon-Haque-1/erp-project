@@ -32,7 +32,8 @@ function RequiredLabel({ htmlFor, children }) {
 function GpsInformationForm({
   values,
   errors,
-  businessUnits,
+  businessUnitOptions = [],
+  businessUnitsLoading = false,
   onChange,
   businessUnitRef,
 }) {
@@ -47,14 +48,15 @@ function GpsInformationForm({
           className={fieldClass(errors.BU_ID)}
           value={values.BU_ID}
           required
+          disabled={businessUnitsLoading}
           aria-invalid={Boolean(errors.BU_ID)}
           aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
           onChange={onChange}
         >
           <option value={""}>--Select Business Unit--</option>
-          {businessUnits.map((unit) => (
-            <option key={unit.ID} value={unit.ID}>
-              {unit.BUSINESS_UNIT}
+          {businessUnitOptions.map((unit) => (
+            <option key={unit.value} value={unit.value}>
+              {unit.label}
             </option>
           ))}
         </select>
@@ -66,7 +68,7 @@ function GpsInformationForm({
         <input
           id={"LOCATION_NAME"}
           name={"LOCATION_NAME"}
-          type={"text"}
+          type={"number"}
           className={fieldClass(errors.LOCATION_NAME)}
           placeholder={"Enter location name"}
           value={values.LOCATION_NAME}
@@ -90,7 +92,10 @@ function GpsInformationForm({
           className={fieldClass(errors.LATITUDE)}
           placeholder={"Enter latitude"}
           value={values.LATITUDE}
-          maxLength={50}
+          min={"-90"}
+          max={"90"}
+          step={"any"}
+          inputMode={"decimal"}
           required
           aria-invalid={Boolean(errors.LATITUDE)}
           aria-describedby={errors.LATITUDE ? "LATITUDE-error" : undefined}
@@ -104,11 +109,14 @@ function GpsInformationForm({
         <input
           id={"LONGITUDE"}
           name={"LONGITUDE"}
-          type={"text"}
+          type={"number"}
           className={fieldClass(errors.LONGITUDE)}
           placeholder={"Enter longitude"}
           value={values.LONGITUDE}
-          maxLength={50}
+          min={"-180"}
+          max={"180"}
+          step={"any"}
+          inputMode={"decimal"}
           required
           aria-invalid={Boolean(errors.LONGITUDE)}
           aria-describedby={errors.LONGITUDE ? "LONGITUDE-error" : undefined}

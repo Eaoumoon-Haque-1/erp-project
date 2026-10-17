@@ -1,16 +1,10 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Office Calendar.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constants, month options, initial values, row generation, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const OFFICE_CALENDAR_TABLE = "HR_OFFICE_CALENDER";
 export const OFFICE_CALENDAR_DETAILS_TABLE = "HR_OFFICE_CALENDER_DTLS";
-
-export const temporaryOfficeCalendarBusinessUnits = [
-  { ID: "1", BUSINESS_UNIT: "Head Office" },
-  { ID: "2", BUSINESS_UNIT: "Factory Unit" },
-  { ID: "3", BUSINESS_UNIT: "Sales Office" },
-];
 
 export const officeCalendarMonthOptions = [
   { value: "1", label: "January" },
@@ -27,15 +21,8 @@ export const officeCalendarMonthOptions = [
   { value: "12", label: "December" },
 ];
 
-export const temporaryOfficeCalendarEventTypes = [
-  { value: "WORKING_DAY", label: "Working Day" },
-  { value: "WEEKEND", label: "Weekend" },
-  { value: "PUBLIC_HOLIDAY", label: "Public Holiday" },
-  { value: "OPTIONAL_HOLIDAY", label: "Optional Holiday" },
-  { value: "SPECIAL_WORKING_DAY", label: "Special Working Day" },
-];
-
 export const initialOfficeCalendarValues = {
+  ID: "",
   BU_ID: [],
   YEAR: "",
   MONTH_ID: "",
@@ -74,10 +61,9 @@ export function createOfficeCalendarRows(year, month) {
 
     return {
       ID: "",
-      HR_OFFICE_CALENDER_ID: "",
       CALENDER_DATE: `${year}-${monthPart}-${dayPart}`,
       CALENDER_DAY: dayNames[date.getDay()],
-      EVENT_TYPE: "",
+      EVENT_TYPE_ID: "",
       REMARKS: "",
       STATUS: "1",
     };
@@ -91,6 +77,7 @@ function normalizeIds(value) {
 
 export function validateOfficeCalendar(values, rows) {
   const normalizedValues = {
+    ID: String(values.ID ?? "").trim(),
     BU_ID: normalizeIds(values.BU_ID),
     YEAR: String(values.YEAR ?? "").trim(),
     MONTH_ID: String(values.MONTH_ID ?? "").trim(),
@@ -100,7 +87,7 @@ export function validateOfficeCalendar(values, rows) {
     ...row,
     CALENDER_DATE: String(row.CALENDER_DATE ?? "").trim(),
     CALENDER_DAY: String(row.CALENDER_DAY ?? "").trim(),
-    EVENT_TYPE: String(row.EVENT_TYPE ?? "").trim(),
+    EVENT_TYPE_ID: String(row.EVENT_TYPE_ID ?? "").trim(),
     REMARKS: String(row.REMARKS ?? "").trim(),
     STATUS: normalizedValues.STATUS,
   }));
@@ -126,8 +113,8 @@ export function validateOfficeCalendar(values, rows) {
     const currentErrors = {};
     if (!row.CALENDER_DATE) currentErrors.CALENDER_DATE = "Date is required.";
     if (!row.CALENDER_DAY) currentErrors.CALENDER_DAY = "Day is required.";
-    if (!row.EVENT_TYPE) {
-      currentErrors.EVENT_TYPE = "Event Type is required.";
+    if (!row.EVENT_TYPE_ID) {
+      currentErrors.EVENT_TYPE_ID = "Event Type is required.";
     }
     if (Object.keys(currentErrors).length > 0) {
       rowErrors[row.CALENDER_DATE || String(Object.keys(rowErrors).length)] =

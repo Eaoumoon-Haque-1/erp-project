@@ -1,15 +1,9 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Shift.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const SHIFT_TABLE = "HR_SHIFT";
-
-export const temporaryShiftBusinessUnits = [
-  { ID: "1", BUSINESS_UNIT: "Head Office" },
-  { ID: "2", BUSINESS_UNIT: "Factory Unit" },
-  { ID: "3", BUSINESS_UNIT: "Regional Office" },
-];
 
 export const weekendDropdownOptions = [
   { value: "Friday", label: "Friday" },
@@ -33,11 +27,12 @@ export const initialShiftValues = {
   EARLY_OUT_DEDUCTION: "",
   WEEKEND: "Friday",
   GRACE_TIME_MINUTES: "15",
+  ALLOW_LATE_IN_MSG: "0",
+  ALLOW_EARLY_OUT_MSG: "0",
   ATTN_IN_OUT_POLICY: "0",
   START_BEFORE: "",
   CLOSE_AFTER: "",
   NOT_ALLOW_ATTN: "0",
-  NOT_ALLOW_ATTN_AFTER_MINUTES: "",
   IN_TIME_START: "",
   IN_TIME_CLOSE: "",
   OUT_TIME_START: "",
@@ -76,15 +71,16 @@ export function validateShift(inputValues) {
     GRACE_TIME_MINUTES: String(
       inputValues.GRACE_TIME_MINUTES ?? "",
     ).trim(),
+    ALLOW_LATE_IN_MSG:
+      String(inputValues.ALLOW_LATE_IN_MSG) === "1" ? "1" : "0",
+    ALLOW_EARLY_OUT_MSG:
+      String(inputValues.ALLOW_EARLY_OUT_MSG) === "1" ? "1" : "0",
     ATTN_IN_OUT_POLICY:
       String(inputValues.ATTN_IN_OUT_POLICY) === "1" ? "1" : "0",
     START_BEFORE: String(inputValues.START_BEFORE ?? "").trim(),
     CLOSE_AFTER: String(inputValues.CLOSE_AFTER ?? "").trim(),
     NOT_ALLOW_ATTN:
       String(inputValues.NOT_ALLOW_ATTN) === "1" ? "1" : "0",
-    NOT_ALLOW_ATTN_AFTER_MINUTES: String(
-      inputValues.NOT_ALLOW_ATTN_AFTER_MINUTES ?? "",
-    ).trim(),
     IN_TIME_START: String(inputValues.IN_TIME_START ?? "").trim(),
     IN_TIME_CLOSE: String(inputValues.IN_TIME_CLOSE ?? "").trim(),
     OUT_TIME_START: String(inputValues.OUT_TIME_START ?? "").trim(),
@@ -195,14 +191,6 @@ export function validateShift(inputValues) {
       errors.OUT_TIME_CLOSE =
         "Out Time (Close) must be later, or Next Day Attendance must be enabled.";
     }
-  }
-
-  if (
-    values.NOT_ALLOW_ATTN === "1" &&
-    !isPositiveInteger(values.NOT_ALLOW_ATTN_AFTER_MINUTES)
-  ) {
-    errors.NOT_ALLOW_ATTN_AFTER_MINUTES =
-      "Not Allow Attn After must be a positive whole number.";
   }
 
   if (values.ALLOW_OVERTIME === "1") {

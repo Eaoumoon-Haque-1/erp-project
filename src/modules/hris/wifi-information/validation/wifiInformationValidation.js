@@ -1,15 +1,9 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for WiFi Information.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const WIFI_INFORMATION_TABLE = "WIFI_INFORMATION";
-
-export const temporaryWifiInformationBusinessUnits = [
-  { ID: "1", BUSINESS_UNIT: "Head Office" },
-  { ID: "2", BUSINESS_UNIT: "Factory Unit" },
-  { ID: "3", BUSINESS_UNIT: "Regional Office" },
-];
 
 export const initialWifiInformationValues = {
   BU_ID: "",

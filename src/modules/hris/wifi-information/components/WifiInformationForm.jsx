@@ -32,7 +32,8 @@ function RequiredLabel({ htmlFor, children }) {
 function WifiInformationForm({
   values,
   errors,
-  businessUnits,
+  businessUnitOptions = [],
+  businessUnitsLoading = false,
   onChange,
   businessUnitRef,
 }) {
@@ -47,14 +48,15 @@ function WifiInformationForm({
           className={fieldClass(errors.BU_ID)}
           value={values.BU_ID}
           required
+          disabled={businessUnitsLoading}
           aria-invalid={Boolean(errors.BU_ID)}
           aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
           onChange={onChange}
         >
           <option value={""}>--Select Business Unit--</option>
-          {businessUnits.map((unit) => (
-            <option key={unit.ID} value={unit.ID}>
-              {unit.BUSINESS_UNIT}
+          {businessUnitOptions.map((unit) => (
+            <option key={unit.value} value={unit.value}>
+              {unit.label}
             </option>
           ))}
         </select>

@@ -1,6 +1,6 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Leave Allocation.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const LEAVE_ALLOCATION_TABLE = "HR_LEAVE_ALLOCATION";

@@ -37,7 +37,9 @@ function OfficeCalendarForm({
   rows,
   errors,
   rowErrors,
-  businessUnits,
+  businessUnitOptions,
+  referencesLoading = false,
+  allowMultipleBusinessUnits = true,
   months,
   eventTypes,
   businessUnitRef,
@@ -45,26 +47,45 @@ function OfficeCalendarForm({
   onBusinessUnitChange,
   onRowChange,
 }) {
-  const businessUnitOptions = businessUnits.map((unit) => ({
-    value: unit.ID,
-    label: unit.BUSINESS_UNIT,
-  }));
-
   return (
     <>
       <div className={"erp-form-grid erp-office-calendar-header-grid"}>
-        <MultiSelectField
-          id={"BU_ID"}
-          name={"BU_ID"}
-          label={"Business Unit"}
-          placeholder={"--Select Business Unit--"}
-          options={businessUnitOptions}
-          value={values.BU_ID}
-          error={errors.BU_ID}
-          required
-          inputRef={businessUnitRef}
-          onChange={onBusinessUnitChange}
-        />
+        {allowMultipleBusinessUnits ? (
+          <MultiSelectField
+            id={"BU_ID"}
+            name={"BU_ID"}
+            label={"Business Unit"}
+            placeholder={"--Select Business Unit--"}
+            options={businessUnitOptions}
+            value={values.BU_ID}
+            error={errors.BU_ID}
+            disabled={referencesLoading}
+            required
+            inputRef={businessUnitRef}
+            onChange={onBusinessUnitChange}
+          />
+        ) : (
+          <div>
+            <RequiredLabel htmlFor={"BU_ID"}>Business Unit</RequiredLabel>
+            <select
+              ref={businessUnitRef}
+              id={"BU_ID"}
+              name={"BU_ID"}
+              className={fieldClass(errors.BU_ID)}
+              value={values.BU_ID[0] ?? ""}
+              disabled={referencesLoading}
+              required
+              aria-invalid={Boolean(errors.BU_ID)}
+              onChange={(event) => onBusinessUnitChange("BU_ID", event.target.value ? [event.target.value] : [])}
+            >
+              <option value={""}>--Select Business Unit--</option>
+              {businessUnitOptions.map((unit) => (
+                <option key={unit.value} value={unit.value}>{unit.label}</option>
+              ))}
+            </select>
+            <FieldError id={"BU_ID-error"} message={errors.BU_ID} />
+          </div>
+        )}
 
         <div>
           <RequiredLabel htmlFor={"YEAR"}>Year</RequiredLabel>
@@ -177,17 +198,18 @@ function OfficeCalendarForm({
                     </td>
                     <td>
                       <select
-                        name={`DETAILS[${index}][EVENT_TYPE]`}
-                        className={fieldClass(currentErrors.EVENT_TYPE)}
-                        value={row.EVENT_TYPE}
+                        name={`DETAILS[${index}][EVENT_TYPE_ID]`}
+                        className={fieldClass(currentErrors.EVENT_TYPE_ID)}
+                        value={row.EVENT_TYPE_ID}
+                        disabled={referencesLoading}
                         aria-label={`Event Type for ${formatDateForDisplay(
                           row.CALENDER_DATE,
                         )}`}
-                        aria-invalid={Boolean(currentErrors.EVENT_TYPE)}
+                        aria-invalid={Boolean(currentErrors.EVENT_TYPE_ID)}
                         onChange={(event) =>
                           onRowChange(
                             row.CALENDER_DATE,
-                            "EVENT_TYPE",
+                            "EVENT_TYPE_ID",
                             event.target.value,
                           )
                         }
@@ -203,8 +225,8 @@ function OfficeCalendarForm({
                         ))}
                       </select>
                       <FieldError
-                        id={`${row.CALENDER_DATE}-EVENT_TYPE-error`}
-                        message={currentErrors.EVENT_TYPE}
+                        id={`${row.CALENDER_DATE}-EVENT_TYPE_ID-error`}
+                        message={currentErrors.EVENT_TYPE_ID}
                       />
                     </td>
                     <td>

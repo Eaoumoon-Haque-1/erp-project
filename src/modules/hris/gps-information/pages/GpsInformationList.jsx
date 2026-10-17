@@ -1,100 +1,104 @@
-﻿/**
- * @file List-page controller for GPS Information.
- * Sections: filter/column/temporary-row configuration, row handlers, and ListPage composition.
- * Edit here when list columns, filters, navigation, API rows, or enabled actions change.
- */
-import ListPage from "../../../../components/shared/ListPage";
-import ListRowActions from "../../../../components/shared/ListRowActions";
+/** @file API-backed GPS Information list page. */
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import ListPage from '../../../../components/shared/ListPage'
+import ListRowActions from '../../../../components/shared/ListRowActions'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { gpsInformationsApi } from '../api/gpsInformationApi'
 import {
-  temporaryGpsInformationBusinessUnits,
-} from "../validation/gpsInformationValidation";
+  mapGpsInformationFromApi,
+  mapGpsInformationToApi,
+} from '../data/gpsInformationApiMapper'
 
-function findBusinessUnit(value) {
-  return (
-    temporaryGpsInformationBusinessUnits.find(
-      (unit) => String(unit.ID) === String(value),
-    )?.BUSINESS_UNIT ?? value
-  );
-}
-
-const gpsInformationFilters = [
-  {
-    key: "BU_ID",
-    label: "Search by Business Unit",
-    placeholder: "--Search by Business Unit--",
-    options: temporaryGpsInformationBusinessUnits.map((unit) => ({
-      label: unit.BUSINESS_UNIT,
-      value: unit.ID,
-    })),
-  },
-  {
-    key: "STATUS",
-    label: "Search by Status",
-    placeholder: "--Search by Status--",
-    options: [
-      { label: "Active", value: "1" },
-      { label: "Inactive", value: "0" },
-    ],
-  },
-];
-
-const gpsInformationColumns = [
-  {
-    key: "BU_ID",
-    label: "Business Unit",
-    render: (value) => findBusinessUnit(value),
-  },
-  { key: "LOCATION_NAME", label: "Location Name" },
-  { key: "LATITUDE", label: "Latitude" },
-  { key: "LONGITUDE", label: "Longitude" },
-  {
-    key: "STATUS",
-    label: "Status",
-    render: (value) => (
-      <span
-        className={[
-          "inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm",
-          String(value) === "1" ? "bg-action-success" : "bg-action-danger",
-        ].join(" ")}
-      >
-        {String(value) === "1" ? "Active" : "Inactive"}
-      </span>
-    ),
-  },
-];
-
-const gpsInformationRows = [
-  {
-    ID: 1,
-    BU_ID: "1",
-    LOCATION_NAME: "Head Office",
-    LATITUDE: "23.8103",
-    LONGITUDE: "90.4125",
-    STATUS: "1",
-  },
-  {
-    ID: 2,
-    BU_ID: "2",
-    LOCATION_NAME: "Factory Unit",
-    LATITUDE: "23.8200",
-    LONGITUDE: "90.4200",
-    STATUS: "1",
-  },
-];
+const basePath = '/hris/attendance-settings/gps-information'
+const columns = [
+  { key: 'BUSINESS_UNIT', label: 'Business Unit' },
+  { key: 'LOCATION_NAME', label: 'Location Name' },
+  { key: 'LATITUDE', label: 'Latitude' },
+  { key: 'LONGITUDE', label: 'Longitude' },
+  { key: 'STATUS', label: 'Status', render: (value) => <span className={['inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm', value === '1' ? 'bg-action-success' : 'bg-action-danger'].join(' ')}>{value === '1' ? 'Active' : 'Inactive'}</span> },
+]
 
 function GpsInformationList() {
+  const navigate = useNavigate()
+  const [rows, setRows] = useState([])
+  const [businessUnitNames, setBusinessUnitNames] = useState(new Map())
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let active = true
+    Promise.all([gpsInformationsApi.list(), businessUnitsApi.list()])
+      .then(([gpsRecords, businessUnits]) => {
+        if (!active) return
+        const names = new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit]))
+        setBusinessUnitNames(names)
+        setRows(gpsRecords.map((record) => mapGpsInformationFromApi(record, names)))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load GPS Information.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [])
+
+  const filters = useMemo(() => [
+    { key: 'BU_ID', label: 'Search by Business Unit', placeholder: '--Search by Business Unit--', options: [...businessUnitNames].map(([value, label]) => ({ value, label })) },
+    { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
+  ], [businessUnitNames])
+
+  const handleDelete = async (row) => {
+    try {
+      await gpsInformationsApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+      return true
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to delete GPS Information.'))
+      return false
+    }
+  }
+
+  const handleStatusChange = async (row) => {
+    try {
+      const updated = await gpsInformationsApi.update(
+        row.ID,
+        mapGpsInformationToApi({ ...row, STATUS: row.STATUS === '1' ? '0' : '1' }),
+      )
+      setRows((current) => current.map((item) =>
+        item.ID === row.ID ? mapGpsInformationFromApi(updated, businessUnitNames) : item,
+      ))
+      return true
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to update GPS Information status.'))
+      return false
+    }
+  }
+
   return (
     <ListPage
-      title={"GPS Information List"}
-      createLabel={"New"}
-      createTo={"/hris/attendance-settings/gps-information/create"}
-      filters={gpsInformationFilters}
-      columns={gpsInformationColumns}
-      rows={gpsInformationRows}
-      rowKey={"ID"}
-      renderActions={(row) => <ListRowActions row={row} />}
+      title={'GPS Information List'}
+      createLabel={'New'}
+      createTo={`${basePath}/create`}
+      filters={filters}
+      columns={columns}
+      rows={rows}
+      loading={loading}
+      message={message}
+      rowKey={'ID'}
+      renderActions={(row) => (
+        <ListRowActions
+          row={row}
+          onView={() => navigate(`${basePath}/${row.ID}/view`)}
+          onEdit={() => navigate(`${basePath}/${row.ID}/edit`)}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     />
-  );
+  )
 }
 
-export default GpsInformationList;
+export default GpsInformationList

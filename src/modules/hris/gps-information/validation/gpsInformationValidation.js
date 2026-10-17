@@ -1,15 +1,9 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for GPS Information.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const GPS_INFO_TABLE = "GPS_INFO";
-
-export const temporaryGpsInformationBusinessUnits = [
-  { ID: "1", BUSINESS_UNIT: "Head Office" },
-  { ID: "2", BUSINESS_UNIT: "Factory Unit" },
-  { ID: "3", BUSINESS_UNIT: "Regional Office" },
-];
 
 export const initialGpsInformationValues = {
   BU_ID: "",
@@ -44,18 +38,18 @@ export function validateGpsInformation(values) {
 
   if (!normalizedValues.LATITUDE) {
     errors.LATITUDE = "Latitude is required.";
-  } else if (normalizedValues.LATITUDE.length < 2) {
-    errors.LATITUDE = "Latitude must be at least 2 characters.";
-  } else if (normalizedValues.LATITUDE.length > 50) {
-    errors.LATITUDE = "Latitude must not exceed 50 characters.";
+  } else if (!Number.isFinite(Number(normalizedValues.LATITUDE))) {
+    errors.LATITUDE = "Latitude must be a valid number.";
+  } else if (Number(normalizedValues.LATITUDE) < -90 || Number(normalizedValues.LATITUDE) > 90) {
+    errors.LATITUDE = "Latitude must be between -90 and 90.";
   }
 
   if (!normalizedValues.LONGITUDE) {
     errors.LONGITUDE = "Longitude is required.";
-  } else if (normalizedValues.LONGITUDE.length < 2) {
-    errors.LONGITUDE = "Longitude must be at least 2 characters.";
-  } else if (normalizedValues.LONGITUDE.length > 50) {
-    errors.LONGITUDE = "Longitude must not exceed 50 characters.";
+  } else if (!Number.isFinite(Number(normalizedValues.LONGITUDE))) {
+    errors.LONGITUDE = "Longitude must be a valid number.";
+  } else if (Number(normalizedValues.LONGITUDE) < -180 || Number(normalizedValues.LONGITUDE) > 180) {
+    errors.LONGITUDE = "Longitude must be between -180 and 180.";
   }
 
   return {
