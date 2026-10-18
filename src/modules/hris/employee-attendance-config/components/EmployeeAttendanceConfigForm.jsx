@@ -6,12 +6,7 @@
 import MultiSelectField from "../../../../components/shared/MultiSelectField";
 import {
   EMPLOYEE_ATTENDANCE_GPS_TABLE,
-  EMPLOYEE_ATTENDANCE_MACHINE_TABLE,
   EMPLOYEE_ATTENDANCE_WIFI_TABLE,
-  mockEmployeeOptions,
-  mockGpsOptions,
-  mockShiftOptions,
-  mockWifiOptions,
 } from "../validation/employeeAttendanceConfigValidation";
 
 function FieldError({ id, message }) {
@@ -112,9 +107,13 @@ function EmployeeAttendanceConfigForm({
   errors,
   businessUnitRef,
   businessUnits = [],
+  employees = [],
+  shiftOptions = [],
+  wifiOptions = [],
+  gpsOptions = [],
+  referencesLoading = false,
   wifiRows = [],
   gpsRows = [],
-  machineRows = [],
   activeTab,
   onTabChange,
   onChange,
@@ -123,27 +122,22 @@ function EmployeeAttendanceConfigForm({
   onPermissionChange,
   onWifiSelection,
   onGpsSelection,
-  onMachineChange,
   onAddWifiRow,
   onRemoveWifiRow,
   onAddGpsRow,
   onRemoveGpsRow,
-  onAddMachineRow,
-  onRemoveMachineRow,
 }) {
   const hasWifiPermission = values.ATTENDANCE_PERMISSIONS.includes("WiFi");
   const hasGpsPermission = values.ATTENDANCE_PERMISSIONS.includes("GPS");
-  const hasMachinePermission =
-    values.ATTENDANCE_PERMISSIONS.includes("Machine");
   const isGpsTrackingEnabled =
     hasGpsPermission && values.GPS_TRACKING === "1";
-  const availableEmployees = mockEmployeeOptions.filter(
+  const availableEmployees = employees.filter(
     (employee) => !values.BU_ID || employee.buId === values.BU_ID,
   );
-  const availableWifi = mockWifiOptions.filter(
+  const availableWifi = wifiOptions.filter(
     (wifi) => !values.BU_ID || wifi.BU_ID === values.BU_ID,
   );
-  const availableGps = mockGpsOptions.filter(
+  const availableGps = gpsOptions.filter(
     (location) => !values.BU_ID || location.BU_ID === values.BU_ID,
   );
 
@@ -160,12 +154,13 @@ function EmployeeAttendanceConfigForm({
             name={"BU_ID"}
             className={fieldClass(errors.BU_ID)}
             value={values.BU_ID}
+            disabled={referencesLoading}
             required
             aria-invalid={Boolean(errors.BU_ID)}
             aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
             onChange={onChange}
           >
-            <option value={""}>--Select Business Unit--</option>
+            <option value={""}>{referencesLoading ? "Loading..." : "--Select Business Unit--"}</option>
             {businessUnits.map((unit) => (
               <option key={unit.ID} value={unit.ID}>
                 {unit.BUSINESS_UNIT}
@@ -185,7 +180,7 @@ function EmployeeAttendanceConfigForm({
             className={fieldClass(errors.EMPLOYEE_ID)}
             value={values.EMPLOYEE_ID}
             required
-            disabled={!values.BU_ID}
+            disabled={!values.BU_ID || referencesLoading}
             aria-invalid={Boolean(errors.EMPLOYEE_ID)}
             aria-describedby={
               errors.EMPLOYEE_ID ? "EMPLOYEE_ID-error" : undefined
@@ -409,7 +404,7 @@ function EmployeeAttendanceConfigForm({
             name={"SHIFT_ID"}
             label={"Shift Name"}
             placeholder={"--Select Shifts--"}
-            options={mockShiftOptions}
+            options={shiftOptions.filter((shift) => !values.BU_ID || shift.buId === values.BU_ID)}
             value={Array.isArray(values.SHIFT_ID) ? values.SHIFT_ID : []}
             error={errors.SHIFT_ID}
             required
@@ -431,7 +426,9 @@ function EmployeeAttendanceConfigForm({
               onChange={onChange}
             >
               <option value={""}>--Select Shift--</option>
-              {mockShiftOptions.map((shift) => (
+              {shiftOptions
+                .filter((shift) => !values.BU_ID || shift.buId === values.BU_ID)
+                .map((shift) => (
                 <option key={shift.value} value={shift.value}>
                   {shift.label}
                 </option>
@@ -467,7 +464,6 @@ function EmployeeAttendanceConfigForm({
           {[
             { key: "wifi", label: "WiFi" },
             { key: "gps", label: "GPS" },
-            { key: "machine", label: "Machine" },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -555,7 +551,7 @@ function EmployeeAttendanceConfigForm({
                 + Add More
               </button>
             </>
-          ) : activeTab === "gps" ? (
+          ) : (
             <>
               <div className={"erp-employee-attendance-table-wrap"}>
                 <table
@@ -615,81 +611,6 @@ function EmployeeAttendanceConfigForm({
                 className={"primary-button erp-attendance-table-add-button"}
                 disabled={!hasGpsPermission}
                 onClick={onAddGpsRow}
-              >
-                + Add More
-              </button>
-            </>
-          ) : (
-            <>
-              <div className={"erp-employee-attendance-table-wrap"}>
-                <table
-                  className={"erp-table erp-employee-attendance-table"}
-                  data-table={EMPLOYEE_ATTENDANCE_MACHINE_TABLE}
-                >
-                  <thead>
-                    <tr>
-                      <th className={"erp-number-column"}>#</th>
-                      <th>Machine ID</th>
-                      <th>IP Address</th>
-                      <th className={"erp-action-column"}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {machineRows.map((row, index) => (
-                      <tr key={row.CLIENT_ID}>
-                        <td className={"erp-number-column"}>{index + 1}</td>
-                        <td>
-                          <input
-                            type={"text"}
-                            className={"erp-form-control"}
-                            value={row.MACHINE_ID}
-                            placeholder={"Enter machine ID"}
-                            disabled={!hasMachinePermission}
-                            onChange={(event) =>
-                              onMachineChange(
-                                index,
-                                "MACHINE_ID",
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type={"text"}
-                            className={"erp-form-control"}
-                            value={row.IP_ADDRESS}
-                            placeholder={"Enter IP address"}
-                            disabled={!hasMachinePermission}
-                            onChange={(event) =>
-                              onMachineChange(
-                                index,
-                                "IP_ADDRESS",
-                                event.target.value,
-                              )
-                            }
-                          />
-                        </td>
-                        <td className={"erp-action-column"}>
-                          <DeleteButton
-                            label={`Remove Machine row ${index + 1}`}
-                            onClick={() => onRemoveMachineRow(index)}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <FieldError
-                id={"MACHINE_ROWS-error"}
-                message={errors.MACHINE_ROWS}
-              />
-              <button
-                type={"button"}
-                className={"primary-button erp-attendance-table-add-button"}
-                disabled={!hasMachinePermission}
-                onClick={onAddMachineRow}
               >
                 + Add More
               </button>

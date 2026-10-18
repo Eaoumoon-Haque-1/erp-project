@@ -58,6 +58,8 @@ import LeaveApplicationEdit from "./leave-application/pages/LeaveApplicationEdit
 import LeaveApplicationView from "./leave-application/pages/LeaveApplicationView";
 import EmployeeAttendanceConfigList from "./employee-attendance-config/pages/EmployeeAttendanceConfigList";
 import EmployeeAttendanceConfigCreate from "./employee-attendance-config/pages/EmployeeAttendanceConfigCreate";
+import EmployeeAttendanceConfigEdit from "./employee-attendance-config/pages/EmployeeAttendanceConfigEdit";
+import EmployeeAttendanceConfigView from "./employee-attendance-config/pages/EmployeeAttendanceConfigView";
 import ShiftList from "./shift/pages/ShiftList";
 import ShiftCreate from "./shift/pages/ShiftCreate";
 import ShiftEdit from "./shift/pages/ShiftEdit";
@@ -401,6 +403,14 @@ export const hrisRoutes = [
   {
     path: "hris/hris-forms/employee-attendance-config/create",
     element: <EmployeeAttendanceConfigCreate />,
+  },
+  {
+    path: "hris/hris-forms/employee-attendance-config/:employeeAttendanceConfigId/edit",
+    element: <EmployeeAttendanceConfigEdit />,
+  },
+  {
+    path: "hris/hris-forms/employee-attendance-config/:employeeAttendanceConfigId/view",
+    element: <EmployeeAttendanceConfigView />,
   },
   {
     path: "hris/hris-forms/mobile-notification",
