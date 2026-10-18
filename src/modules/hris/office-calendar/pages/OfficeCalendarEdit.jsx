@@ -1,5 +1,5 @@
 /** @file API-backed Office Calendar edit page. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
@@ -10,7 +10,10 @@ import {
   mapOfficeCalendarToApi,
   officeCalendarFieldMap,
 } from '../data/officeCalendarApiMapper'
-import { loadOfficeCalendarReferences } from '../data/officeCalendarReferences'
+import {
+  getOfficeCalendarEventTypeOptions,
+  loadOfficeCalendarReferences,
+} from '../data/officeCalendarReferences'
 import {
   OFFICE_CALENDAR_TABLE,
   createInitialOfficeCalendarValues,
@@ -31,7 +34,7 @@ function OfficeCalendarEdit() {
   const [errors, setErrors] = useState({})
   const [rowErrors, setRowErrors] = useState({})
   const [businessUnitOptions, setBusinessUnitOptions] = useState([])
-  const [eventTypeOptions, setEventTypeOptions] = useState([])
+  const [references, setReferences] = useState(null)
   const [referencesLoading, setReferencesLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -40,6 +43,7 @@ function OfficeCalendarEdit() {
     Promise.all([officeCalendarsApi.get(officeCalendarId), loadOfficeCalendarReferences()])
       .then(([record, references]) => {
         if (!active) return
+        setReferences(references)
         const mapped = mapOfficeCalendarFromApi(
           record,
           references.businessUnitNames,
@@ -59,20 +63,10 @@ function OfficeCalendarEdit() {
         const currentBusinessUnits = references.businessUnits
           .filter((unit) => mapped.BU_ID.includes(String(unit.id)))
           .map((unit) => ({ value: String(unit.id), label: unit.businessUnit }))
-        const selectedEventIds = new Set(mapped.DAYS.map((day) => day.EVENT_TYPE_ID))
-        const currentEventTypes = references.eventTypes
-          .filter((type) => selectedEventIds.has(String(type.id)))
-          .map((type) => ({ value: String(type.id), label: type.value }))
-
         setBusinessUnitOptions([
           ...references.businessUnitOptions,
           ...currentBusinessUnits.filter((option) =>
             !references.businessUnitOptions.some((current) => current.value === option.value)),
-        ])
-        setEventTypeOptions([
-          ...references.eventTypeOptions,
-          ...currentEventTypes.filter((option) =>
-            !references.eventTypeOptions.some((current) => current.value === option.value)),
         ])
       })
       .catch((error) => {
@@ -83,6 +77,15 @@ function OfficeCalendarEdit() {
       })
     return () => { active = false }
   }, [officeCalendarId])
+
+  const selectedEventTypeIds = useMemo(
+    () => rows.map((row) => row.EVENT_TYPE_ID).filter(Boolean),
+    [rows],
+  )
+  const eventTypeOptions = useMemo(
+    () => getOfficeCalendarEventTypeOptions(references, values.BU_ID, selectedEventTypeIds),
+    [references, selectedEventTypeIds, values.BU_ID],
+  )
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -106,6 +109,14 @@ function OfficeCalendarEdit() {
 
   const handleBusinessUnitChange = (name, nextValue) => {
     setValues((current) => ({ ...current, [name]: nextValue }))
+    const allowedEventIds = new Set(
+      getOfficeCalendarEventTypeOptions(references, nextValue).map((option) => option.value),
+    )
+    setRows((current) => current.map((row) => (
+      row.EVENT_TYPE_ID && !allowedEventIds.has(String(row.EVENT_TYPE_ID))
+        ? { ...row, EVENT_TYPE_ID: '' }
+        : row
+    )))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 

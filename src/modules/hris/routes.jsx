@@ -54,6 +54,8 @@ import HrLookupValueEdit from "./hr-lookup-value/pages/HrLookupValueEdit";
 import HrLookupValueView from "./hr-lookup-value/pages/HrLookupValueView";
 import LeaveApplicationList from "./leave-application/pages/LeaveApplicationList";
 import LeaveApplicationCreate from "./leave-application/pages/LeaveApplicationCreate";
+import LeaveApplicationEdit from "./leave-application/pages/LeaveApplicationEdit";
+import LeaveApplicationView from "./leave-application/pages/LeaveApplicationView";
 import EmployeeAttendanceConfigList from "./employee-attendance-config/pages/EmployeeAttendanceConfigList";
 import EmployeeAttendanceConfigCreate from "./employee-attendance-config/pages/EmployeeAttendanceConfigCreate";
 import ShiftList from "./shift/pages/ShiftList";
@@ -72,8 +74,12 @@ import GpsInformationEdit from "./gps-information/pages/GpsInformationEdit";
 import GpsInformationView from "./gps-information/pages/GpsInformationView";
 import MobileNotificationList from "./mobile-notification/pages/MobileNotificationList";
 import MobileNotificationCreate from "./mobile-notification/pages/MobileNotificationCreate";
+import MobileNotificationEdit from "./mobile-notification/pages/MobileNotificationEdit";
+import MobileNotificationView from "./mobile-notification/pages/MobileNotificationView";
 import OfficeNoticeList from "./office-notice/pages/OfficeNoticeList";
 import OfficeNoticeCreate from "./office-notice/pages/OfficeNoticeCreate";
+import OfficeNoticeEdit from "./office-notice/pages/OfficeNoticeEdit";
+import OfficeNoticeView from "./office-notice/pages/OfficeNoticeView";
 import ManualAttendanceUpdateList from "./manual-attendance-update/pages/ManualAttendanceUpdateList";
 import ManualAttendanceUpdateCreate from "./manual-attendance-update/pages/ManualAttendanceUpdateCreate";
 import OfficeCalendarList from "./office-calendar/pages/OfficeCalendarList";
@@ -381,6 +387,14 @@ export const hrisRoutes = [
     element: <LeaveApplicationCreate />,
   },
   {
+    path: "hris/hris-forms/leave-application/:leaveApplicationId/edit",
+    element: <LeaveApplicationEdit />,
+  },
+  {
+    path: "hris/hris-forms/leave-application/:leaveApplicationId/view",
+    element: <LeaveApplicationView />,
+  },
+  {
     path: "hris/hris-forms/employee-attendance-config",
     element: <EmployeeAttendanceConfigList />,
   },
@@ -397,12 +411,28 @@ export const hrisRoutes = [
     element: <MobileNotificationCreate />,
   },
   {
+    path: "hris/hris-forms/mobile-notification/:mobileNotificationId/edit",
+    element: <MobileNotificationEdit />,
+  },
+  {
+    path: "hris/hris-forms/mobile-notification/:mobileNotificationId/view",
+    element: <MobileNotificationView />,
+  },
+  {
     path: "hris/hris-forms/office-notice",
     element: <OfficeNoticeList />,
   },
   {
     path: "hris/hris-forms/office-notice/create",
     element: <OfficeNoticeCreate />,
+  },
+  {
+    path: "hris/hris-forms/office-notice/:officeNoticeId/edit",
+    element: <OfficeNoticeEdit />,
+  },
+  {
+    path: "hris/hris-forms/office-notice/:officeNoticeId/view",
+    element: <OfficeNoticeView />,
   },
   {
     path: "hris/hris-forms/manual-attendance-update",

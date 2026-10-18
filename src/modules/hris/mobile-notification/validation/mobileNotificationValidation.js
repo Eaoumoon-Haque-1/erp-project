@@ -1,39 +1,9 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Mobile Notification.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const MOBILE_NOTIFICATION_TABLE = "HR_MOBILE_NOTIFICATION";
-
-export const temporaryMobileNotificationBusinessUnits = [
-  { ID: "1", BUSINESS_UNIT: "Head Office" },
-  { ID: "2", BUSINESS_UNIT: "Factory Unit" },
-  { ID: "3", BUSINESS_UNIT: "Sales Office" },
-];
-
-export const temporaryMobileNotificationDepartments = [
-  { ID: "1", BU_ID: "1", DEPARTMENT: "HR" },
-  { ID: "2", BU_ID: "1", DEPARTMENT: "Finance" },
-  { ID: "3", BU_ID: "2", DEPARTMENT: "Engineering" },
-  { ID: "4", BU_ID: "2", DEPARTMENT: "Production" },
-  { ID: "5", BU_ID: "3", DEPARTMENT: "Sales" },
-];
-
-export const temporaryMobileNotificationEmployees = [
-  { ID: "1", DEPT_ID: "1", EMPLOYEE_NAME: "MD Rahman" },
-  { ID: "2", DEPT_ID: "1", EMPLOYEE_NAME: "Nadia Islam" },
-  { ID: "3", DEPT_ID: "2", EMPLOYEE_NAME: "Touhid Hossain" },
-  { ID: "4", DEPT_ID: "3", EMPLOYEE_NAME: "Sadia Akter" },
-  { ID: "5", DEPT_ID: "4", EMPLOYEE_NAME: "Jahid Hasan" },
-  { ID: "6", DEPT_ID: "5", EMPLOYEE_NAME: "Farzana Karim" },
-];
-
-export const temporaryNotificationTypes = [
-  { value: "GENERAL", label: "General" },
-  { value: "ANNOUNCEMENT", label: "Announcement" },
-  { value: "REMINDER", label: "Reminder" },
-  { value: "URGENT", label: "Urgent" },
-];
 
 export const initialMobileNotificationValues = {
   BU_ID: [],

@@ -3,10 +3,6 @@
  * Sections: field helpers, feature field groups, validation display, and exported form component.
  * Receive values/errors/callbacks through props; saving, navigation, and API calls stay in the page.
  */
-import {
-  temporaryLeaveApplicationCategories,
-  temporaryLeaveApplicationEmployees,
-} from "../validation/leaveApplicationValidation";
 import DateInput from "../../../../components/shared/DateInput";
 
 function FieldError({ id, message }) {
@@ -37,13 +33,13 @@ function Label({ htmlFor, required = false, children }) {
   );
 }
 
-function ReadonlyField({ id, name, label, value, required = false }) {
+function ReadonlyField({ id, name, label, value, hiddenValue = value, required = false }) {
   return (
     <div>
       <Label htmlFor={id} required={required}>
         {label}
       </Label>
-      <input type={"hidden"} name={name} value={value} />
+      <input type={"hidden"} name={name} value={hiddenValue} />
       <input
         id={id}
         type={"text"}
@@ -60,6 +56,9 @@ export default function LeaveApplicationForm({
   errors,
   employeeRef,
   fileRef,
+  employeeOptions = [],
+  leaveCategoryOptions = [],
+  referencesLoading = false,
   onChange,
   onEmployeeChange,
 }) {
@@ -70,6 +69,7 @@ export default function LeaveApplicationForm({
         name={"BU_ID"}
         label={"Business Unit"}
         value={values.BUSINESS_UNIT}
+        hiddenValue={values.BU_ID}
         required
       />
 
@@ -83,6 +83,7 @@ export default function LeaveApplicationForm({
           name={"EMPLOYEE_ID"}
           className={fieldClass(errors.EMPLOYEE_ID)}
           value={values.EMPLOYEE_ID}
+          disabled={referencesLoading}
           required
           aria-invalid={Boolean(errors.EMPLOYEE_ID)}
           aria-describedby={
@@ -91,9 +92,9 @@ export default function LeaveApplicationForm({
           onChange={onEmployeeChange}
         >
           <option value={""}>--Select Employee--</option>
-          {temporaryLeaveApplicationEmployees.map((employee) => (
-            <option key={employee.ID} value={employee.ID}>
-              {employee.EMPLOYEE_NAME}
+          {employeeOptions.map((employee) => (
+            <option key={employee.value} value={employee.value}>
+              {employee.label}
             </option>
           ))}
         </select>
@@ -105,6 +106,7 @@ export default function LeaveApplicationForm({
         name={"DEPT_ID"}
         label={"Department"}
         value={values.DEPARTMENT}
+        hiddenValue={values.DEPT_ID}
         required
       />
 
@@ -113,6 +115,7 @@ export default function LeaveApplicationForm({
         name={"DESIGNATION_ID"}
         label={"Designation"}
         value={values.DESIGNATION}
+        hiddenValue={values.DESIGNATION_ID}
         required
       />
 
@@ -121,6 +124,7 @@ export default function LeaveApplicationForm({
         name={"EMP_TYPE_ID"}
         label={"Employee Type"}
         value={values.EMPLOYEE_TYPE}
+        hiddenValue={values.EMP_TYPE_ID}
         required
       />
 
@@ -168,6 +172,7 @@ export default function LeaveApplicationForm({
           name={"LEAVE_CATEGORY_ID"}
           className={fieldClass(errors.LEAVE_CATEGORY_ID)}
           value={values.LEAVE_CATEGORY_ID}
+          disabled={!values.EMPLOYEE_ID || referencesLoading}
           required
           aria-invalid={Boolean(errors.LEAVE_CATEGORY_ID)}
           aria-describedby={
@@ -176,7 +181,7 @@ export default function LeaveApplicationForm({
           onChange={onChange}
         >
           <option value={""}>--Select Leave Category--</option>
-          {temporaryLeaveApplicationCategories.map((category) => (
+          {leaveCategoryOptions.map((category) => (
             <option key={category.value} value={category.value}>
               {category.label}
             </option>

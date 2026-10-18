@@ -2688,6 +2688,21 @@
     color: #dc2626;
   }
 
+  .erp-record-view-audit {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #d8dee5;
+  }
+
+  .erp-record-view-audit h2 {
+    margin: 0 0 16px;
+    padding: 8px;
+    background: #ccfbf1;
+    color: var(--color-app-text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
   .erp-view-status-active,
   .erp-view-status-inactive {
     display: inline-block;

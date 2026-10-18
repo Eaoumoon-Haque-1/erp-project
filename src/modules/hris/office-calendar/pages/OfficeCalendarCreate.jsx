@@ -1,12 +1,15 @@
 /** @file API-backed Office Calendar create page. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import { officeCalendarsApi } from '../api/officeCalendarApi'
 import OfficeCalendarForm from '../components/OfficeCalendarForm'
 import { mapOfficeCalendarToApi, officeCalendarFieldMap } from '../data/officeCalendarApiMapper'
-import { loadOfficeCalendarReferences } from '../data/officeCalendarReferences'
+import {
+  getOfficeCalendarEventTypeOptions,
+  loadOfficeCalendarReferences,
+} from '../data/officeCalendarReferences'
 import {
   OFFICE_CALENDAR_TABLE,
   createInitialOfficeCalendarValues,
@@ -24,7 +27,7 @@ function OfficeCalendarCreate() {
   const [errors, setErrors] = useState({})
   const [rowErrors, setRowErrors] = useState({})
   const [businessUnitOptions, setBusinessUnitOptions] = useState([])
-  const [eventTypeOptions, setEventTypeOptions] = useState([])
+  const [references, setReferences] = useState(null)
   const [referencesLoading, setReferencesLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -33,8 +36,8 @@ function OfficeCalendarCreate() {
     loadOfficeCalendarReferences()
       .then((references) => {
         if (!active) return
+        setReferences(references)
         setBusinessUnitOptions(references.businessUnitOptions)
-        setEventTypeOptions(references.eventTypeOptions)
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Office Calendar options.')
@@ -44,6 +47,11 @@ function OfficeCalendarCreate() {
       })
     return () => { active = false }
   }, [])
+
+  const eventTypeOptions = useMemo(
+    () => getOfficeCalendarEventTypeOptions(references, values.BU_ID),
+    [references, values.BU_ID],
+  )
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -68,6 +76,14 @@ function OfficeCalendarCreate() {
 
   const handleBusinessUnitChange = (name, nextValue) => {
     setValues((current) => ({ ...current, [name]: nextValue }))
+    const allowedEventIds = new Set(
+      getOfficeCalendarEventTypeOptions(references, nextValue).map((option) => option.value),
+    )
+    setRows((current) => current.map((row) => (
+      row.EVENT_TYPE_ID && !allowedEventIds.has(String(row.EVENT_TYPE_ID))
+        ? { ...row, EVENT_TYPE_ID: '' }
+        : row
+    )))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 

@@ -1,18 +1,12 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Office Notice.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const OFFICE_NOTICE_TABLE = "HR_OFFICE_NOTICE";
 
-export const temporaryOfficeNoticeBusinessUnits = [
-  { ID: "1", BUSINESS_UNIT: "Head Office" },
-  { ID: "2", BUSINESS_UNIT: "Factory Unit" },
-  { ID: "3", BUSINESS_UNIT: "Sales Office" },
-];
-
 export const initialOfficeNoticeValues = {
-  BG_ID: "",
+  BU_ID: "",
   TITLE: "",
   PUBLISH_DATE: "",
   EXPIRE_DATE: "",
@@ -28,7 +22,7 @@ export const createInitialOfficeNoticeValues = () => ({
 
 export function validateOfficeNotice(values) {
   const normalizedValues = {
-    BG_ID: String(values.BG_ID ?? "").trim(),
+    BU_ID: String(values.BU_ID ?? "").trim(),
     TITLE: String(values.TITLE ?? "").trim(),
     PUBLISH_DATE: String(values.PUBLISH_DATE ?? "").trim(),
     EXPIRE_DATE: String(values.EXPIRE_DATE ?? "").trim(),
@@ -39,8 +33,8 @@ export function validateOfficeNotice(values) {
   };
   const errors = {};
 
-  if (!normalizedValues.BG_ID) {
-    errors.BG_ID = "Business Unit is required.";
+  if (!normalizedValues.BU_ID) {
+    errors.BU_ID = "Business Unit is required.";
   }
   if (!normalizedValues.TITLE) {
     errors.TITLE = "Title is required.";

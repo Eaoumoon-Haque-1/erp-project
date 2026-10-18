@@ -31,6 +31,26 @@ function RequiredLabel({ htmlFor, children }) {
   );
 }
 
+function TargetField({ id, label, placeholder, options, value, error, disabled, multiple, inputRef, onChange }) {
+  if (multiple) {
+    return <MultiSelectField id={id} name={id} label={label} placeholder={placeholder}
+      options={options} value={value} error={error} disabled={disabled} required
+      inputRef={inputRef} onChange={onChange} />;
+  }
+  return (
+    <div>
+      <RequiredLabel htmlFor={id}>{label}</RequiredLabel>
+      <select ref={inputRef} id={id} name={id} className={fieldClass(error)}
+        value={value[0] ?? ""} disabled={disabled} required aria-invalid={Boolean(error)}
+        onChange={(event) => onChange(id, event.target.value ? [event.target.value] : [])}>
+        <option value={""}>{placeholder}</option>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      <FieldError id={`${id}-error`} message={error} />
+    </div>
+  );
+}
+
 function MobileNotificationForm({
   values,
   errors,
@@ -38,65 +58,48 @@ function MobileNotificationForm({
   departments,
   employees,
   notificationTypes,
+  referencesLoading = false,
+  allowMultipleTargets = true,
   businessUnitRef,
   onChange,
   onMultiSelectChange,
 }) {
-  const businessUnitOptions = businessUnits.map((unit) => ({
-    value: unit.ID,
-    label: unit.BUSINESS_UNIT,
-  }));
-  const departmentOptions = departments
-    .filter((department) => values.BU_ID.includes(department.BU_ID))
-    .map((department) => ({
-      value: department.ID,
-      label: department.DEPARTMENT,
-    }));
-  const employeeOptions = employees
-    .filter((employee) => values.DEPT_ID.includes(employee.DEPT_ID))
-    .map((employee) => ({
-      value: employee.ID,
-      label: employee.EMPLOYEE_NAME,
-    }));
-
   return (
     <div className={"erp-form-grid"}>
-      <MultiSelectField
+      <TargetField
         id={"BU_ID"}
-        name={"BU_ID"}
         label={"Business Unit"}
         placeholder={"--Select Business Unit--"}
-        options={businessUnitOptions}
+        options={businessUnits}
         value={values.BU_ID}
         error={errors.BU_ID}
-        required
+        disabled={referencesLoading}
+        multiple={allowMultipleTargets}
         inputRef={businessUnitRef}
         onChange={onMultiSelectChange}
       />
 
-      <MultiSelectField
+      <TargetField
         id={"DEPT_ID"}
-        name={"DEPT_ID"}
         label={"Department Name"}
         placeholder={"--Select Department--"}
-        options={departmentOptions}
+        options={departments}
         value={values.DEPT_ID}
         error={errors.DEPT_ID}
-        disabled={values.BU_ID.length === 0}
-        required
+        disabled={referencesLoading || values.BU_ID.length === 0}
+        multiple={allowMultipleTargets}
         onChange={onMultiSelectChange}
       />
 
-      <MultiSelectField
+      <TargetField
         id={"EMPL_ID"}
-        name={"EMPL_ID"}
         label={"Employee Name"}
         placeholder={"--Select Employee--"}
-        options={employeeOptions}
+        options={employees}
         value={values.EMPL_ID}
         error={errors.EMPL_ID}
-        disabled={values.DEPT_ID.length === 0}
-        required
+        disabled={referencesLoading || values.DEPT_ID.length === 0}
+        multiple={allowMultipleTargets}
         onChange={onMultiSelectChange}
       />
 
@@ -109,6 +112,7 @@ function MobileNotificationForm({
           name={"NOTIFICATION_TYPE"}
           className={fieldClass(errors.NOTIFICATION_TYPE)}
           value={values.NOTIFICATION_TYPE}
+          disabled={referencesLoading || values.BU_ID.length === 0}
           required
           aria-invalid={Boolean(errors.NOTIFICATION_TYPE)}
           aria-describedby={

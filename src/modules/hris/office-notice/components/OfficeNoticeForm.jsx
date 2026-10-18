@@ -36,35 +36,37 @@ function Label({ htmlFor, required = false, children }) {
 function OfficeNoticeForm({
   values,
   errors,
-  businessUnits,
+  businessUnitOptions,
+  businessUnitsLoading = false,
   businessUnitRef,
   onChange,
 }) {
   return (
     <div className={"erp-form-grid"}>
       <div>
-        <Label htmlFor={"BG_ID"} required>
+        <Label htmlFor={"BU_ID"} required>
           Business Unit
         </Label>
         <select
           ref={businessUnitRef}
-          id={"BG_ID"}
-          name={"BG_ID"}
-          className={fieldClass(errors.BG_ID)}
-          value={values.BG_ID}
+          id={"BU_ID"}
+          name={"BU_ID"}
+          className={fieldClass(errors.BU_ID)}
+          value={values.BU_ID}
+          disabled={businessUnitsLoading}
           required
-          aria-invalid={Boolean(errors.BG_ID)}
-          aria-describedby={errors.BG_ID ? "BG_ID-error" : undefined}
+          aria-invalid={Boolean(errors.BU_ID)}
+          aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
           onChange={onChange}
         >
-          <option value={""}>--Select Business Unit--</option>
-          {businessUnits.map((unit) => (
-            <option key={unit.ID} value={unit.ID}>
-              {unit.BUSINESS_UNIT}
+          <option value={""}>{businessUnitsLoading ? "Loading..." : "--Select Business Unit--"}</option>
+          {businessUnitOptions.map((unit) => (
+            <option key={unit.value} value={unit.value}>
+              {unit.label}
             </option>
           ))}
         </select>
-        <FieldError id={"BG_ID-error"} message={errors.BG_ID} />
+        <FieldError id={"BU_ID-error"} message={errors.BU_ID} />
       </div>
 
       <div>

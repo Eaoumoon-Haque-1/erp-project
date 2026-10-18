@@ -28,5 +28,4 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local Markdown documentation
-*.md
+# Project Markdown files are part of the developer and AI handoff.

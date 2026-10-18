@@ -1,6 +1,6 @@
 ﻿/**
  * @file Backend-facing data contract and client validation for Leave Application.
- * Sections: exact table constant, temporary options/records, initial values, normalization, and rules.
+ * Sections: exact table constant, initial values, normalization, and rules.
  * Keep spreadsheet table/column identifiers exact and return { values, errors, isValid }.
  */
 export const LEAVE_APPLICATION_TABLE = "HR_EMP_LEAVE";
@@ -9,52 +9,6 @@ export const LEAVE_APPLICATION_ALLOWED_FILE_TYPES = [
   "application/pdf",
   "image/jpeg",
   "image/png",
-];
-
-export const temporaryLeaveApplicationEmployees = [
-  {
-    ID: "1",
-    EMPLOYEE_NAME: "MD Rahman",
-    BU_ID: "1",
-    BUSINESS_UNIT: "Head Office",
-    DEPT_ID: "1",
-    DEPARTMENT: "HR",
-    DESIGNATION_ID: "1",
-    DESIGNATION: "Manager",
-    EMP_TYPE_ID: "1",
-    EMPLOYEE_TYPE: "Permanent",
-  },
-  {
-    ID: "2",
-    EMPLOYEE_NAME: "Nadia Islam",
-    BU_ID: "2",
-    BUSINESS_UNIT: "Factory Unit",
-    DEPT_ID: "2",
-    DEPARTMENT: "Engineering",
-    DESIGNATION_ID: "2",
-    DESIGNATION: "Developer",
-    EMP_TYPE_ID: "2",
-    EMPLOYEE_TYPE: "Contractual",
-  },
-  {
-    ID: "3",
-    EMPLOYEE_NAME: "Touhid Hossain",
-    BU_ID: "1",
-    BUSINESS_UNIT: "Head Office",
-    DEPT_ID: "3",
-    DEPARTMENT: "Finance",
-    DESIGNATION_ID: "3",
-    DESIGNATION: "Accountant",
-    EMP_TYPE_ID: "3",
-    EMPLOYEE_TYPE: "Project Based",
-  },
-];
-
-export const temporaryLeaveApplicationCategories = [
-  { value: "1", label: "Annual Leave", balance: "18" },
-  { value: "2", label: "Casual Leave", balance: "10" },
-  { value: "3", label: "Sick Leave", balance: "12" },
-  { value: "4", label: "Maternity Leave", balance: "120" },
 ];
 
 export const initialLeaveApplicationValues = {
@@ -140,7 +94,7 @@ export function validateLeaveApplication(values) {
   }
 
   const document = normalizedValues.SUPPORTING_DOCUMENT;
-  if (document) {
+  if (document && typeof document !== "string") {
     if (!LEAVE_APPLICATION_ALLOWED_FILE_TYPES.includes(document.type)) {
       errors.SUPPORTING_DOCUMENT = "Upload a PDF, JPG, JPEG, or PNG file.";
     } else if (document.size > LEAVE_APPLICATION_MAX_FILE_SIZE) {

@@ -10,8 +10,39 @@ function isCalendarEventType(type) {
   return names.some((name) => (
     name === 'eventtype'
     || name.includes('calendarevent')
-    || (name.includes('calendar') && name.includes('day'))
+    || name.includes('calenderevent')
+    || ((name.includes('calendar') || name.includes('calender')) && name.includes('day'))
   ))
+}
+
+/**
+ * Return active calendar-event values belonging to the Business Group(s) of
+ * the selected Business Units. Existing values can be included while editing
+ * even when they have since been made inactive.
+ */
+export function getOfficeCalendarEventTypeOptions(
+  references,
+  selectedBusinessUnitIds = [],
+  includeValueIds = [],
+) {
+  if (!references) return []
+
+  const selectedUnitIds = new Set(selectedBusinessUnitIds.map(String))
+  const selectedGroupIds = new Set(
+    references.businessUnits
+      .filter((unit) => selectedUnitIds.has(String(unit.id)))
+      .map((unit) => String(unit.bgId ?? ''))
+      .filter(Boolean),
+  )
+  const includedIds = new Set(includeValueIds.map(String))
+
+  return references.eventTypes
+    .filter((value) => selectedGroupIds.has(String(value.bgId ?? '')))
+    .filter((value) => String(value.status ?? 1) === '1' || includedIds.has(String(value.id)))
+    .map((value) => ({
+      value: String(value.id),
+      label: value.value,
+    }))
 }
 
 export async function loadOfficeCalendarReferences() {
@@ -33,12 +64,6 @@ export async function loadOfficeCalendarReferences() {
     businessUnitOptions: businessUnits
       .filter((unit) => String(unit.status ?? 1) === '1')
       .map((unit) => ({ value: String(unit.id), label: unit.businessUnit })),
-    eventTypeOptions: eventTypes
-      .filter((value) => String(value.status ?? 1) === '1')
-      .map((value) => ({
-      value: String(value.id),
-      label: value.value,
-      })),
     businessUnitNames: new Map(
       businessUnits.map((unit) => [String(unit.id), unit.businessUnit]),
     ),
