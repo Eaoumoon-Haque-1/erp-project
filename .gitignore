@@ -28,4 +28,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# Project Markdown files are part of the developer and AI handoff.
+# Markdown documentation is local-only.
+*.md
