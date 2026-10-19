@@ -3,9 +3,14 @@
  * Sections: filter/column/temporary-row configuration, row handlers, and ListPage composition.
  * Edit here when list columns, filters, navigation, API rows, or enabled actions change.
  */
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
-import { businessUnitOptions, departmentOptions, employmentStatusOptions } from '../data/employeeOptions'
+import ListRowActions from '../../../../components/shared/ListRowActions'
+import { employeesApi } from '../api/employeeApi'
+import { mapEmployeeListFromApi } from '../data/employeeApiMapper'
+import { createEmployeeReferenceNames, loadEmployeeReferences } from '../data/employeeReferences'
 
 const columns = [
   { key: 'EMPLOYEE_ID', label: 'Employee ID' },
@@ -13,62 +18,20 @@ const columns = [
   { key: 'DEPARTMENT_NAME', label: 'Department' },
   { key: 'DESIGNATION_NAME', label: 'Designation' },
   {
-    key: 'EMPLOYMENT_STATUS',
+    key: 'EMPLOYMENT_STATUS_NAME',
     label: 'Employment Status',
     render: (value) => (
       <span
         className={[
           'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
-          value === 'ACTIVE' ? 'bg-action-success' : 'bg-action-danger',
+          /active|confirm|probation/i.test(value) ? 'bg-action-success' : 'bg-action-danger',
         ].join(' ')}
       >
-        {value === 'ACTIVE' ? 'Active' : value}
+        {value || 'N/A'}
       </span>
     ),
   },
   { key: 'BUSINESS_UNIT_NAME', label: 'Business Unit' },
-]
-
-const filters = [
-  { key: 'BUSINESS_UNIT_ID', label: 'Business Unit', placeholder: '--Search by Business Unit--', options: businessUnitOptions },
-  { key: 'DEPARTMENT_ID', label: 'Department', placeholder: '--Search by Department--', options: departmentOptions },
-  { key: 'EMPLOYMENT_STATUS', label: 'Employment Status', placeholder: '--Search by Employment Status--', options: employmentStatusOptions },
-]
-
-const rows = [
-  {
-    ID: '1',
-    EMPLOYEE_ID: 'EMP-0101',
-    EMPLOYEE_NAME: 'Samira Rahman',
-    DEPARTMENT_NAME: 'Human Resources',
-    DESIGNATION_NAME: 'HR Executive',
-    EMPLOYMENT_STATUS: 'ACTIVE',
-    BUSINESS_UNIT_NAME: 'Head Office',
-    BUSINESS_UNIT_ID: '1',
-    DEPARTMENT_ID: '1',
-  },
-  {
-    ID: '2',
-    EMPLOYEE_ID: 'EMP-0102',
-    EMPLOYEE_NAME: 'Tanvir Hasan',
-    DEPARTMENT_NAME: 'Administration',
-    DESIGNATION_NAME: 'Senior Officer',
-    EMPLOYMENT_STATUS: 'ACTIVE',
-    BUSINESS_UNIT_NAME: 'Head Office',
-    BUSINESS_UNIT_ID: '1',
-    DEPARTMENT_ID: '3',
-  },
-  {
-    ID: '3',
-    EMPLOYEE_ID: 'EMP-0103',
-    EMPLOYEE_NAME: 'Md. Eaoumoon Haque',
-    DEPARTMENT_NAME: 'Software & IT',
-    DESIGNATION_NAME: 'Software Engineer',
-    EMPLOYMENT_STATUS: 'ACTIVE',
-    BUSINESS_UNIT_NAME: 'Factory Unit',
-    BUSINESS_UNIT_ID: '2',
-    DEPARTMENT_ID: '2',
-  },
 ]
 
 function ActionButton({ label, className, onClick, children }) {
@@ -92,6 +55,30 @@ function ActionButton({ label, className, onClick, children }) {
 
 function EmployeeInformationList() {
   const navigate = useNavigate()
+  const [rows, setRows] = useState([])
+  const [options, setOptions] = useState({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([employeesApi.list(), loadEmployeeReferences()])
+      .then(([records, referenceResult]) => {
+        if (!active) return
+        const names = createEmployeeReferenceNames(referenceResult.references)
+        setRows(records.map((record) => mapEmployeeListFromApi(record, names)))
+        setOptions(referenceResult.options)
+      })
+      .catch((error) => getApiErrorMessage(error, 'Unable to load Employees.'))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  const filters = useMemo(() => [
+    { key: 'BUSINESS_UNIT_ID', label: 'Business Unit', placeholder: '--Search by Business Unit--', options: options.businessUnitOptions || [] },
+    { key: 'DEPARTMENT_ID', label: 'Department', placeholder: '--Search by Department--', options: options.departmentOptions || [] },
+    { key: 'EMPLOYMENT_STATUS', label: 'Employment Status', placeholder: '--Search by Employment Status--', options: options.employmentStatusOptions || [] },
+  ], [options])
+
   return (
     <ListPage
       title={'Employee Information List'}
@@ -100,67 +87,15 @@ function EmployeeInformationList() {
       filters={filters}
       columns={columns}
       rows={rows}
+      loading={loading}
       renderActions={(row) => (
         <div className={'inline-flex items-center gap-1'}>
-          {/* 1. View Button */}
-          <ActionButton
-            label={'View'}
-            className={'bg-action-view'}
-            onClick={() => navigate(`/hris/hris-forms/employee-information/${row.ID}`)}
-          >
-            <svg
-              viewBox={'0 0 24 24'}
-              className={'size-4'}
-              fill={'none'}
-              stroke={'currentColor'}
-              strokeWidth={'2'}
-              strokeLinecap={'round'}
-              strokeLinejoin={'round'}
-            >
-              <path d={'M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z'} />
-              <circle cx={'12'} cy={'12'} r={'2.5'} />
-            </svg>
-          </ActionButton>
-
-          {/* 2. Edit Button */}
-          <ActionButton
-            label={'Edit'}
-            className={'bg-action-edit'}
-            onClick={() => navigate(`/hris/hris-forms/employee-information/${row.ID}/edit`)}
-          >
-            <svg
-              viewBox={'0 0 24 24'}
-              className={'size-4'}
-              fill={'none'}
-              stroke={'currentColor'}
-              strokeWidth={'2'}
-              strokeLinecap={'round'}
-              strokeLinejoin={'round'}
-            >
-              <path d={'M12 20h9'} />
-              <path d={'M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z'} />
-            </svg>
-          </ActionButton>
-
-          {/* 3. Delete Button */}
-          <ActionButton
-            label={'Delete'}
-            className={'bg-action-danger'}
-            onClick={() => {}}
-          >
-            <svg
-              viewBox={'0 0 24 24'}
-              className={'size-4'}
-              fill={'none'}
-              stroke={'currentColor'}
-              strokeWidth={'2'}
-              strokeLinecap={'round'}
-              strokeLinejoin={'round'}
-            >
-              <path d={'M4 7h16'} />
-              <path d={'M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5'} />
-            </svg>
-          </ActionButton>
+          <ListRowActions
+            row={row}
+            entityName={'Employee Information'}
+            onView={() => navigate(`/hris/hris-forms/employee-information/${row.ID}/view`)}
+            onEdit={() => navigate(`/hris/hris-forms/employee-information/${row.ID}/edit`)}
+          />
 
           {/* 4. Human / User Profile Icon Button */}
           <ActionButton

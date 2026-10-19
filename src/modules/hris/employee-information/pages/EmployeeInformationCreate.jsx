@@ -1,13 +1,26 @@
 ﻿/**
  * @file Create-page controller for Employee Information.
  * Sections: controlled state/refs, change handlers, validation submit/reset, and form-page composition.
- * Future create API calls belong here; keep field markup in the matching form component.
+ * Handles create/edit API calls while field markup stays in the matching form component.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { getApiErrorMessage, normalizeApiError } from "../../../../api/errors";
 import ActionForm from "../../../../components/shared/ActionForm";
 import PageHeader from "../../../../components/shared/PageHeader";
+import { getImageSource } from "../../../../utils/imageDataUrl";
+import { employeeProfilesApi, employeesApi } from "../api/employeeApi";
 import EmployeeInformationForm from "../components/EmployeeInformationForm";
+import {
+  mapCertificationsToApi,
+  mapEducationsToApi,
+  mapEmployeeFromApi,
+  mapEmployeeToApi,
+  mapJobExperiencesToApi,
+  mapTrainingsToApi,
+  withProfileRows,
+} from "../data/employeeApiMapper";
+import { loadEmployeeReferences } from "../data/employeeReferences";
 import {
   EMPLOYEE_TABLE,
   createCertificationRow,
@@ -23,6 +36,23 @@ const rowFactories = {
   training: createTrainingRow,
   certification: createCertificationRow,
   jobExperience: createJobExperienceRow,
+};
+
+const emptyReferenceOptions = {
+  businessUnitOptions: [],
+  departmentOptions: [],
+  designationOptions: [],
+  employmentTypeOptions: [],
+  employmentStatusOptions: [],
+  reportingOfficerOptions: [],
+  educationLevelOptions: [],
+  degreeTitleOptions: [],
+  genderOptions: [],
+  religionOptions: [],
+  nationalityOptions: [],
+  bloodGroupOptions: [],
+  disabilityTypeOptions: [],
+  countryOptions: [],
 };
 
 const emptyErrors = () => ({
@@ -118,22 +148,60 @@ function findInvalidTab(errors) {
 }
 
 function EmployeeInformationCreate() {
+  const { employeeId } = useParams();
+  const isEdit = Boolean(employeeId);
   const navigate = useNavigate();
   const photoInputRef = useRef(null);
   const [values, setValues] = useState(createInitialEmployeeValues);
   const [errors, setErrors] = useState(emptyErrors);
   const [activeTab, setActiveTab] = useState("personal");
+  const [referenceOptions, setReferenceOptions] = useState(emptyReferenceOptions);
+  const [referenceData, setReferenceData] = useState({ businessUnits: [] });
+  const [originalValues, setOriginalValues] = useState(null);
+  const [createdEmployeeId, setCreatedEmployeeId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const previewUrl = useMemo(
-    () => (values.PHOTO ? URL.createObjectURL(values.PHOTO) : ""),
+    () => values.PHOTO instanceof File ? URL.createObjectURL(values.PHOTO) : getImageSource(values.PHOTO),
     [values.PHOTO],
   );
 
   useEffect(
     () => () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
     },
     [previewUrl],
   );
+
+  useEffect(() => {
+    let active = true;
+    const referenceRequest = loadEmployeeReferences();
+    const recordRequest = isEdit
+      ? Promise.all([
+          employeesApi.get(employeeId),
+          employeeProfilesApi.getEducations(employeeId),
+          employeeProfilesApi.getTrainings(employeeId),
+          employeeProfilesApi.getCertifications(employeeId),
+          employeeProfilesApi.getJobExperiences(employeeId),
+        ])
+      : Promise.resolve(null);
+
+    Promise.all([referenceRequest, recordRequest])
+      .then(([referenceResult, recordResult]) => {
+        if (!active) return;
+        setReferenceOptions(referenceResult.options);
+        setReferenceData(referenceResult.references);
+        if (recordResult) {
+          const [record, educations, trainings, certifications, jobExperiences] = recordResult;
+          const mapped = withProfileRows(mapEmployeeFromApi(record), {
+            educations, trainings, certifications, jobExperiences,
+          });
+          setValues(mapped);
+          setOriginalValues(mapped);
+        }
+      })
+      .catch((error) => getApiErrorMessage(error, `Unable to load ${isEdit ? "Employee Information" : "employee dropdown options"}.`));
+    return () => { active = false; };
+  }, [employeeId, isEdit]);
 
   const handleChange = (event) => {
     const { name, type, value, files } = event.target;
@@ -149,9 +217,8 @@ function EmployeeInformationCreate() {
             ),
           }
         : {}),
-      ...(name === "BUSINESS_UNIT_ID" ? { DEPARTMENT_ID: "" } : {}),
-      ...(name === "EMPLOYMENT_STATUS" && value !== "SEPARATED"
-        ? { SEPARATION_DATE: "" }
+      ...(name === "BUSINESS_UNIT_ID"
+        ? { DEPARTMENT_ID: "", DESIGNATION_ID: "", REPORTING_OFFICER_ID: "" }
         : {}),
       ...(name === "MARITAL_STATUS" && value !== "Married"
         ? { SPOUSE_NAME: "", DATE_OF_MARRIAGE: "" }
@@ -250,7 +317,14 @@ function EmployeeInformationCreate() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const saveProfileSections = (id, nextValues) => Promise.all([
+    employeeProfilesApi.saveEducations(id, mapEducationsToApi(nextValues.education, id)),
+    employeeProfilesApi.saveTrainings(id, mapTrainingsToApi(nextValues.training, id)),
+    employeeProfilesApi.saveCertifications(id, mapCertificationsToApi(nextValues.certification, id)),
+    employeeProfilesApi.saveJobExperiences(id, mapJobExperiencesToApi(nextValues.jobExperience, id)),
+  ]);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const result = validateEmployeeInformation(values);
     setValues(result.values);
@@ -261,13 +335,40 @@ function EmployeeInformationCreate() {
       requestAnimationFrame(() =>
         document.querySelector('[aria-invalid="true"]')?.focus(),
       );
-      return;
+      return false;
     }
-    navigate("/hris/hris-forms/employee-information");
+    setSubmitting(true);
+    let savedId = employeeId || createdEmployeeId;
+    try {
+      const payload = await mapEmployeeToApi(result.values, referenceData.businessUnits);
+      if (savedId) {
+        await employeesApi.update(savedId, payload);
+      } else {
+        const created = await employeesApi.create(payload);
+        savedId = created?.id;
+        if (!savedId) throw new Error("Employee was saved, but the API did not return its ID.");
+        setCreatedEmployeeId(String(savedId));
+      }
+      await saveProfileSections(savedId, result.values);
+      navigate("/hris/hris-forms/employee-information");
+      return true;
+    } catch (error) {
+      const normalized = normalizeApiError(error, `Unable to ${isEdit || createdEmployeeId ? "update" : "create"} Employee Information.`, {
+        buId: "BUSINESS_UNIT_ID", employeeName: "EMPLOYEE_NAME", employeeCode: "EMPLOYEE_ID",
+        deptId: "DEPARTMENT_ID", desigId: "DESIGNATION_ID", employmentTypeId: "EMPLOYMENT_TYPE_ID",
+        joiningDate: "JOINING_DATE", employmentStatusId: "EMPLOYMENT_STATUS",
+        reportingOfficerId: "REPORTING_OFFICER_ID", mobileNo: "PERSONAL_MOBILE_NO", email: "EMAIL",
+      });
+      setErrors((current) => ({ ...current, fields: { ...current.fields, ...normalized.fieldErrors } }));
+      getApiErrorMessage(error, normalized.message);
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReset = () => {
-    setValues(createInitialEmployeeValues());
+    setValues(isEdit && originalValues ? originalValues : createInitialEmployeeValues());
     setErrors(emptyErrors());
     setActiveTab("personal");
     if (photoInputRef.current) photoInputRef.current.value = "";
@@ -276,12 +377,13 @@ function EmployeeInformationCreate() {
   return (
     <div className={"erp-list-page erp-employee-page"}>
       <PageHeader
-        title={"Employee Information Create"}
+        title={`Employee Information ${isEdit ? "Edit" : "Create"}`}
         actionLabel={"List"}
         actionTo={"/hris/hris-forms/employee-information"}
       />
       <ActionForm
         entityName={"Employee Information"}
+        action={isEdit ? "update" : "create"}
         data-table={EMPLOYEE_TABLE}
         onSubmit={handleSubmit}
         onReset={handleReset}
@@ -299,14 +401,15 @@ function EmployeeInformationCreate() {
           onAddRow={handleAddRow}
           onRemoveRow={handleRemoveRow}
           onReorderRows={handleReorderRows}
+          referenceOptions={referenceOptions}
         />
         <section className={"erp-employee-card erp-employee-submit-card"}>
           <div className={"erp-form-actions"}>
             <button type={"reset"} className={"secondary-button"}>
               Reset
             </button>
-            <button type={"submit"} className={"primary-button"}>
-              Save
+            <button type={"submit"} className={"primary-button"} disabled={submitting}>
+              {submitting ? "Saving..." : isEdit ? "Update" : "Save"}
             </button>
           </div>
         </section>

@@ -8,25 +8,25 @@ import EmployeePhotoField from "./EmployeePhotoField";
 import EmployeeSectionCard from "./EmployeeSectionCard";
 import RepeatableEmployeeTable from "./RepeatableEmployeeTable";
 import {
-  bloodGroupOptions,
-  businessUnitOptions,
-  countryOptions,
-  degreeTitleOptions,
-  departmentOptions,
-  designationOptions,
-  disabilityTypeOptions,
+  bloodGroupOptions as defaultBloodGroupOptions,
+  businessUnitOptions as defaultBusinessUnitOptions,
+  countryOptions as defaultCountryOptions,
+  degreeTitleOptions as defaultDegreeTitleOptions,
+  departmentOptions as defaultDepartmentOptions,
+  designationOptions as defaultDesignationOptions,
+  disabilityTypeOptions as defaultDisabilityTypeOptions,
   thanaOptions,
   districtOptions,
-  educationLevelOptions,
-  employmentStatusOptions,
-  employmentTypeOptions,
-  genderOptions,
+  educationLevelOptions as defaultEducationLevelOptions,
+  employmentStatusOptions as defaultEmploymentStatusOptions,
+  employmentTypeOptions as defaultEmploymentTypeOptions,
+  genderOptions as defaultGenderOptions,
   maritalStatusOptions,
-  nationalityOptions,
-  religionOptions,
-  reportingOfficerOptions,
-  boardOptions,
-  resultOptions,
+  nationalityOptions as defaultNationalityOptions,
+  religionOptions as defaultReligionOptions,
+  reportingOfficerOptions as defaultReportingOfficerOptions,
+  boardOptions as defaultBoardOptions,
+  resultOptions as defaultResultOptions,
   toSelectOptions,
 } from "../data/employeeOptions";
 import {
@@ -86,16 +86,49 @@ function EmployeeInformationForm({
   onAddRow,
   onRemoveRow,
   onReorderRows,
+  referenceOptions = {},
 }) {
   const fieldErrors = errors.fields || {};
+  const {
+    bloodGroupOptions = defaultBloodGroupOptions,
+    businessUnitOptions = defaultBusinessUnitOptions,
+    countryOptions = defaultCountryOptions,
+    degreeTitleOptions = defaultDegreeTitleOptions,
+    departmentOptions = defaultDepartmentOptions,
+    designationOptions = defaultDesignationOptions,
+    disabilityTypeOptions = defaultDisabilityTypeOptions,
+    educationLevelOptions = defaultEducationLevelOptions,
+    employmentStatusOptions = defaultEmploymentStatusOptions,
+    employmentTypeOptions = defaultEmploymentTypeOptions,
+    genderOptions = defaultGenderOptions,
+    nationalityOptions = defaultNationalityOptions,
+    religionOptions = defaultReligionOptions,
+    reportingOfficerOptions = defaultReportingOfficerOptions,
+    boardOptions = defaultBoardOptions,
+    resultOptions = defaultResultOptions,
+  } = referenceOptions;
+  const selectedUnit = businessUnitOptions.find(
+    (item) => item.value === values.BUSINESS_UNIT_ID,
+  );
+  const selectedGroupId = selectedUnit?.bgId;
+  const forSelectedGroup = (items) => items.filter(
+    (item) => !selectedGroupId || !item.bgId || item.bgId === selectedGroupId,
+  );
   const officer = reportingOfficerOptions.find(
     (item) => item.value === values.REPORTING_OFFICER_ID,
   );
-  const departments = departmentOptions.filter(
+  const departments = forSelectedGroup(departmentOptions).filter(
     (item) =>
       !values.BUSINESS_UNIT_ID ||
+      !item.businessUnitId ||
       item.businessUnitId === values.BUSINESS_UNIT_ID,
   );
+  const designations = forSelectedGroup(designationOptions);
+  const reportingOfficers = forSelectedGroup(reportingOfficerOptions);
+  const selectedEmploymentStatus = employmentStatusOptions.find(
+    (item) => item.value === values.EMPLOYMENT_STATUS,
+  );
+  const isSeparated = /separat|resign|terminat|retir/i.test(selectedEmploymentStatus?.label || '');
   const field = (name, label, props = {}) => (
     <EmployeeField
       key={name}
@@ -314,7 +347,7 @@ function EmployeeInformationForm({
             })}
             {field("DESIGNATION_ID", "Designation", {
               required: true,
-              options: designationOptions,
+              options: designations,
             })}
             {field("JOINING_DATE", "Joining Date", {
               required: true,
@@ -344,9 +377,9 @@ function EmployeeInformationForm({
               placeholder: "Enter days",
             })}
             {field("SEPARATION_DATE", "Separation Date", {
-              required: values.EMPLOYMENT_STATUS === "SEPARATED",
+              required: isSeparated,
               type: "date",
-              disabled: values.EMPLOYMENT_STATUS !== "SEPARATED",
+              disabled: !isSeparated,
             })}
           </Grid>
           <EmployeePhotoField
@@ -427,7 +460,7 @@ function EmployeeInformationForm({
               <Grid>
                 {field("REPORTING_OFFICER_ID", "Reporting Officer", {
                   required: true,
-                  options: reportingOfficerOptions.map((item) => ({
+                  options: reportingOfficers.map((item) => ({
                     value: item.value,
                     label: `${item.employeeId} â€” ${item.name}`,
                   })),
@@ -455,15 +488,15 @@ function EmployeeInformationForm({
                 {/* {field('BIRTH_PLACE', 'Birth Place', { required: true, maxLength: 150 })} */}
                 {field("GENDER_ID", "Gender", {
                   // required: true,
-                  options: toSelectOptions(genderOptions),
+                  options: toSelectOptions(forSelectedGroup(genderOptions)),
                 })}
                 {field("RELIGION_ID", "Religion", {
                   // required: true,
-                  options: toSelectOptions(religionOptions),
+                  options: toSelectOptions(forSelectedGroup(religionOptions)),
                 })}
                 {field("NATIONALITY_ID", "Nationality", {
                   // required: true,
-                  options: toSelectOptions(nationalityOptions),
+                  options: toSelectOptions(forSelectedGroup(nationalityOptions)),
                 })}
                 {field("HEIGHT_ID", "Height (Meters)", {
                   // required: true,
@@ -473,7 +506,7 @@ function EmployeeInformationForm({
                 })}
                 {field("BLOOD_GROUP", "Blood Group", {
                   // required: true,
-                  options: toSelectOptions(bloodGroupOptions),
+                  options: toSelectOptions(forSelectedGroup(bloodGroupOptions)),
                 })}
                 {field("HIGHEST_EDUCATION_ID", "Highest Education", {
                   // required: true,
@@ -501,7 +534,7 @@ function EmployeeInformationForm({
                 })}
                 {field("DISABILITY_TYPES", "Disability Type", {
                   required: values.DISABILITY_STATUS === "YES",
-                  options: toSelectOptions(disabilityTypeOptions),
+                  options: toSelectOptions(forSelectedGroup(disabilityTypeOptions)),
                   disabled: values.DISABILITY_STATUS !== "YES",
                 })}
                 {field("DISABILITY_DETAILS", "Disability Details", {

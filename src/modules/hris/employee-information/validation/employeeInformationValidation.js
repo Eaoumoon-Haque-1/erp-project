@@ -27,7 +27,7 @@ export const createEducationRow = () => ({
 export const createTrainingRow = () => ({
   _ROW_ID: rowId(),
   TRAINING_TITLE: "",
-  COUNTRY_ID: "Bangladesh",
+  COUNTRY_ID: "",
   TOPICS_COVERED: "",
   TRAINING_YEAR: "",
   INSTITUTE_NAME: "",
@@ -63,7 +63,7 @@ export const createInitialEmployeeValues = () => ({
   EMPLOYMENT_TYPE_ID: "",
   JOINING_DATE: "",
   CONFIRMATION_DATE: "",
-  EMPLOYMENT_STATUS: "ACTIVE",
+  EMPLOYMENT_STATUS: "",
   PROBATIONARY_PERIOD: "",
   NOTICE_PERIOD: "",
   SEPARATION_DATE: "",
@@ -81,7 +81,7 @@ export const createInitialEmployeeValues = () => ({
   MARITAL_STATUS: "",
   DATE_OF_MARRIAGE: "",
   RELIGION_ID: "",
-  NATIONALITY_ID: "Bangladeshi",
+  NATIONALITY_ID: "",
   BLOOD_GROUP: "",
   HIGHEST_EDUCATION_ID: "",
   NID: "",
@@ -105,6 +105,7 @@ export const createInitialEmployeeValues = () => ({
   DISABILITY_DETAILS: "",
   HAS_NATIONAL_DISABILITY_ID: "NO",
   NATIONAL_DISABILITY_ID: "",
+  STATUS: "1",
   education: [createEducationRow()],
   training: [createTrainingRow()],
   certification: [createCertificationRow()],
@@ -152,11 +153,6 @@ const minMax = (errors, key, value, minLength, maxLength, label) => {
   if (!errors[key] && text(value).length < minLength)
     errors[key] = `${label} must be at least ${minLength} characters.`;
   if (!errors[key]) max(errors, key, value, maxLength, label);
-};
-const validatePastDate = (errors, key, value, label) => {
-  required(errors, key, value, label);
-  if (!errors[key] && value > today())
-    errors[key] = `${label} cannot be in the future.`;
 };
 const validateYear = (errors, key, value, label) => {
   required(errors, key, value, label);
@@ -228,7 +224,8 @@ function validateTraining(rows) {
       200,
       "Training Title",
     );
-    required(errors, "COUNTRY_ID", row.COUNTRY_ID, "Country");
+    // Country is kept in the design, but remains optional until its numeric
+    // lookup is available for the EmployeeTraining.countryId contract.
     required(errors, "TOPICS_COVERED", row.TOPICS_COVERED, "Topics Covered");
     max(errors, "TOPICS_COVERED", row.TOPICS_COVERED, 500, "Topics Covered");
     validateYear(errors, "TRAINING_YEAR", row.TRAINING_YEAR, "Training Year");
@@ -264,8 +261,9 @@ function validateCertification(rows) {
     );
     required(errors, "LOCATION", row.LOCATION, "Location");
     max(errors, "LOCATION", row.LOCATION, 150, "Location");
-    required(errors, "DURATION", row.DURATION, "Duration");
-    if (!errors.DURATION && !isDateRange(row.DURATION))
+    // The UI keeps its date-range control. The API currently exposes only a
+    // numeric duration, so this display-only field must not block saving.
+    if (row.DURATION && !isDateRange(row.DURATION))
       errors.DURATION = "Select a valid certification date range.";
     return errors;
   });
@@ -354,24 +352,7 @@ export function validateEmployeeInformation(inputValues) {
     ["EMPLOYMENT_STATUS", "Employment Status"],
     ["PROBATIONARY_PERIOD", "Probationary Period"],
     ["NOTICE_PERIOD", "Notice Period"],
-    ["SHIFT_ID", "Shift"],
-    ["OFFICE_IN_TIME", "Office In Time"],
-    ["OFFICE_OUT_TIME", "Office Out Time"],
-    ["OVERTIME_ALLOWANCE", "Overtime Allowance"],
     ["REPORTING_OFFICER_ID", "Reporting Officer"],
-    ["FATHER_NAME", "Father's Name"],
-    ["MOTHER_NAME", "Mother's Name"],
-    ["DATE_OF_BIRTH", "Date of Birth"],
-    ["GENDER_ID", "Gender"],
-    ["MARITAL_STATUS", "Marital Status"],
-    ["RELIGION_ID", "Religion"],
-    ["NATIONALITY_ID", "Nationality"],
-    ["BLOOD_GROUP", "Blood Group"],
-    ["HIGHEST_EDUCATION_ID", "Highest Education"],
-    ["NID", "NID"],
-    ["NO_OF_CHILD", "No. of Child"],
-    ["MALE_CHILD", "Male Child"],
-    ["FEMALE_CHILD", "Female Child"],
     // ["PRESENT_ADDRESS", "Present Address"],
     // ["PERMANENT_ADDRESS", "Permanent Address"],
     // ["DISTRICT", "District"],
@@ -389,10 +370,8 @@ export function validateEmployeeInformation(inputValues) {
   if (values.EMPLOYEE_NAME && values.EMPLOYEE_NAME.length < 2)
     fields.EMPLOYEE_NAME = "Employee Name must be at least 2 characters.";
   max(fields, "EMPLOYEE_NAME", values.EMPLOYEE_NAME, 150, "Employee Name");
-  [
-    ["FATHER_NAME", "Father's Name"],
-    ["MOTHER_NAME", "Mother's Name"],
-  ].forEach(([key, label]) => minMax(fields, key, values[key], 2, 150, label));
+  [["FATHER_NAME", "Father's Name"], ["MOTHER_NAME", "Mother's Name"]]
+    .forEach(([key, label]) => max(fields, key, values[key], 150, label));
   max(fields, "SPOUSE_NAME", values.SPOUSE_NAME, 150, "Spouse Name");
   if (values.MARITAL_STATUS === "Married") {
     required(fields, "SPOUSE_NAME", values.SPOUSE_NAME, "Spouse Name");
@@ -403,12 +382,8 @@ export function validateEmployeeInformation(inputValues) {
       "Date of Marriage",
     );
   }
-  validatePastDate(
-    fields,
-    "DATE_OF_BIRTH",
-    values.DATE_OF_BIRTH,
-    "Date of Birth",
-  );
+  if (values.DATE_OF_BIRTH && values.DATE_OF_BIRTH > today())
+    fields.DATE_OF_BIRTH = "Date of Birth cannot be in the future.";
   if (values.DATE_OF_MARRIAGE > today())
     fields.DATE_OF_MARRIAGE = "Date of Marriage cannot be in the future.";
   if (
@@ -424,13 +399,6 @@ export function validateEmployeeInformation(inputValues) {
   )
     fields.CONFIRMATION_DATE =
       "Confirmation Date must be on or after Joining Date.";
-  if (values.EMPLOYMENT_STATUS === "SEPARATED")
-    required(
-      fields,
-      "SEPARATION_DATE",
-      values.SEPARATION_DATE,
-      "Separation Date",
-    );
   if (values.SEPARATION_DATE && values.SEPARATION_DATE < values.JOINING_DATE)
     fields.SEPARATION_DATE =
       "Separation Date must be on or after Joining Date.";
@@ -448,7 +416,7 @@ export function validateEmployeeInformation(inputValues) {
       "Probationary Period must be a whole number greater than 0.";
   if (!isWhole(values.NOTICE_PERIOD))
     fields.NOTICE_PERIOD = "Notice Period must be a whole number of 0 or more.";
-  if (!/^(?:\d{10}|\d{13}|\d{17})$/.test(values.NID))
+  if (values.NID && !/^(?:\d{10}|\d{13}|\d{17})$/.test(values.NID))
     fields.NID = "NID must contain 10, 13, or 17 digits.";
   if (values.PASSPORT_NO && !/^[A-Za-z0-9]+$/.test(values.PASSPORT_NO))
     fields.PASSPORT_NO = "Passport No must contain letters and numbers only.";
@@ -483,10 +451,8 @@ export function validateEmployeeInformation(inputValues) {
   )
     fields.NO_OF_CHILD =
       "No. of Child must equal Male Child plus Female Child.";
-  [
-    ["PRESENT_ADDRESS", "Present Address"],
-    ["PERMANENT_ADDRESS", "Permanent Address"],
-  ].forEach(([key, label]) => minMax(fields, key, values[key], 10, 500, label));
+  [["PRESENT_ADDRESS", "Present Address"], ["PERMANENT_ADDRESS", "Permanent Address"]]
+    .forEach(([key, label]) => max(fields, key, values[key], 500, label));
   [
     ["OFFICE_MOBILE_NO", "Office Mobile No"],
     ["PERSONAL_MOBILE_NO", "Personal Mobile No"],
@@ -504,9 +470,9 @@ export function validateEmployeeInformation(inputValues) {
   //   if (values[key] && !/^[0-9+()\-\s]+$/.test(values[key]))
   //     fields[key] = `${label} contains invalid characters.`;
   // });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.EMAIL))
+  if (values.EMAIL && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.EMAIL))
     fields.EMAIL = "Enter a valid email address.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.OFFICE_EMAIL))
+  if (values.OFFICE_EMAIL && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.OFFICE_EMAIL))
     fields.OFFICE_EMAIL = "Enter a valid office email address.";
   max(fields, "EMAIL", values.EMAIL, 150, "Email");
   max(fields, "OFFICE_EMAIL", values.OFFICE_EMAIL, 150, "Office Email");

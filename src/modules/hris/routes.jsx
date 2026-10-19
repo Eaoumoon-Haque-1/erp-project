@@ -45,6 +45,7 @@ import LeaveAllocationEdit from "../super-admin/leave-allocation/pages/LeaveAllo
 import LeaveAllocationView from "../super-admin/leave-allocation/pages/LeaveAllocationView";
 import EmployeeInformationList from "./employee-information/pages/EmployeeInformationList";
 import EmployeeInformationCreate from "./employee-information/pages/EmployeeInformationCreate";
+import EmployeeInformationView from "./employee-information/pages/EmployeeInformationView";
 import UserCreationFromEmployeeCreate from "./user-creation-from-employee/pages/UserCreationFromEmployeeCreate";
 import HrLookupTypeList from "./hr-lookup-type/pages/HrLookupTypeList";
 import HrLookupTypeCreate from "./hr-lookup-type/pages/HrLookupTypeCreate";
@@ -387,6 +388,14 @@ export const hrisRoutes = [
   {
     path: "hris/hris-forms/employee-information/create",
     element: <EmployeeInformationCreate />,
+  },
+  {
+    path: "hris/hris-forms/employee-information/:employeeId/edit",
+    element: <EmployeeInformationCreate />,
+  },
+  {
+    path: "hris/hris-forms/employee-information/:employeeId/view",
+    element: <EmployeeInformationView />,
   },
   {
     path: "hris/hris-forms/employee-information/:employeeId/user-creation",
