@@ -12,7 +12,7 @@ export const initialEmploymentStatusValues = {
   STATUS: '1',
 }
 
-export function validateEmploymentStatus(values) {
+export function validateEmploymentStatus(values, existingRecords = []) {
   const normalizedValues = {
     STATUS_NAME: String(values.STATUS_NAME ?? '').trim(),
     SHORT_NAME: String(values.SHORT_NAME ?? '').trim(),
@@ -27,6 +27,10 @@ export function validateEmploymentStatus(values) {
     errors.STATUS_NAME = 'Status Name must be at least 2 characters.'
   } else if (normalizedValues.STATUS_NAME.length > 50) {
     errors.STATUS_NAME = 'Status Name must not exceed 50 characters.'
+  } else if (existingRecords.some((record) =>
+    String(record.statusName ?? record.STATUS_NAME).trim().toLowerCase() === normalizedValues.STATUS_NAME.toLowerCase()
+  )) {
+    errors.STATUS_NAME = 'Status Name must be unique.'
   }
 
   if (normalizedValues.SHORT_NAME && normalizedValues.SHORT_NAME.length < 2) {

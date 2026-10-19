@@ -21,6 +21,8 @@ import EmploymentTypeEdit from "./employment-type/pages/EmploymentTypeEdit";
 import EmploymentTypeView from "./employment-type/pages/EmploymentTypeView";
 import EmploymentStatusList from "./employment-status/pages/EmploymentStatusList";
 import EmploymentStatusCreate from "./employment-status/pages/EmploymentStatusCreate";
+import EmploymentStatusEdit from "./employment-status/pages/EmploymentStatusEdit";
+import EmploymentStatusView from "./employment-status/pages/EmploymentStatusView";
 import DegreeEducationMappingList from "./degree-education-mapping/pages/DegreeEducationMappingList";
 import DegreeEducationMappingCreate from "./degree-education-mapping/pages/DegreeEducationMappingCreate";
 import DegreeEducationMappingEdit from "./degree-education-mapping/pages/DegreeEducationMappingEdit";
@@ -169,6 +171,14 @@ export const hrisRoutes = [
   {
     path: "hris/employee-settings/employment-status/create",
     element: <EmploymentStatusCreate />,
+  },
+  {
+    path: "hris/employee-settings/employment-status/:employmentStatusId/edit",
+    element: <EmploymentStatusEdit />,
+  },
+  {
+    path: "hris/employee-settings/employment-status/:employmentStatusId/view",
+    element: <EmploymentStatusView />,
   },
   {
     path: "hris/employee-settings/degree-education-mapping",

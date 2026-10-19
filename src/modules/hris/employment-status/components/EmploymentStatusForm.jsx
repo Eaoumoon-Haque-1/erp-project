@@ -75,7 +75,7 @@ function EmploymentStatusForm({ values, errors, onChange, statusNameRef }) {
           className={fieldClass(errors.SORT_ORDER)}
           placeholder={'Enter sort order'}
           value={values.SORT_ORDER}
-          min={'0'}
+          min={'0.000001'}
           step={'any'}
           inputMode={'decimal'}
           aria-invalid={Boolean(errors.SORT_ORDER)}
