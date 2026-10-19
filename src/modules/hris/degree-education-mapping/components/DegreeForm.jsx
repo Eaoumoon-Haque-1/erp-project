@@ -35,7 +35,7 @@ function DegreeForm({ values, errors, levelOptions = [], loadingLevels = false, 
       </div>
       <div>
         <label className={'erp-field-label'} htmlFor={'SORT_ORDER'}>Sort Order</label>
-        <input id={'SORT_ORDER'} name={'SORT_ORDER'} type={'number'} min={1} step={1} className={fieldClass(errors.SORT_ORDER)} value={values.SORT_ORDER} aria-invalid={Boolean(errors.SORT_ORDER)} aria-describedby={errors.SORT_ORDER ? 'degree-sort-order-error' : undefined} onChange={onChange} />
+        <input id={'SORT_ORDER'} name={'SORT_ORDER'} type={'number'} min={0} step={'any'} inputMode={'decimal'} className={fieldClass(errors.SORT_ORDER)} value={values.SORT_ORDER} aria-invalid={Boolean(errors.SORT_ORDER)} aria-describedby={errors.SORT_ORDER ? 'degree-sort-order-error' : undefined} onChange={onChange} />
         <FieldError id={'degree-sort-order-error'} message={errors.SORT_ORDER} />
       </div>
       <div>

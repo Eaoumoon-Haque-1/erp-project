@@ -65,7 +65,7 @@ function UserTypeForm({
 
       <div>
         <label className={'erp-field-label'} htmlFor={'SORT_ORDER'}>Sort Order</label>
-        <input id={'SORT_ORDER'} name={'SORT_ORDER'} type={'number'} className={fieldClass(errors.SORT_ORDER)} value={values.SORT_ORDER} min={'1'} step={'1'} placeholder={'Enter sort order'} aria-invalid={Boolean(errors.SORT_ORDER)} aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined} onChange={onChange} />
+        <input id={'SORT_ORDER'} name={'SORT_ORDER'} type={'number'} className={fieldClass(errors.SORT_ORDER)} value={values.SORT_ORDER} min={'0'} step={'any'} placeholder={'Enter sort order'} aria-invalid={Boolean(errors.SORT_ORDER)} aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined} onChange={onChange} />
         <FieldError id={'SORT_ORDER-error'} message={errors.SORT_ORDER} />
       </div>
 

@@ -40,9 +40,10 @@ export function validateEmploymentType(values, existingRecords = []) {
   }
 
   if (normalizedValues.SORT_ORDER) {
-    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalizedValues.SORT_ORDER)) {
+    const sortOrder = Number(normalizedValues.SORT_ORDER)
+    if (!Number.isFinite(sortOrder)) {
       errors.SORT_ORDER = 'Sort Order must be a valid number.'
-    } else if (Number(normalizedValues.SORT_ORDER) <= 0) {
+    } else if (sortOrder <= 0) {
       errors.SORT_ORDER = 'Sort Order must be greater than 0.'
     }
   }

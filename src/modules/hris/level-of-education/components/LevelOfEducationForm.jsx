@@ -81,11 +81,12 @@ function LevelOfEducationForm({ values, errors, levelOfEducationRef, onChange })
             id={'SORT_ORDER'}
             name={'SORT_ORDER'}
             type={'number'}
-            min={1}
+            min={0}
             className={fieldClass(errors.SORT_ORDER)}
             placeholder={'e.g. 1'}
             value={values.SORT_ORDER || ''}
-            step={1}
+            step={'any'}
+            inputMode={'decimal'}
             aria-invalid={Boolean(errors.SORT_ORDER)}
             aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
             onChange={onChange}

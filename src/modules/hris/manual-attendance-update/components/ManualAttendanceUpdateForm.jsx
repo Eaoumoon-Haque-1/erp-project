@@ -36,36 +36,54 @@ function Label({ htmlFor, required = false, children }) {
 function ManualAttendanceUpdateForm({
   values,
   errors,
+  businessGroups,
   businessUnits,
   departments,
   designations,
   shifts,
-  businessUnitRef,
+  businessGroupRef,
+  referencesLoading = false,
   onChange,
 }) {
-  const departmentOptions = departments.filter(
-    (department) => department.BU_ID === values.BU_ID,
-  );
-  const designationOptions = designations.filter(
-    (designation) => designation.DEPT_ID === values.DEPT_ID,
-  );
-  const shiftOptions = shifts.filter((shift) => shift.BU_ID === values.BU_ID);
-
   return (
     <div className={"erp-form-grid"}>
-      <input type={"hidden"} name={"BG_ID"} value={values.BG_ID} />
+      <div>
+        <Label htmlFor={"BG_ID"} required>
+          Group Name
+        </Label>
+        <select
+          ref={businessGroupRef}
+          id={"BG_ID"}
+          name={"BG_ID"}
+          className={fieldClass(errors.BG_ID)}
+          value={values.BG_ID}
+          required
+          disabled={referencesLoading}
+          aria-invalid={Boolean(errors.BG_ID)}
+          aria-describedby={errors.BG_ID ? "BG_ID-error" : undefined}
+          onChange={onChange}
+        >
+          <option value={""}>--Select Group Name--</option>
+          {businessGroups.map((group) => (
+            <option key={group.ID} value={group.ID}>
+              {group.GROUP_NAME}
+            </option>
+          ))}
+        </select>
+        <FieldError id={"BG_ID-error"} message={errors.BG_ID} />
+      </div>
 
       <div>
         <Label htmlFor={"BU_ID"} required>
           Business Unit
         </Label>
         <select
-          ref={businessUnitRef}
           id={"BU_ID"}
           name={"BU_ID"}
           className={fieldClass(errors.BU_ID)}
           value={values.BU_ID}
           required
+          disabled={!values.BG_ID || referencesLoading}
           aria-invalid={Boolean(errors.BU_ID)}
           aria-describedby={errors.BU_ID ? "BU_ID-error" : undefined}
           onChange={onChange}
@@ -96,7 +114,7 @@ function ManualAttendanceUpdateForm({
           onChange={onChange}
         >
           <option value={""}>--Select Department--</option>
-          {departmentOptions.map((department) => (
+          {departments.map((department) => (
             <option key={department.ID} value={department.ID}>
               {department.DEPARTMENT}
             </option>
@@ -121,7 +139,7 @@ function ManualAttendanceUpdateForm({
           onChange={onChange}
         >
           <option value={""}>--Select Designation--</option>
-          {designationOptions.map((designation) => (
+          {designations.map((designation) => (
             <option key={designation.ID} value={designation.ID}>
               {designation.DESIGNATION}
             </option>
@@ -146,7 +164,7 @@ function ManualAttendanceUpdateForm({
           onChange={onChange}
         >
           <option value={""}>--Select Shift--</option>
-          {shiftOptions.map((shift) => (
+          {shifts.map((shift) => (
             <option key={shift.ID} value={shift.ID}>
               {shift.SHIFT_TITLE}
             </option>

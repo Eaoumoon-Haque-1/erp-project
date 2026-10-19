@@ -52,9 +52,10 @@ export function validateUserType(values, existingTypeNames = [], existingShortNa
   }
 
   if (normalizedValues.SORT_ORDER) {
-    if (!/^\d+$/.test(normalizedValues.SORT_ORDER)) {
-      errors.SORT_ORDER = 'Sort Order must be a whole number.'
-    } else if (Number(normalizedValues.SORT_ORDER) <= 0) {
+    const sortOrder = Number(normalizedValues.SORT_ORDER)
+    if (!Number.isFinite(sortOrder)) {
+      errors.SORT_ORDER = 'Sort Order must be a valid number.'
+    } else if (sortOrder <= 0) {
       errors.SORT_ORDER = 'Sort Order must be greater than 0.'
     }
   }

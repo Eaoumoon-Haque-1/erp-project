@@ -40,8 +40,10 @@ export function validateLevelOfEducation(values, existingLevelNames = []) {
   const sortOrderStr = (values.SORT_ORDER || '').trim()
   if (sortOrderStr) {
     const num = Number(sortOrderStr)
-    if (isNaN(num) || !Number.isInteger(num) || num <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be a positive integer greater than 0.'
+    if (!Number.isFinite(num)) {
+      errors.SORT_ORDER = 'Sort Order must be a valid number.'
+    } else if (num <= 0) {
+      errors.SORT_ORDER = 'Sort Order must be greater than 0.'
     }
   }
 

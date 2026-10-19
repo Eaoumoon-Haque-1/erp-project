@@ -114,9 +114,9 @@ function DepartmentForm({
           className={fieldClass(errors.SORT_ORDER)}
           placeholder={'Enter sort order'}
           value={values.SORT_ORDER}
-          min={'1'}
-          step={'1'}
-          inputMode={'numeric'}
+          min={'0'}
+          step={'any'}
+          inputMode={'decimal'}
           aria-invalid={Boolean(errors.SORT_ORDER)}
           aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
           onChange={onChange}

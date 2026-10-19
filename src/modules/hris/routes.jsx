@@ -84,6 +84,8 @@ import OfficeNoticeEdit from "./office-notice/pages/OfficeNoticeEdit";
 import OfficeNoticeView from "./office-notice/pages/OfficeNoticeView";
 import ManualAttendanceUpdateList from "./manual-attendance-update/pages/ManualAttendanceUpdateList";
 import ManualAttendanceUpdateCreate from "./manual-attendance-update/pages/ManualAttendanceUpdateCreate";
+import ManualAttendanceUpdateEdit from "./manual-attendance-update/pages/ManualAttendanceUpdateEdit";
+import ManualAttendanceUpdateView from "./manual-attendance-update/pages/ManualAttendanceUpdateView";
 import OfficeCalendarList from "./office-calendar/pages/OfficeCalendarList";
 import OfficeCalendarCreate from "./office-calendar/pages/OfficeCalendarCreate";
 import OfficeCalendarEdit from "./office-calendar/pages/OfficeCalendarEdit";
@@ -451,5 +453,13 @@ export const hrisRoutes = [
   {
     path: "hris/hris-forms/manual-attendance-update/create",
     element: <ManualAttendanceUpdateCreate />,
+  },
+  {
+    path: "hris/hris-forms/manual-attendance-update/:manualAttendanceUpdateId/edit",
+    element: <ManualAttendanceUpdateEdit />,
+  },
+  {
+    path: "hris/hris-forms/manual-attendance-update/:manualAttendanceUpdateId/view",
+    element: <ManualAttendanceUpdateView />,
   },
 ];

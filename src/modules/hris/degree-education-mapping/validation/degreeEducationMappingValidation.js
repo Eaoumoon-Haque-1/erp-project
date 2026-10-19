@@ -48,8 +48,11 @@ export function validateDegreeEntry(values, rows = []) {
   }
 
   if (normalizedValues.SORT_ORDER) {
-    if (!/^\d+$/.test(normalizedValues.SORT_ORDER) || Number(normalizedValues.SORT_ORDER) < 1) {
-      errors.SORT_ORDER = "Sort Order must be a positive whole number.";
+    const sortOrder = Number(normalizedValues.SORT_ORDER);
+    if (!Number.isFinite(sortOrder)) {
+      errors.SORT_ORDER = "Sort Order must be a valid number.";
+    } else if (sortOrder <= 0) {
+      errors.SORT_ORDER = "Sort Order must be greater than 0.";
     }
   }
 
