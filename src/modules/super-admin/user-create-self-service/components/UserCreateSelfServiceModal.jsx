@@ -4,6 +4,7 @@
  * Keep open/close behavior accessible and place future API mutations in the owning workflow.
  */
 import { useEffect, useRef, useState } from 'react'
+import { applyApiFormErrors } from '../../../../api/errors'
 import ActionForm from '../../../../components/shared/ActionForm'
 import Modal from '../../../../components/shared/Modal'
 import UserCreationFromEmployeeForm from '../../../hris/user-creation-from-employee/components/UserCreationFromEmployeeForm'
@@ -25,13 +26,15 @@ function createValues(employee) {
     VALID_FROM_DATE: employee?.VALID_FROM_DATE || '',
     VALID_TO_DATE: employee?.VALID_TO_DATE || '',
     IS_ANDROID_ID_FIXED: employee?.IS_ANDROID_ID_FIXED || '0',
+    ANDROID_ID: employee?.ANDROID_ID || '',
     IS_ACTIVE: employee?.IS_ACTIVE ?? '1',
   }
 }
 
-function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptions, onClose, onSave }) {
+function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptions, readOnly = false, onClose, onSave }) {
   const [values, setValues] = useState(() => createValues(employee))
   const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
   const formRef = useRef(null)
 
   useEffect(() => {
@@ -63,12 +66,23 @@ function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptio
       return
     }
 
-    await onSave(result.values)
+    setSubmitting(true)
+    try {
+      await onSave(result.values)
+    } catch (error) {
+      applyApiFormErrors(error, setErrors, 'Unable to create User from Employee.', {
+        userName: 'USER_NAME', password: 'PASSWORD', confirmPassword: 'CONFIRM_PASSWORD',
+        fromDate: 'VALID_FROM_DATE', toDate: 'VALID_TO_DATE', roleId: 'USER_ROLE',
+        userTypeId: 'USER_TYPE', isAndroidFixed: 'IS_ANDROID_ID_FIXED', androidId: 'ANDROID_ID', status: 'IS_ACTIVE',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
     <Modal
-      title={'User Create Self Service'}
+      title={readOnly ? 'Employee User Details' : 'User Create Self Service'}
       open={open}
       onClose={onClose}
       panelClassName={'erp-user-self-service-modal'}
@@ -85,17 +99,19 @@ function UserCreateSelfServiceModal({ open, employee, roleOptions, userTypeOptio
           errors={errors}
           roleOptions={roleOptions}
           userTypeOptions={userTypeOptions}
-          passwordRequired={employee?.HAS_USER !== '1'}
+          passwordRequired={!readOnly}
+          showPasswordFields={!readOnly}
+          readOnly={readOnly}
           onChange={handleChange}
         />
 
         <div className={'erp-modal-actions'}>
-          <button type={'button'} className={'secondary-button'} onClick={onClose}>
-            Cancel
+          <button type={'button'} className={'secondary-button'} disabled={submitting} onClick={onClose}>
+            {readOnly ? 'Close' : 'Cancel'}
           </button>
-          <button type={'submit'} className={'primary-button'}>
-            Save
-          </button>
+          {!readOnly && <button type={'submit'} className={'primary-button'} disabled={submitting}>
+            {submitting ? 'Saving...' : 'Save'}
+          </button>}
         </div>
       </ActionForm>
     </Modal>

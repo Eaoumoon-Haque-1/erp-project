@@ -55,6 +55,8 @@ function UserCreationFromEmployeeForm({
   roleOptions = [],
   userTypeOptions = [],
   passwordRequired = true,
+  showPasswordFields = true,
+  readOnly = false,
   onChange,
 }) {
   const [showPassword, setShowPassword] = useState(false)
@@ -62,6 +64,7 @@ function UserCreationFromEmployeeForm({
 
   return (
     <div className={'erp-user-creation-form space-y-6'}>
+      <fieldset disabled={readOnly} className={'contents'}>
       {/* 5-column ERP Form Grid */}
       <div className={'erp-form-grid'}>
         {/* --- ROW 1 --- */}
@@ -153,7 +156,7 @@ function UserCreationFromEmployeeForm({
 
         {/* --- ROW 2 --- */}
         {/* 6 (Row 2, Col 1). Password */}
-        <div>
+        {showPasswordFields && <div>
           <label className={'erp-field-label'} htmlFor={'PASSWORD'}>Password{passwordRequired && <span className={'erp-required'}>*</span>}</label>
           <div className={'relative'}>
             <input
@@ -176,10 +179,10 @@ function UserCreationFromEmployeeForm({
             </button>
           </div>
           <FieldError id={'PASSWORD-error'} message={errors.PASSWORD} />
-        </div>
+        </div>}
 
         {/* 7 (Row 2, Col 2). Confirm Password */}
-        <div>
+        {showPasswordFields && <div>
           <label className={'erp-field-label'} htmlFor={'CONFIRM_PASSWORD'}>Confirm Password{passwordRequired && <span className={'erp-required'}>*</span>}</label>
           <div className={'relative'}>
             <input
@@ -202,7 +205,7 @@ function UserCreationFromEmployeeForm({
             </button>
           </div>
           <FieldError id={'CONFIRM_PASSWORD-error'} message={errors.CONFIRM_PASSWORD} />
-        </div>
+        </div>}
 
         {/* 8 (Row 2, Col 3). Valid From Date */}
         <div>
@@ -249,6 +252,22 @@ function UserCreationFromEmployeeForm({
           </label>
         </div>
 
+        {values.IS_ANDROID_ID_FIXED === '1' && (
+          <div>
+            <label className={'erp-field-label'} htmlFor={'ANDROID_ID'}>Android ID</label>
+            <input
+              id={'ANDROID_ID'}
+              name={'ANDROID_ID'}
+              type={'text'}
+              className={fieldClass(errors.ANDROID_ID)}
+              placeholder={'Enter Android ID'}
+              value={values.ANDROID_ID || ''}
+              onChange={onChange}
+            />
+            <FieldError id={'ANDROID_ID-error'} message={errors.ANDROID_ID} />
+          </div>
+        )}
+
         {/* --- ROW 3 --- */}
         {/* 11 (Row 3, Col 1). Is Active? */}
         <div className={'flex flex-col justify-end pb-2'}>
@@ -265,6 +284,7 @@ function UserCreationFromEmployeeForm({
           </label>
         </div>
       </div>
+      </fieldset>
     </div>
   )
 }

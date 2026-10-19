@@ -40,15 +40,16 @@ export const hrisMenu = [
             path: "/hris/employee-settings/employment-status",
           },
           {
-            label: "Degree & Education Mapping",
-            key: "degree-education-mapping",
-            path: "/hris/employee-settings/degree-education-mapping",
-          },
-          {
             label: "Level of Education",
             key: "level-of-education",
             path: "/hris/employee-settings/level-of-education",
           },
+          {
+            label: "Degree & Education Mapping",
+            key: "degree-education-mapping",
+            path: "/hris/employee-settings/degree-education-mapping",
+          },
+          
           // {
           //   label: "Assign Empl and BU to User",
           //   key: "assign-empl-bu-user",

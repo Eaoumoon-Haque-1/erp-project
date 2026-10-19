@@ -54,6 +54,7 @@ export const initialUserCreationFromEmployeeValues = {
   VALID_FROM_DATE: '',
   VALID_TO_DATE: '',
   IS_ANDROID_ID_FIXED: '0',
+  ANDROID_ID: '',
   IS_ACTIVE: '1',
 }
 
@@ -110,6 +111,7 @@ export function validateUserCreationFromEmployee(values, { requirePassword = tru
     values: {
       ...values,
       USER_NAME: values.USER_NAME ? values.USER_NAME.trim() : '',
+      ANDROID_ID: values.ANDROID_ID ? values.ANDROID_ID.trim() : '',
     },
   }
 }
