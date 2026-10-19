@@ -62,7 +62,13 @@ function ListPage({
   const visibleRows = filteredRows.slice(startIndex, startIndex + pageSize)
 
   const updateFilter = (key, value) => {
-    setFilterValues((current) => ({ ...current, [key]: value }))
+    setFilterValues((current) => {
+      const next = { ...current, [key]: value }
+      filters.forEach((filter) => {
+        if (filter.dependsOn === key) next[filter.key] = ''
+      })
+      return next
+    })
     setCurrentPage(1)
   }
 
@@ -81,17 +87,25 @@ function ListPage({
       {/* Filters render as selects when options exist, otherwise as search inputs. */}
       {filters.length > 0 && (
         <div className={'erp-list-filters'}>
-          {filters.map((filter) =>
-            filter.options ? (
+          {filters.map((filter) => {
+            const options = typeof filter.options === 'function'
+              ? filter.options(filterValues)
+              : filter.options
+            const disabled = typeof filter.disabled === 'function'
+              ? filter.disabled(filterValues)
+              : filter.disabled || (filter.dependsOn && !filterValues[filter.dependsOn])
+
+            return options ? (
               <select
                 key={filter.key}
                 className={'erp-list-control'}
                 aria-label={filter.label}
                 value={filterValues[filter.key] ?? ''}
+                disabled={disabled}
                 onChange={(event) => updateFilter(filter.key, event.target.value)}
               >
                 <option value={''}>{filter.placeholder}</option>
-                {filter.options.map((option) => (
+                {options.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -105,10 +119,11 @@ function ListPage({
                 placeholder={filter.placeholder}
                 aria-label={filter.label}
                 value={filterValues[filter.key] ?? ''}
+                disabled={disabled}
                 onChange={(event) => updateFilter(filter.key, event.target.value)}
               />
-            ),
-          )}
+            )
+          })}
           <button className={'primary-button w-fit self-center'} type={'button'} onClick={resetFilters}>
             Reset
           </button>

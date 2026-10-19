@@ -23,7 +23,7 @@ const columns = [
 function DesignationDepartmentMappingList() {
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
-  const [filterOptions, setFilterOptions] = useState({ units: [], departments: [] })
+  const [unitOptions, setUnitOptions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,10 +43,7 @@ function DesignationDepartmentMappingList() {
         designationNames: new Map(designations.map((row) => [String(row.id), row.designationName])),
       }
       setRows(mappings.map((row) => mapDesignationDepartmentMappingFromApi(row, labels)))
-      setFilterOptions({
-        units: units.map((row) => ({ value: String(row.id), label: row.businessUnit })),
-        departments: departments.map((row) => ({ value: String(row.id), label: row.departmentName })),
-      })
+      setUnitOptions(units.map((row) => ({ value: String(row.id), label: row.businessUnit })))
     }).catch((error) => {
       if (active) getApiErrorMessage(error, 'Unable to load Department–Designation mappings.')
     }).finally(() => { if (active) setLoading(false) })
@@ -54,10 +51,18 @@ function DesignationDepartmentMappingList() {
   }, [])
 
   const filters = useMemo(() => [
-    { key: 'BU_ID', label: 'Search by Business Unit', placeholder: '--Search by Business Unit--', options: filterOptions.units },
-    { key: 'DEPT_ID', label: 'Search by Department Name', placeholder: '--Search by Department Name--', options: filterOptions.departments },
+    { key: 'BU_ID', label: 'Search by Business Unit', placeholder: '--Search by Business Unit--', options: unitOptions },
+    {
+      key: 'DEPT_ID',
+      label: 'Search by Department Name',
+      placeholder: '--Select Business Unit First--',
+      dependsOn: 'BU_ID',
+      options: (values) => [...new Map(rows
+        .filter((row) => row.BU_ID === values.BU_ID)
+        .map((row) => [row.DEPT_ID, { value: row.DEPT_ID, label: row.DEPARTMENT_NAME }])).values()],
+    },
     { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
-  ], [filterOptions])
+  ], [rows, unitOptions])
 
   const handleDelete = async (row) => {
     try {
