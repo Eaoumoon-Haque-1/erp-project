@@ -15,6 +15,12 @@ function Navbar({ onDrawerToggle }) {
     navigate("/login", { replace: true });
   };
 
+  const identity = [
+    session?.username,
+    session?.employeeName,
+    session?.businessUnitName,
+  ].filter(Boolean).join(", ");
+
   return (
     <nav className={"health-navbar"}>
       <div className={"health-navbar-container"}>
@@ -34,7 +40,7 @@ function Navbar({ onDrawerToggle }) {
           />
         </Link>
         <div className={"health-navbar-session"}>
-          <span>{session?.username}</span>
+          <span>{`User: ${identity}`}</span>
           <button type={"button"} onClick={handleLogout}>
             Logout
           </button>

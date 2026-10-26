@@ -36,8 +36,9 @@ export function mapAssignedBusinessUnits(dto, unitNames = new Map()) {
 }
 
 export function mapEmployeeAssignmentToApi(rows = []) {
+  const currentRow = rows.find((row) => String(row.STATUS) === '1') || rows.at(-1)
   return {
-    employeeId: rows[0] ? Number(rows[0].EMPL_ID) : null,
+    employeeId: currentRow ? Number(currentRow.EMPL_ID) : null,
   }
 }
 

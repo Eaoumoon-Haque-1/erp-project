@@ -81,10 +81,6 @@ function DrawerSidebar({ open, collapsed, onNavigate }) {
       className={[baseClass, drawerClass, desktopClass].join(' ')}
       aria-label={'Primary navigation'}
     >
-      <div className={'health-sidebar-profile'}>
-        <h5>Super Admin</h5>
-        <span>Super Admin</span>
-      </div>
       <nav>
         {appMenu.map((item) => (
           <DrawerMenuGroup

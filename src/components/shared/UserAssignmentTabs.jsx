@@ -51,6 +51,7 @@ function UserAssignmentTabs({
   businessUnitRows,
   maxEmployeeAssignments = Number.POSITIVE_INFINITY,
   showEmployeeStatus = true,
+  showEmployeeHistory = false,
   activeTab,
   generalError,
   onTabChange,
@@ -211,14 +212,16 @@ function UserAssignmentTabs({
                   <tr>
                     <th className={"w-[60px]"}>#</th>
                     <th>Employee Name</th>
-                    {showEmployeeStatus && <th className={"w-[150px]"}>Status</th>}
+                    {showEmployeeHistory && <th className={"w-[140px]"}>Active From</th>}
+                    {showEmployeeHistory && <th className={"w-[140px]"}>Active To</th>}
+                    {(showEmployeeStatus || showEmployeeHistory) && <th className={"w-[150px]"}>Status</th>}
                     <th className={"w-[100px] text-center"}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {employeeRows.length === 0 ? (
                     <tr>
-                      <td className={"erp-empty-cell"} colSpan={showEmployeeStatus ? 4 : 3}>
+                      <td className={"erp-empty-cell"} colSpan={showEmployeeHistory ? 6 : showEmployeeStatus ? 4 : 3}>
                         No employee assigned
                       </td>
                     </tr>
@@ -227,7 +230,9 @@ function UserAssignmentTabs({
                       <tr key={row.id ?? `${row.EMPL_ID}-${index}`}>
                         <td>{index + 1}</td>
                         <td>{row.DISPLAY_NAME || row.NAME}</td>
-                        {showEmployeeStatus && <td>
+                        {showEmployeeHistory && <td>{row.ACTIVE_FROM || 'N/A'}</td>}
+                        {showEmployeeHistory && <td>{row.ACTIVE_TO || '—'}</td>}
+                        {(showEmployeeStatus || showEmployeeHistory) && <td>
                           <span
                             className={[
                               "inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm",

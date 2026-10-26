@@ -5,7 +5,7 @@
  */
 function Footer() {
   return (
-    <footer className={'flex h-10 items-center justify-end bg-gradient-to-r from-brand-end to-brand-start px-4 text-white'}>
+    <footer className={'flex h-10 items-center justify-end border-t border-slate-200 bg-white px-4 text-slate-600'}>
       <span>Cloud ERP</span>
     </footer>
   )

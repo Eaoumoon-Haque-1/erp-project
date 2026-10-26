@@ -51,6 +51,21 @@ export function saveAuthSession(response, previousSession = {}) {
       : previousSession.expiresAt || Date.now(),
     username: response.username || previousSession.username || '',
     role: response.role || previousSession.role || '',
+    userId: response.userId ?? previousSession.userId ?? null,
+    userEmpId: response.userEmpId ?? previousSession.userEmpId ?? null,
+    bgId: response.bgId ?? previousSession.bgId ?? null,
+    buId: response.buId ?? previousSession.buId ?? null,
+    employeeName:
+      response.employeeName
+      || response.empName
+      || previousSession.employeeName
+      || '',
+    businessUnitName:
+      response.businessUnitName
+      || response.businessUnit
+      || response.buName
+      || previousSession.businessUnitName
+      || '',
   }
 
   if (!accessToken) {

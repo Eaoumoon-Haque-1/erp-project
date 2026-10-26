@@ -55,8 +55,8 @@ function Grid({ children, className = "" }) {
 
 function DerivedOfficerFields({ officer }) {
   const fields = [
-    ["Officerâ€™s ID", officer?.employeeId || ""],
-    ["Officerâ€™s Name", officer?.name || ""],
+    ["Officer's ID", officer?.employeeId || ""],
+    ["Officer's Name", officer?.name || ""],
     ["Department", officer?.department || ""],
     ["Designation", officer?.designation || ""],
   ];

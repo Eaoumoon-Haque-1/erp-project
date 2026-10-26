@@ -110,7 +110,7 @@
     right: 1px;
     display: grid;
     width: 44px;
-    height: 43px;
+    height: 34px;
     place-items: center;
     border: 0;
     border-left: 1px solid #dee2e6;
@@ -174,11 +174,9 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 0;
-    background: linear-gradient(
-      135deg,
-      var(--color-brand-start) 0%,
-      var(--color-brand-end) 100%
-    );
+    border-bottom: 1px solid #d9e2e8;
+    background: #fff;
+    box-shadow: 0 2px 8px rgb(15 23 42 / 0.08);
     font-family: Roboto, sans-serif;
   }
 
@@ -232,22 +230,23 @@
     align-items: center;
     gap: 12px;
     margin-left: auto;
-    color: #062f33;
+    color: #334155;
     font-size: 14px;
     font-weight: 600;
   }
 
   .health-navbar-session button {
-    border: 1px solid rgb(6 47 51 / 0.35);
+    border: 1px solid #cbd5e1;
     border-radius: 3px;
     padding: 5px 10px;
-    background: rgb(255 255 255 / 0.2);
-    color: #062f33;
+    background: #fff;
+    color: #334155;
     font-weight: 700;
   }
 
   .health-navbar-session button:hover {
-    background: rgb(255 255 255 / 0.4);
+    border-color: #94a3b8;
+    background: #f1f5f9;
   }
 
   .health-sidebar {
@@ -256,36 +255,11 @@
     padding: 15px;
     overflow-x: hidden;
     overflow-y: auto;
-    border-right: 2px solid rgb(0 0 0 / 0.1);
-    background: #fff;
-    box-shadow: 4px 0 20px rgb(0 0 0 / 0.08);
+    border-right: 1px solid #c0e8e8;
+    background: #d2e7e7;
+    box-shadow: 3px 0 12px rgb(71 109 130 / 0.1);
     scroll-behavior: smooth;
     transition: all 0.25s ease;
-  }
-
-  .health-sidebar-profile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 15px;
-    color: #000;
-  }
-
-  .health-sidebar-profile h5 {
-    margin: 0 0 8px;
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.2;
-  }
-
-  .health-sidebar-profile span {
-    padding: 0 10px;
-    border-radius: 10px;
-    background: yellow;
-    color: #cf9310;
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 24px;
   }
 
   .health-sidebar-parent {
@@ -298,7 +272,7 @@
     border: 0;
     border-radius: 4px;
     background: transparent;
-    color: #038b8d;
+    color: #475569;
     font-family: Roboto, sans-serif;
     font-size: 16px;
     font-weight: 600;
@@ -316,16 +290,22 @@
     line-height: 24px;
   }
 
+  .health-sidebar-parent:hover {
+    background: #fff;
+    color: #1e3a5f;
+    box-shadow: 0 1px 5px rgb(49 95 125 / 0.1);
+  }
+
   .health-sidebar-submenu {
     margin-left: 20px;
-    border-left: 1px solid #e5e7eb;
+    border-left: 1px solid #c5dfdf;
   }
 
   .health-sidebar-link {
     display: block;
     padding: 5px 10px;
     border-radius: 4px;
-    color: #7a7794;
+    color: #475569;
     font-family: Roboto, sans-serif;
     font-size: 16px;
     font-weight: 400;
@@ -334,14 +314,17 @@
   }
 
   .health-sidebar-link:hover {
-    background: #049ea0;
-    color: #fff;
+    background: #fff;
+    color: #1e3a5f;
+    box-shadow: 0 1px 5px rgb(49 95 125 / 0.1);
   }
 
   .health-sidebar-link.active {
-    background: #038b8d;
-    color: #fff;
-    font-weight: 400;
+    border: 1px solid #cfe5e5;
+    background: #fff;
+    color: #315f7d;
+    box-shadow: 0 1px 5px rgb(49 95 125 / 0.12);
+    font-weight: 600;
   }
 
   @media screen and (max-width: 1400px) {
@@ -363,8 +346,7 @@
       overflow: hidden;
     }
 
-    .health-sidebar.health-sidebar-desktop-collapsed nav,
-    .health-sidebar.health-sidebar-desktop-collapsed .health-sidebar-profile {
+    .health-sidebar.health-sidebar-desktop-collapsed nav {
       display: none;
     }
   }
@@ -625,7 +607,7 @@
 
   .erp-attendance-binary-label {
     color: #000;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     line-height: 1.4;
   }
@@ -642,7 +624,7 @@
     align-items: center;
     gap: 5px;
     color: #000;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.4;
     cursor: pointer;
   }
@@ -668,11 +650,11 @@
   .erp-attendance-permission-control {
     display: flex;
     width: 100%;
-    height: 45px;
-    min-height: 45px;
+    height: 36px;
+    min-height: 36px;
     align-items: center;
     gap: 16px;
-    padding: 10px 12px;
+    padding: 5px 10px;
     border: 1px solid #dee2e6;
     border-radius: 3px;
     background: #fff;
@@ -781,7 +763,7 @@
     height: 24px;
     margin-bottom: 4px;
     color: #000;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     line-height: 1.5;
   }
@@ -794,10 +776,10 @@
   .erp-form-control {
     display: block;
     width: 100%;
-    height: 45px;
-    min-height: 45px;
-    max-height: 45px;
-    padding: 10px 12px;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 5px 10px;
     border: 1px solid #dee2e6;
     border-radius: 3px;
     background: #fff;
@@ -863,7 +845,7 @@
 
   .erp-form-control.erp-multi-select-trigger-grow {
     height: auto;
-    min-height: 45px;
+    min-height: 36px;
     max-height: none;
     align-items: flex-start;
   }
@@ -967,9 +949,9 @@
 
   .erp-calendar-readonly-value {
     display: flex;
-    min-height: 45px;
+    min-height: 36px;
     align-items: center;
-    padding: 10px 12px;
+    padding: 5px 10px;
     border: 1px solid #dee2e6;
     border-radius: 3px;
     background: #f3f3f3;
@@ -979,8 +961,8 @@
   }
 
   .erp-textarea {
-    height: 45px;
-    min-height: 45px;
+    height: 36px;
+    min-height: 36px;
     max-height: 93px;
     overflow-y: auto;
     resize: vertical;
@@ -1001,10 +983,10 @@
   }
 
   .erp-file-control {
-    height: 45px;
-    min-height: 45px;
-    max-height: 45px;
-    padding: 7px;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 3px;
   }
 
   .erp-field-help {
@@ -1024,12 +1006,12 @@
   .erp-switch-field {
     display: flex;
     width: 100%;
-    height: 45px;
+    height: 36px;
     align-items: center;
     gap: 10px;
     padding: 0;
     color: #000;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
   }
 
@@ -1075,7 +1057,7 @@
 
   .erp-menu-radio-options {
     display: flex;
-    min-height: 38px;
+    min-height: 36px;
     align-items: center;
     gap: 22px;
   }
@@ -1084,6 +1066,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
+    font-size: 14px;
     cursor: pointer;
   }
 
@@ -1132,11 +1115,11 @@
 
   .erp-checkbox-field {
     display: flex;
-    height: 45px;
+    height: 36px;
     align-items: center;
     gap: 10px;
     color: var(--color-app-text);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
   }
@@ -1285,8 +1268,8 @@
 
   .erp-role-add-button {
     display: inline-flex;
-    width: 45px;
-    height: 45px;
+    width: 36px;
+    height: 36px;
     align-items: center;
     justify-content: center;
     align-self: start;
@@ -1295,7 +1278,7 @@
     border-radius: 5px;
     background: var(--color-action-view);
     color: #fff;
-    font-size: 34px;
+    font-size: 28px;
     font-weight: 500;
     line-height: 1;
     cursor: pointer;
@@ -1370,14 +1353,15 @@
 
   .erp-excel-field-row label {
     padding: 8px 12px;
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
     color: #000;
   }
 
   .erp-excel-field-row input {
     width: 100%;
-    min-height: 40px;
+    height: 36px;
+    min-height: 36px;
     padding: 0 10px;
     border: 2px solid #000;
     background: #fff;
@@ -1397,13 +1381,13 @@
 
   .erp-excel-role-label {
     padding: 8px 12px;
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
     color: #000;
   }
 
   .erp-excel-role-select {
-    height: 42px;
+    height: 36px;
     margin: 8px 0;
     border: 2px solid #000;
     background: #fff;
@@ -1415,7 +1399,7 @@
   .erp-excel-add-button {
     justify-self: end;
     width: 140px;
-    height: 42px;
+    height: 36px;
     margin-right: 12px;
     border: 2px solid #c92a8d;
     background: #f7dbe9;
@@ -1893,8 +1877,8 @@
     display: block;
     width: 100%;
     min-width: 0;
-    height: 38px;
-    padding: 7px 9px;
+    height: 36px;
+    padding: 6px 9px;
     border: 1px solid #dee2e6;
     border-radius: 3px;
     background: #fff;
@@ -1928,7 +1912,7 @@
   }
 
   textarea.erp-employee-table-control {
-    min-height: 38px;
+    min-height: 36px;
     max-height: 78px;
     resize: vertical;
   }
@@ -1940,10 +1924,11 @@
   .erp-table-checkbox {
     display: flex;
     min-width: 0;
-    min-height: 38px;
+    min-height: 36px;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    font-size: 14px;
   }
 
   .erp-table-checkbox input {
@@ -2657,9 +2642,9 @@
   }
 
   .erp-record-view-grid dd {
-    min-height: 42px;
+    min-height: 36px;
     margin: 0;
-    padding: 9px 11px;
+    padding: 6px 10px;
     border: 1px solid #d8dee5;
     border-radius: 3px;
     background: #f6f8fa;

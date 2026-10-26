@@ -32,6 +32,36 @@ const existingUserNames = []
 const existingMobileNumbers = []
 const listPath = '/super-admin/user-creation/user'
 
+function localDateString(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function previousDate(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() - 1)
+  return localDateString(date)
+}
+
+function applyUserStatusToEmployeeRows(rows, userStatus) {
+  if (rows.length === 0) return rows
+  const today = localDateString()
+
+  if (userStatus === '0') {
+    return rows.map((row) => row.STATUS === '1'
+      ? { ...row, ACTIVE_TO: today, STATUS: '0' }
+      : row)
+  }
+
+  const lastIndex = rows.length - 1
+  return rows.map((row, index) => index === lastIndex
+    ? { ...row, ACTIVE_TO: '', STATUS: '1' }
+    : { ...row, STATUS: '0' })
+}
+
 function UserCreate() {
   const navigate = useNavigate()
   const userNameRef = useRef(null)
@@ -86,6 +116,9 @@ function UserCreate() {
         : {}),
     }))
     if (name === 'BG_ID') setBusinessUnitRows([])
+    if (name === 'STATUS') {
+      setEmployeeRows((current) => applyUserStatusToEmployeeRows(current, nextValue))
+    }
     setErrors((current) => ({
       ...current,
       [name]: undefined,
@@ -175,18 +208,33 @@ function UserCreate() {
         businessUnitOptions={businessUnitOptions}
         employeeRows={employeeRows}
         businessUnitRows={businessUnitRows}
-        maxEmployeeAssignments={1}
+        maxEmployeeAssignments={Number.POSITIVE_INFINITY}
         showEmployeeStatus={false}
+        showEmployeeHistory
         activeTab={activeAssignmentTab}
         generalError={errors.ASSIGNMENTS}
         onTabChange={setActiveAssignmentTab}
         onAddEmployee={(row) => {
-          setEmployeeRows((current) => [...current, row])
+          const activeFrom = localDateString()
+          setEmployeeRows((current) => [
+            ...current.map((employee) => employee.STATUS === '1'
+              ? { ...employee, ACTIVE_TO: previousDate(activeFrom), STATUS: '0' }
+              : employee),
+            {
+              ...row,
+              ACTIVE_FROM: activeFrom,
+              ACTIVE_TO: values.STATUS === '1' ? '' : activeFrom,
+              STATUS: values.STATUS === '1' ? '1' : '0',
+            },
+          ])
           setErrors((current) => ({ ...current, ASSIGNMENTS: undefined }))
         }}
         onRemoveEmployee={(indexToRemove) =>
           setEmployeeRows((current) =>
-            current.filter((_, index) => index !== indexToRemove),
+            applyUserStatusToEmployeeRows(
+              current.filter((_, index) => index !== indexToRemove),
+              values.STATUS,
+            ),
           )
         }
         onAddBusinessUnit={(row) => {
