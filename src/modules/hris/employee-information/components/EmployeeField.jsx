@@ -66,7 +66,7 @@ function EmployeeField({
           className={className}
           value={value}
           required={required}
-          disabled={disabled}
+          disabled={readOnly || disabled}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
           onChange={onChange}

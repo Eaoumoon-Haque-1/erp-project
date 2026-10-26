@@ -10,6 +10,12 @@ export const employeesApi = {
   get: (id) => unwrap(apiClient.get(`${employeePath}/${id}`)),
   create: (payload) => unwrap(apiClient.post(employeePath, payload)),
   update: (id, payload) => unwrap(apiClient.put(`${employeePath}/${id}`, payload)),
+  remove: (id) => unwrap(apiClient.delete(`${employeePath}/${id}`)),
+  updateStatus: (id, status) => unwrap(apiClient.patch(
+    `${employeePath}/${id}/status`,
+    null,
+    { params: { status: Number(status) } },
+  )),
 }
 
 const profileResource = (employeeId, resource) => `${employeePath}/${employeeId}/${resource}`

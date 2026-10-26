@@ -82,6 +82,8 @@ export const createInitialEmployeeValues = () => ({
   DATE_OF_MARRIAGE: "",
   RELIGION_ID: "",
   NATIONALITY_ID: "",
+  HEIGHT_ID: "",
+  WEIGHT_ID: "",
   BLOOD_GROUP: "",
   HIGHEST_EDUCATION_ID: "",
   NID: "",
@@ -149,15 +151,14 @@ const max = (errors, key, value, length, label) => {
     errors[key] = `${label} must not exceed ${length} characters.`;
 };
 const minMax = (errors, key, value, minLength, maxLength, label) => {
-  required(errors, key, value, label);
-  if (!errors[key] && text(value).length < minLength)
+  if (!text(value)) return;
+  if (text(value).length < minLength)
     errors[key] = `${label} must be at least ${minLength} characters.`;
   if (!errors[key]) max(errors, key, value, maxLength, label);
 };
 const validateYear = (errors, key, value, label) => {
-  required(errors, key, value, label);
+  if (!text(value)) return;
   if (
-    !errors[key] &&
     (!/^\d{4}$/.test(value) || Number(value) > new Date().getFullYear())
   )
     errors[key] =
@@ -179,13 +180,6 @@ function validateEducation(rows) {
   return rows.map((row) => {
     const errors = {};
     if (isBlankRow(row)) return errors;
-    required(
-      errors,
-      "EDUCATION_LEVEL_ID",
-      row.EDUCATION_LEVEL_ID,
-      "Education Level",
-    );
-    required(errors, "DEGREE_TITLE_ID", row.DEGREE_TITLE_ID, "Degree Title");
     max(errors, "MAJOR_GROUP", row.MAJOR_GROUP, 150, "Major/Group");
     minMax(
       errors,
@@ -195,7 +189,6 @@ function validateEducation(rows) {
       200,
       "Institute Name",
     );
-    required(errors, "RESULT", row.RESULT, "Result");
     if (row.CGPA_MARKS && Number(row.CGPA_MARKS) < 0)
       errors.CGPA_MARKS = "CGPA/Marks cannot be negative.";
     if (row.SCALE_MARKS && !isPositiveNumber(row.SCALE_MARKS))
@@ -226,7 +219,6 @@ function validateTraining(rows) {
     );
     // Country is kept in the design, but remains optional until its numeric
     // lookup is available for the EmployeeTraining.countryId contract.
-    required(errors, "TOPICS_COVERED", row.TOPICS_COVERED, "Topics Covered");
     max(errors, "TOPICS_COVERED", row.TOPICS_COVERED, 500, "Topics Covered");
     validateYear(errors, "TRAINING_YEAR", row.TRAINING_YEAR, "Training Year");
     minMax(
@@ -237,10 +229,8 @@ function validateTraining(rows) {
       200,
       "Institute Name",
     );
-    required(errors, "DURATION", row.DURATION, "Duration");
-    if (!errors.DURATION && !isPositiveNumber(row.DURATION))
+    if (row.DURATION && !isPositiveNumber(row.DURATION))
       errors.DURATION = "Duration must be greater than 0.";
-    required(errors, "LOCATION", row.LOCATION, "Location");
     max(errors, "LOCATION", row.LOCATION, 150, "Location");
     return errors;
   });
@@ -259,7 +249,6 @@ function validateCertification(rows) {
       200,
       "Institute Name",
     );
-    required(errors, "LOCATION", row.LOCATION, "Location");
     max(errors, "LOCATION", row.LOCATION, 150, "Location");
     // The UI keeps its date-range control. The API currently exposes only a
     // numeric duration, so this display-only field must not block saving.
@@ -282,26 +271,11 @@ function validateJobExperience(rows) {
       200,
       "Company Business",
     );
-    required(errors, "DESIGNATION", row.DESIGNATION, "Designation");
     max(errors, "DESIGNATION", row.DESIGNATION, 150, "Designation");
-    required(errors, "DEPARTMENT", row.DEPARTMENT, "Department");
     max(errors, "DEPARTMENT", row.DEPARTMENT, 200, "Department");
-    required(
-      errors,
-      "EMPLOYMENT_PERIOD_START_DT",
-      row.EMPLOYMENT_PERIOD_START_DT,
-      "Employment Start Date",
-    );
     if (row.EMPLOYMENT_PERIOD_START_DT > today())
       errors.EMPLOYMENT_PERIOD_START_DT =
         "Employment Start Date cannot be in the future.";
-    if (row.CURRENTLY_WORKING !== "1")
-      required(
-        errors,
-        "EMPLOYMENT_PERIOD_END_DT",
-        row.EMPLOYMENT_PERIOD_END_DT,
-        "Employment End Date",
-      );
     if (
       row.EMPLOYMENT_PERIOD_END_DT &&
       row.EMPLOYMENT_PERIOD_END_DT < row.EMPLOYMENT_PERIOD_START_DT
@@ -344,15 +318,9 @@ export function validateEmployeeInformation(inputValues) {
   [
     ["BUSINESS_UNIT_ID", "Business Unit"],
     ["EMPLOYEE_NAME", "Employee Name"],
-    ["EMPLOYEE_ID", "Employee ID"],
+    ["EMPLOYEE_ID", "Employee Code"],
     ["DEPARTMENT_ID", "Department"],
     ["DESIGNATION_ID", "Designation"],
-    ["EMPLOYMENT_TYPE_ID", "Employment Type"],
-    ["JOINING_DATE", "Joining Date"],
-    ["EMPLOYMENT_STATUS", "Employment Status"],
-    ["PROBATIONARY_PERIOD", "Probationary Period"],
-    ["NOTICE_PERIOD", "Notice Period"],
-    ["REPORTING_OFFICER_ID", "Reporting Officer"],
     // ["PRESENT_ADDRESS", "Present Address"],
     // ["PERMANENT_ADDRESS", "Permanent Address"],
     // ["DISTRICT", "District"],
@@ -373,15 +341,6 @@ export function validateEmployeeInformation(inputValues) {
   [["FATHER_NAME", "Father's Name"], ["MOTHER_NAME", "Mother's Name"]]
     .forEach(([key, label]) => max(fields, key, values[key], 150, label));
   max(fields, "SPOUSE_NAME", values.SPOUSE_NAME, 150, "Spouse Name");
-  if (values.MARITAL_STATUS === "Married") {
-    required(fields, "SPOUSE_NAME", values.SPOUSE_NAME, "Spouse Name");
-    required(
-      fields,
-      "DATE_OF_MARRIAGE",
-      values.DATE_OF_MARRIAGE,
-      "Date of Marriage",
-    );
-  }
   if (values.DATE_OF_BIRTH && values.DATE_OF_BIRTH > today())
     fields.DATE_OF_BIRTH = "Date of Birth cannot be in the future.";
   if (values.DATE_OF_MARRIAGE > today())
@@ -409,13 +368,18 @@ export function validateEmployeeInformation(inputValues) {
   )
     fields.OFFICE_OUT_TIME = "Office Out Time must be after Office In Time.";
   if (
-    !isWhole(values.PROBATIONARY_PERIOD) ||
-    Number(values.PROBATIONARY_PERIOD) <= 0
+    values.PROBATIONARY_PERIOD &&
+    (!isWhole(values.PROBATIONARY_PERIOD) ||
+      Number(values.PROBATIONARY_PERIOD) <= 0)
   )
     fields.PROBATIONARY_PERIOD =
       "Probationary Period must be a whole number greater than 0.";
-  if (!isWhole(values.NOTICE_PERIOD))
+  if (values.NOTICE_PERIOD && !isWhole(values.NOTICE_PERIOD))
     fields.NOTICE_PERIOD = "Notice Period must be a whole number of 0 or more.";
+  if (values.HEIGHT_ID && !isPositiveNumber(values.HEIGHT_ID))
+    fields.HEIGHT_ID = "Height must be greater than 0.";
+  if (values.WEIGHT_ID && !isPositiveNumber(values.WEIGHT_ID))
+    fields.WEIGHT_ID = "Weight must be greater than 0.";
   if (values.NID && !/^(?:\d{10}|\d{13}|\d{17})$/.test(values.NID))
     fields.NID = "NID must contain 10, 13, or 17 digits.";
   if (values.PASSPORT_NO && !/^[A-Za-z0-9]+$/.test(values.PASSPORT_NO))
@@ -476,25 +440,7 @@ export function validateEmployeeInformation(inputValues) {
     fields.OFFICE_EMAIL = "Enter a valid office email address.";
   max(fields, "EMAIL", values.EMAIL, 150, "Email");
   max(fields, "OFFICE_EMAIL", values.OFFICE_EMAIL, 150, "Office Email");
-  required(
-    fields,
-    "DISABILITY_STATUS",
-    values.DISABILITY_STATUS,
-    "Disability Status",
-  );
   if (values.DISABILITY_STATUS === "YES") {
-    required(
-      fields,
-      "DISABILITY_TYPES",
-      values.DISABILITY_TYPES,
-      "Disability Type",
-    );
-    required(
-      fields,
-      "HAS_NATIONAL_DISABILITY_ID",
-      values.HAS_NATIONAL_DISABILITY_ID,
-      "National Disability ID selection",
-    );
     max(
       fields,
       "DISABILITY_DETAILS",
@@ -503,12 +449,6 @@ export function validateEmployeeInformation(inputValues) {
       "Disability Details",
     );
     if (values.HAS_NATIONAL_DISABILITY_ID === "YES") {
-      required(
-        fields,
-        "NATIONAL_DISABILITY_ID",
-        values.NATIONAL_DISABILITY_ID,
-        "National Disability ID",
-      );
       max(
         fields,
         "NATIONAL_DISABILITY_ID",

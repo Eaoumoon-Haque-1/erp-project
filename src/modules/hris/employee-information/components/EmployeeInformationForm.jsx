@@ -87,6 +87,7 @@ function EmployeeInformationForm({
   onRemoveRow,
   onReorderRows,
   referenceOptions = {},
+  readOnly = false,
 }) {
   const fieldErrors = errors.fields || {};
   const {
@@ -114,6 +115,9 @@ function EmployeeInformationForm({
   const forSelectedGroup = (items) => items.filter(
     (item) => !selectedGroupId || !item.bgId || item.bgId === selectedGroupId,
   );
+  const groupLookupOptions = (items) => selectedGroupId
+    ? items.filter((item) => item.bgId === selectedGroupId)
+    : [];
   const officer = reportingOfficerOptions.find(
     (item) => item.value === values.REPORTING_OFFICER_ID,
   );
@@ -123,7 +127,11 @@ function EmployeeInformationForm({
       !item.businessUnitId ||
       item.businessUnitId === values.BUSINESS_UNIT_ID,
   );
-  const designations = forSelectedGroup(designationOptions);
+  const designations = forSelectedGroup(designationOptions).filter(
+    (item) =>
+      item.businessUnitId === values.BUSINESS_UNIT_ID &&
+      item.departmentId === values.DEPARTMENT_ID,
+  );
   const reportingOfficers = forSelectedGroup(reportingOfficerOptions);
   const selectedEmploymentStatus = employmentStatusOptions.find(
     (item) => item.value === values.EMPLOYMENT_STATUS,
@@ -138,6 +146,8 @@ function EmployeeInformationForm({
       error={fieldErrors[name]}
       onChange={onChange}
       {...props}
+      readOnly={readOnly || props.readOnly}
+      disabled={readOnly || props.disabled}
     />
   );
 
@@ -219,7 +229,8 @@ function EmployeeInformationForm({
     {
       key: "COUNTRY_ID",
       label: "Country",
-      options: toSelectOptions(countryOptions),
+      options: toSelectOptions(groupLookupOptions(countryOptions)),
+      disabled: !values.BUSINESS_UNIT_ID,
       className: "erp-table-cell-wide",
     },
     {
@@ -331,7 +342,7 @@ function EmployeeInformationForm({
               maxLength: 150,
               placeholder: "Enter employee name",
             })}
-            {field("EMPLOYEE_ID", "Employee ID", {
+            {field("EMPLOYEE_ID", "Employee Code", {
               required: true,
               readOnly: true,
             })}
@@ -348,36 +359,31 @@ function EmployeeInformationForm({
             {field("DESIGNATION_ID", "Designation", {
               required: true,
               options: designations,
+              disabled: !values.BUSINESS_UNIT_ID || !values.DEPARTMENT_ID,
             })}
             {field("JOINING_DATE", "Joining Date", {
-              required: true,
               type: "date",
             })}
             {field("EMPLOYMENT_TYPE_ID", "Employment Type", {
-              required: true,
               options: employmentTypeOptions,
             })}
             {field("EMPLOYMENT_STATUS", "Employment Status", {
-              required: true,
               options: employmentStatusOptions,
             })}
             {field("CONFIRMATION_DATE", "Confirmation Date", { type: "date" })}
             {field("PROBATIONARY_PERIOD", "Probationary Period", {
-              required: true,
               type: "number",
               min: "1",
               step: "1",
               placeholder: "Enter days",
             })}
             {field("NOTICE_PERIOD", "Notice Period", {
-              required: true,
               type: "number",
               min: "0",
               step: "1",
               placeholder: "Enter days",
             })}
             {field("SEPARATION_DATE", "Separation Date", {
-              required: isSeparated,
               type: "date",
               disabled: !isSeparated,
             })}
@@ -387,6 +393,7 @@ function EmployeeInformationForm({
             error={fieldErrors.PHOTO}
             inputRef={photoInputRef}
             onChange={onChange}
+            readOnly={readOnly}
           />
         </div>
       </EmployeeSectionCard>
@@ -459,7 +466,6 @@ function EmployeeInformationForm({
             <EmployeeSectionCard title={"Reporting Officer"}>
               <Grid>
                 {field("REPORTING_OFFICER_ID", "Reporting Officer", {
-                  required: true,
                   options: reportingOfficers.map((item) => ({
                     value: item.value,
                     label: `${item.employeeId} â€” ${item.name}`,
@@ -488,17 +494,18 @@ function EmployeeInformationForm({
                 {/* {field('BIRTH_PLACE', 'Birth Place', { required: true, maxLength: 150 })} */}
                 {field("GENDER_ID", "Gender", {
                   // required: true,
-                  options: toSelectOptions(forSelectedGroup(genderOptions)),
+                  options: toSelectOptions(genderOptions),
                 })}
                 {field("RELIGION_ID", "Religion", {
                   // required: true,
-                  options: toSelectOptions(forSelectedGroup(religionOptions)),
+                  options: toSelectOptions(religionOptions),
                 })}
                 {field("NATIONALITY_ID", "Nationality", {
                   // required: true,
-                  options: toSelectOptions(forSelectedGroup(nationalityOptions)),
+                  options: toSelectOptions(groupLookupOptions(nationalityOptions)),
+                  disabled: !values.BUSINESS_UNIT_ID,
                 })}
-                {field("HEIGHT_ID", "Height (Meters)", {
+                {field("HEIGHT_ID", "Height (Feet)", {
                   // required: true,
                 })}
                 {field("WEIGHT_ID", "Weight (Kg)", {
@@ -506,7 +513,7 @@ function EmployeeInformationForm({
                 })}
                 {field("BLOOD_GROUP", "Blood Group", {
                   // required: true,
-                  options: toSelectOptions(forSelectedGroup(bloodGroupOptions)),
+                  options: toSelectOptions(bloodGroupOptions),
                 })}
                 {field("HIGHEST_EDUCATION_ID", "Highest Education", {
                   // required: true,
@@ -529,13 +536,11 @@ function EmployeeInformationForm({
             <EmployeeSectionCard title={"Disability"}>
               <Grid>
                 {field("DISABILITY_STATUS", "Disability Status", {
-                  required: true,
                   options: yesNoOptions,
                 })}
                 {field("DISABILITY_TYPES", "Disability Type", {
-                  required: values.DISABILITY_STATUS === "YES",
-                  options: toSelectOptions(forSelectedGroup(disabilityTypeOptions)),
-                  disabled: values.DISABILITY_STATUS !== "YES",
+                  options: toSelectOptions(groupLookupOptions(disabilityTypeOptions)),
+                  disabled: !values.BUSINESS_UNIT_ID || values.DISABILITY_STATUS !== "YES",
                 })}
                 {field("DISABILITY_DETAILS", "Disability Details", {
                   textarea: true,
@@ -548,15 +553,11 @@ function EmployeeInformationForm({
                   "HAS_NATIONAL_DISABILITY_ID",
                   "National Disability ID No",
                   {
-                    required: values.DISABILITY_STATUS === "YES",
                     options: yesNoOptions,
                     disabled: values.DISABILITY_STATUS !== "YES",
                   },
                 )}
                 {field("NATIONAL_DISABILITY_ID", "National Disability ID", {
-                  required:
-                    values.DISABILITY_STATUS === "YES" &&
-                    values.HAS_NATIONAL_DISABILITY_ID === "YES",
                   maxLength: 50,
                   placeholder: "Enter National Disability ID",
                   disabled:
@@ -693,6 +694,7 @@ function EmployeeInformationForm({
               onReorder={(sourceIndex, targetIndex) =>
                 onReorderRows("education", sourceIndex, targetIndex)
               }
+              readOnly={readOnly}
             />
           )}
           {activeTab === "training" && (
@@ -711,6 +713,7 @@ function EmployeeInformationForm({
               onReorder={(sourceIndex, targetIndex) =>
                 onReorderRows("training", sourceIndex, targetIndex)
               }
+              readOnly={readOnly}
             />
           )}
           {activeTab === "certification" && (
@@ -729,6 +732,7 @@ function EmployeeInformationForm({
               onReorder={(sourceIndex, targetIndex) =>
                 onReorderRows("certification", sourceIndex, targetIndex)
               }
+              readOnly={readOnly}
             />
           )}
           {activeTab === "experience" && (
@@ -747,6 +751,7 @@ function EmployeeInformationForm({
               onReorder={(sourceIndex, targetIndex) =>
                 onReorderRows("jobExperience", sourceIndex, targetIndex)
               }
+              readOnly={readOnly}
             />
           )}
         </div>

@@ -3,7 +3,7 @@
  * Sections: local display/interaction helpers and the exported controlled component.
  * Keep page navigation and API persistence in the owning page unless this component is the workflow boundary.
  */
-function EmployeePhotoField({ previewUrl, error, inputRef, onChange }) {
+function EmployeePhotoField({ previewUrl, error, inputRef, onChange, readOnly = false }) {
   return (
     <div className={'erp-employee-photo-field'}>
       <span className={'erp-field-label'}>Employee's Photo</span>
@@ -19,19 +19,21 @@ function EmployeePhotoField({ previewUrl, error, inputRef, onChange }) {
           </div>
         )}
       </div>
-      <label className={'erp-field-label'} htmlFor={'PHOTO'}>Upload Image</label>
-      <input
-        ref={inputRef}
-        id={'PHOTO'}
-        name={'PHOTO'}
-        type={'file'}
-        className={['erp-form-control erp-file-control', error ? 'erp-form-control-invalid' : ''].join(' ')}
-        accept={'.jpg,.jpeg,.png,image/jpeg,image/png'}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? 'PHOTO-error' : 'PHOTO-help'}
-        onChange={onChange}
-      />
-      <p id={'PHOTO-help'} className={'erp-field-help'}>JPG, JPEG, or PNG; maximum 2 MB.</p>
+      {!readOnly && <>
+        <label className={'erp-field-label'} htmlFor={'PHOTO'}>Upload Image</label>
+        <input
+          ref={inputRef}
+          id={'PHOTO'}
+          name={'PHOTO'}
+          type={'file'}
+          className={['erp-form-control erp-file-control', error ? 'erp-form-control-invalid' : ''].join(' ')}
+          accept={'.jpg,.jpeg,.png,image/jpeg,image/png'}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'PHOTO-error' : 'PHOTO-help'}
+          onChange={onChange}
+        />
+        <p id={'PHOTO-help'} className={'erp-field-help'}>JPG, JPEG, or PNG; maximum 2 MB.</p>
+      </>}
       {error && <p id={'PHOTO-error'} className={'erp-field-error'}>{error}</p>}
     </div>
   )

@@ -34,7 +34,7 @@ function parseDateRange(value) {
   return [parseDate(start), parseDate(end)];
 }
 
-function DateRangeControl({ column, row, inputId, error, onChange }) {
+function DateRangeControl({ column, row, inputId, error, onChange, readOnly }) {
   const [startDate, endDate] = parseDateRange(row[column.key]);
 
   return (
@@ -51,6 +51,7 @@ function DateRangeControl({ column, row, inputId, error, onChange }) {
       strictParsing
       placeholderText={"DD/MM/YYYY - DD/MM/YYYY"}
       isClearable
+      disabled={readOnly}
       aria-invalid={Boolean(error)}
       onChange={(dates) => {
         const [nextStartDate, nextEndDate] = dates || [];
@@ -64,7 +65,7 @@ function DateRangeControl({ column, row, inputId, error, onChange }) {
   );
 }
 
-function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
+function RecordControl({ column, row, rowIndex, inputId, error, onChange, readOnly }) {
   if (column.type === "checkbox") {
     return (
       <label className={"erp-table-checkbox"}>
@@ -73,6 +74,7 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
           name={column.key}
           type={"checkbox"}
           checked={row[column.key] === "1"}
+          disabled={readOnly}
           onChange={(event) =>
             onChange(rowIndex, column.key, event.target.checked ? "1" : "0")
           }
@@ -89,6 +91,7 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
         row={row}
         inputId={inputId}
         error={error}
+        readOnly={readOnly}
         onChange={(value) => onChange(rowIndex, column.key, value)}
       />
     );
@@ -103,6 +106,7 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
         value={row[column.key]}
         min={typeof column.min === "function" ? column.min(row) : column.min}
         disabled={column.disabled?.(row)}
+        readOnly={readOnly}
         aria-invalid={Boolean(error)}
         onChange={(event) =>
           onChange(rowIndex, column.key, event.target.value)
@@ -112,12 +116,16 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
   }
 
   if (column.options) {
+    const columnDisabled = typeof column.disabled === 'function'
+      ? column.disabled(row)
+      : column.disabled
     return (
       <select
         id={inputId}
         name={column.key}
         className={controlClass(error)}
         value={row[column.key]}
+        disabled={readOnly || columnDisabled}
         aria-invalid={Boolean(error)}
         onChange={(event) => onChange(rowIndex, column.key, event.target.value)}
       >
@@ -140,6 +148,7 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
         value={row[column.key]}
         maxLength={column.maxLength}
         placeholder={column.placeholder}
+        readOnly={readOnly}
         aria-invalid={Boolean(error)}
         onChange={(event) => onChange(rowIndex, column.key, event.target.value)}
       />
@@ -158,6 +167,7 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange }) {
       step={column.step}
       inputMode={column.digitsOnly ? "numeric" : undefined}
       placeholder={column.placeholder}
+      readOnly={readOnly}
       disabled={column.disabled?.(row)}
       aria-invalid={Boolean(error)}
       onChange={(event) => {
@@ -181,6 +191,7 @@ function RepeatableEmployeeTable({
   onRemove,
   onReorder,
   embedded = false,
+  readOnly = false,
 }) {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -206,7 +217,7 @@ function RepeatableEmployeeTable({
                   {column.required && <span className={"erp-required"}>*</span>}
                 </th>
               ))}
-              <th className={"erp-action-column"}>Action</th>
+              {!readOnly && <th className={"erp-action-column"}>Action</th>}
             </tr>
           </thead>
           <tbody>
@@ -217,6 +228,7 @@ function RepeatableEmployeeTable({
                   dragOverIndex === rowIndex ? "erp-table-row-drag-over" : ""
                 }
                 onDragOver={(event) => {
+                  if (readOnly) return
                   event.preventDefault();
                   setDragOverIndex(rowIndex);
                 }}
@@ -227,7 +239,7 @@ function RepeatableEmployeeTable({
                 }}
               >
                 <td className={"erp-number-column"} data-label={"Record"}>
-                  <button
+                  {!readOnly && <button
                     type={"button"}
                     className={"erp-row-drag-handle"}
                     draggable
@@ -235,7 +247,7 @@ function RepeatableEmployeeTable({
                     onDragStart={() => setDraggedIndex(rowIndex)}
                   >
                     ::
-                  </button>
+                  </button>}
                   {rowIndex + 1}
                 </td>
                 {columns.map((column) => {
@@ -254,12 +266,13 @@ function RepeatableEmployeeTable({
                         inputId={inputId}
                         error={error}
                         onChange={onChange}
+                        readOnly={readOnly}
                       />
                       {error && <p className={"erp-field-error"}>{error}</p>}
                     </td>
                   );
                 })}
-                <td className={"erp-action-column"} data-label={"Action"}>
+                {!readOnly && <td className={"erp-action-column"} data-label={"Action"}>
                   <button
                     type={"button"}
                     className={"erp-remove-row-button"}
@@ -268,19 +281,19 @@ function RepeatableEmployeeTable({
                   >
                     ×
                   </button>
-                </td>
+                </td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <button
+      {!readOnly && <button
         type={"button"}
         className={"primary-button erp-add-row-button"}
         onClick={onAdd}
       >
         + Add More
-      </button>
+      </button>}
     </>
   );
 

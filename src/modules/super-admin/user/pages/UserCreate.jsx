@@ -115,7 +115,10 @@ function UserCreate() {
         ? { TO_DATE: getUserValidityToDate(nextValue) }
         : {}),
     }))
-    if (name === 'BG_ID') setBusinessUnitRows([])
+    if (name === 'BG_ID') {
+      setBusinessUnitRows([])
+      setEmployeeRows([])
+    }
     if (name === 'STATUS') {
       setEmployeeRows((current) => applyUserStatusToEmployeeRows(current, nextValue))
     }
@@ -125,6 +128,30 @@ function UserCreate() {
       ...(name === 'BG_ID' ? { BU_ID: undefined } : {}),
       ...(name === 'FROM_DATE' ? { TO_DATE: undefined } : {}),
     }))
+  }
+
+  const visibleEmployeeOptions = employeeOptions.filter(
+    (option) => !values.BG_ID || option.bgId === values.BG_ID,
+  )
+  const selectedEmployee = (
+    employeeRows.find((row) => row.STATUS === '1') || employeeRows.at(-1)
+  )
+
+  const stageEmployee = (row) => {
+    if (!row || employeeRows.some((employee) => employee.EMPL_ID === row.EMPL_ID)) return
+    const activeFrom = localDateString()
+    setEmployeeRows((current) => [
+      ...current.map((employee) => employee.STATUS === '1'
+        ? { ...employee, ACTIVE_TO: previousDate(activeFrom), STATUS: '0' }
+        : employee),
+      {
+        ...row,
+        ACTIVE_FROM: activeFrom,
+        ACTIVE_TO: values.STATUS === '1' ? '' : activeFrom,
+        STATUS: values.STATUS === '1' ? '1' : '0',
+      },
+    ])
+    setErrors((current) => ({ ...current, ASSIGNMENTS: undefined }))
   }
 
   const handleSubmit = async (event) => {
@@ -202,9 +229,23 @@ function UserCreate() {
 
   return (
     <FormPage title={'User Create'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} messageTone={'error'} submitting={submitting}>
-      <UserForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} unitsLoading={unitsLoading} userNameRef={userNameRef} businessUnitOptions={businessUnitOptions} roleOptions={roleOptions} userTypeOptions={userTypeOptions} requirePassword onChange={handleChange} />
+      <UserForm
+        values={values}
+        errors={errors}
+        groupOptions={groupOptions}
+        groupsLoading={groupsLoading}
+        unitsLoading={unitsLoading}
+        userNameRef={userNameRef}
+        businessUnitOptions={businessUnitOptions}
+        roleOptions={roleOptions}
+        userTypeOptions={userTypeOptions}
+        employeeDisplayValue={selectedEmployee?.DISPLAY_NAME || ''}
+        showEmployeeField
+        requirePassword
+        onChange={handleChange}
+      />
       <UserAssignmentTabs
-        employeeOptions={employeeOptions.filter((option) => !values.BG_ID || option.bgId === values.BG_ID)}
+        employeeOptions={visibleEmployeeOptions}
         businessUnitOptions={businessUnitOptions}
         employeeRows={employeeRows}
         businessUnitRows={businessUnitRows}
@@ -214,21 +255,7 @@ function UserCreate() {
         activeTab={activeAssignmentTab}
         generalError={errors.ASSIGNMENTS}
         onTabChange={setActiveAssignmentTab}
-        onAddEmployee={(row) => {
-          const activeFrom = localDateString()
-          setEmployeeRows((current) => [
-            ...current.map((employee) => employee.STATUS === '1'
-              ? { ...employee, ACTIVE_TO: previousDate(activeFrom), STATUS: '0' }
-              : employee),
-            {
-              ...row,
-              ACTIVE_FROM: activeFrom,
-              ACTIVE_TO: values.STATUS === '1' ? '' : activeFrom,
-              STATUS: values.STATUS === '1' ? '1' : '0',
-            },
-          ])
-          setErrors((current) => ({ ...current, ASSIGNMENTS: undefined }))
-        }}
+        onAddEmployee={stageEmployee}
         onRemoveEmployee={(indexToRemove) =>
           setEmployeeRows((current) =>
             applyUserStatusToEmployeeRows(

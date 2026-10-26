@@ -84,13 +84,13 @@ function TextField({ name, label, values, errors, inputRef, onChange, digitsOnly
   )
 }
 
-function SelectField({ name, label, values, errors, options, onChange, disabled = false, placeholder = 'Select...' }) {
+function SelectField({ name, label, values, errors, options, onChange, disabled = false, placeholder = 'Select...', required = true }) {
   return (
     <div>
       <label className={'erp-field-label'} htmlFor={name}>
-        {label}<span className={'erp-required'} aria-hidden={'true'}>*</span>
+        {label}{required && <span className={'erp-required'} aria-hidden={'true'}>*</span>}
       </label>
-      <select id={name} name={name} className={fieldClass(errors[name])} value={values[name]} required disabled={disabled} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined} onChange={onChange}>
+      <select id={name} name={name} className={fieldClass(errors[name])} value={values[name]} required={required} disabled={disabled} aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined} onChange={onChange}>
         <option value={''}>{placeholder}</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -109,6 +109,8 @@ function UserForm({
   businessUnitOptions = [],
   roleOptions = [],
   userTypeOptions = [],
+  employeeDisplayValue = '',
+  showEmployeeField = false,
   requirePassword = true,
   onChange,
 }) {
@@ -129,6 +131,18 @@ function UserForm({
       <TextField name={'FROM_DATE'} label={'Validate From Date'} values={values} errors={errors} type={'date'} onChange={onChange} />
       <TextField name={'TO_DATE'} label={'Validate To Date'} values={values} errors={errors} type={'date'} min={values.FROM_DATE || undefined} onChange={onChange} />
       <SelectField name={'ROLE_ID'} label={'User Role'} values={values} errors={errors} options={roleOptions} onChange={onChange} />
+      {showEmployeeField && (
+        <TextField
+          name={'ASSIGNED_EMPLOYEE_NAME'}
+          label={'Employee Name'}
+          values={{ ASSIGNED_EMPLOYEE_NAME: employeeDisplayValue }}
+          errors={errors}
+          type={'text'}
+          placeholder={'Select an employee below'}
+          readOnly
+          onChange={onChange}
+        />
+      )}
       <div>
         <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
         <label className={'erp-checkbox-field'}>

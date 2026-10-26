@@ -11,12 +11,16 @@ const isNotificationType = (record) => [record.typeName, record.code]
   .some((name) => name === 'notificationtype' || name.includes('mobilenotification'))
 
 export async function loadMobileNotificationReferences() {
-  const [businessUnits, departments, employees, lookupTypes, lookupValues] = await Promise.all([
+  const [businessUnits, departments, employees, lookupTypes] = await Promise.all([
     businessUnitsApi.list(), departmentsApi.list(), employeesApi.list(),
-    hrLookupTypesApi.list(), hrLookupValuesApi.list(),
+    hrLookupTypesApi.list(),
   ])
-  const notificationTypeIds = new Set(lookupTypes.filter(isNotificationType).map((item) => String(item.id)))
-  const notificationTypes = lookupValues.filter((item) => notificationTypeIds.has(String(item.typeId)))
+  const notificationLookupTypes = lookupTypes.filter(isNotificationType)
+  const notificationTypes = await hrLookupValuesApi.getByTypesForBusinessGroups(
+    notificationLookupTypes,
+    businessUnits.map((unit) => unit.bgId),
+    { activeOnly: true },
+  )
   return {
     businessUnits, departments, employees, notificationTypes,
     businessUnitNames: new Map(businessUnits.map((item) => [String(item.id), item.businessUnit])),

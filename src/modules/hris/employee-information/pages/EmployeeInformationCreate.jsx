@@ -63,6 +63,24 @@ const emptyErrors = () => ({
   jobExperience: [],
 });
 
+function getNextEmployeeCode(employees = []) {
+  const codes = employees
+    .map((employee) => String(employee.employeeCode ?? '').trim())
+    .map((code) => code.match(/^EMP-(\d+)$/i))
+    .filter(Boolean)
+    .map((match) => ({
+      number: Number(match[1]),
+      width: match[1].length,
+    }))
+
+  if (!codes.length) return 'EMP-0001'
+
+  const latest = codes.reduce((highest, current) => (
+    current.number > highest.number ? current : highest
+  ))
+  return `EMP-${String(latest.number + 1).padStart(latest.width, '0')}`
+}
+
 const visibleEmployeeFields = new Set([
   "BUSINESS_UNIT_ID",
   "EMPLOYEE_NAME",
@@ -94,6 +112,8 @@ const tabFields = {
     "GENDER_ID",
     "RELIGION_ID",
     "NATIONALITY_ID",
+    "HEIGHT_ID",
+    "WEIGHT_ID",
     "BLOOD_GROUP",
     "HIGHEST_EDUCATION_ID",
     "NID",
@@ -197,6 +217,11 @@ function EmployeeInformationCreate() {
           });
           setValues(mapped);
           setOriginalValues(mapped);
+        } else {
+          setValues((current) => ({
+            ...current,
+            EMPLOYEE_ID: getNextEmployeeCode(referenceResult.references.employees),
+          }));
         }
       })
       .catch((error) => getApiErrorMessage(error, `Unable to load ${isEdit ? "Employee Information" : "employee dropdown options"}.`));
@@ -218,8 +243,16 @@ function EmployeeInformationCreate() {
           }
         : {}),
       ...(name === "BUSINESS_UNIT_ID"
-        ? { DEPARTMENT_ID: "", DESIGNATION_ID: "", REPORTING_OFFICER_ID: "" }
+        ? {
+            DEPARTMENT_ID: "",
+            DESIGNATION_ID: "",
+            REPORTING_OFFICER_ID: "",
+            NATIONALITY_ID: "",
+            DISABILITY_TYPES: "",
+            training: current.training.map((row) => ({ ...row, COUNTRY_ID: "" })),
+          }
         : {}),
+      ...(name === "DEPARTMENT_ID" ? { DESIGNATION_ID: "" } : {}),
       ...(name === "MARITAL_STATUS" && value !== "Married"
         ? { SPOUSE_NAME: "", DATE_OF_MARRIAGE: "" }
         : {}),
@@ -357,7 +390,11 @@ function EmployeeInformationCreate() {
         buId: "BUSINESS_UNIT_ID", employeeName: "EMPLOYEE_NAME", employeeCode: "EMPLOYEE_ID",
         deptId: "DEPARTMENT_ID", desigId: "DESIGNATION_ID", employmentTypeId: "EMPLOYMENT_TYPE_ID",
         joiningDate: "JOINING_DATE", employmentStatusId: "EMPLOYMENT_STATUS",
-        reportingOfficerId: "REPORTING_OFFICER_ID", mobileNo: "PERSONAL_MOBILE_NO", email: "EMAIL",
+        reportingOfficerId: "REPORTING_OFFICER_ID", gender: "GENDER_ID", religion: "RELIGION_ID",
+        bloodGroup: "BLOOD_GROUP", height: "HEIGHT_ID", weight: "WEIGHT_ID",
+        district: "DISTRICT", thana: "THANA", officeMobileNo: "OFFICE_MOBILE_NO",
+        personalMobileNo: "PERSONAL_MOBILE_NO", emergencyContact: "EMERGENCY_MOBILE_NO",
+        personalEmail: "EMAIL", officeEmail: "OFFICE_EMAIL",
       });
       setErrors((current) => ({ ...current, fields: { ...current.fields, ...normalized.fieldErrors } }));
       getApiErrorMessage(error, normalized.message);

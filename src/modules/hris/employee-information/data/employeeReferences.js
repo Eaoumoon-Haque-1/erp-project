@@ -2,6 +2,7 @@
 import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
 import { departmentsApi } from '../../department/api/departmentApi'
 import { degreesApi } from '../../degree-education-mapping/api/degreeApi'
+import { designationDepartmentMappingsApi } from '../../designation-department-mapping/api/designationDepartmentMappingApi'
 import { designationsApi } from '../../designation/api/designationApi'
 import { employmentStatusesApi } from '../../employment-status/api/employmentStatusApi'
 import { employmentTypesApi } from '../../employment-type/api/employmentTypeApi'
@@ -10,16 +11,19 @@ import { hrLookupValuesApi } from '../../hr-lookup-value/api/hrLookupValueApi'
 import { levelOfEducationsApi } from '../../level-of-education/api/levelOfEducationApi'
 import { shiftsApi } from '../../shift/api/shiftApi'
 import { employeesApi } from '../api/employeeApi'
+import {
+  bloodGroupOptions as fixedBloodGroupOptions,
+  genderOptions as fixedGenderOptions,
+  religionOptions as fixedReligionOptions,
+  toSelectOptions,
+} from './employeeOptions'
 
 const normalized = (value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const active = (item) => String(item.status ?? 1) === '1'
 const option = (value, label, extra = {}) => ({ value: String(value), label: label || String(value), ...extra })
 
 const lookupAliases = {
-  genderOptions: ['gender'],
-  religionOptions: ['religion'],
   nationalityOptions: ['nationality', 'nationalities'],
-  bloodGroupOptions: ['bloodgroup'],
   disabilityTypeOptions: ['disabilitytype'],
   countryOptions: ['country', 'countries'],
 }
@@ -34,20 +38,81 @@ function lookupOptions(types, values, aliases) {
     .map((value) => option(value.id, value.value, { bgId: String(value.bgId ?? '') }))
 }
 
+function mappedBusinessUnitOptions(
+  masters,
+  mappings,
+  mappingIdKey,
+  labelKey,
+  dependency = null,
+) {
+  const masterById = new Map(
+    masters.filter(active).map((master) => [String(master.id), master]),
+  )
+  const uniqueOptions = new Map()
+
+  mappings.filter(active).forEach((mapping) => {
+    const master = masterById.get(String(mapping[mappingIdKey]))
+    if (!master || mapping.buId == null) return
+
+    const businessUnitId = String(mapping.buId)
+    const value = String(master.id)
+    const dependencyValue = dependency
+      ? String(mapping[dependency.mappingKey] ?? '')
+      : ''
+    uniqueOptions.set(`${businessUnitId}:${dependencyValue}:${value}`, option(
+      value,
+      master[labelKey],
+      {
+        bgId: String(mapping.bgId ?? master.bgId ?? ''),
+        businessUnitId,
+        ...(dependency ? { [dependency.optionKey]: dependencyValue } : {}),
+      },
+    ))
+  })
+
+  return [...uniqueOptions.values()]
+}
+
 export async function loadEmployeeReferences() {
   const [
-    businessUnits, departments, designations, employmentTypes, employmentStatuses,
-    shifts, employees, levels, degrees, lookupTypes, lookupValues,
+    businessUnits, departments, designations, departmentDesignationMappings,
+    employmentTypes, employmentStatuses, shifts, employees, levels, degrees, lookupTypes,
   ] = await Promise.all([
-    businessUnitsApi.list(), departmentsApi.list(), designationsApi.list(), employmentTypesApi.list(),
-    employmentStatusesApi.list(), shiftsApi.list(), employeesApi.list(), levelOfEducationsApi.list(),
-    degreesApi.list(), hrLookupTypesApi.list(), hrLookupValuesApi.list(),
+    businessUnitsApi.list(), departmentsApi.list(), designationsApi.list(),
+    designationDepartmentMappingsApi.list(), employmentTypesApi.list(),
+    employmentStatusesApi.list(), shiftsApi.list(), employeesApi.list(),
+    levelOfEducationsApi.list(), degreesApi.list(), hrLookupTypesApi.list(),
   ])
+
+  const relevantLookupTypes = lookupTypes.filter((type) => (
+    Object.values(lookupAliases).some((aliases) => (
+      aliases.includes(normalized(type.code)) || aliases.includes(normalized(type.typeName))
+    ))
+  ))
+  const businessGroupIds = [...new Set(businessUnits.map((unit) => String(unit.bgId ?? '')).filter(Boolean))]
+  const lookupRequests = relevantLookupTypes.flatMap((type) => {
+    const typeCode = String(type.code ?? '').trim()
+    if (!typeCode) return []
+    return businessGroupIds.map((businessGroupId) => ({ type, typeCode, businessGroupId }))
+  })
+  const lookupValueBatches = await Promise.all(lookupRequests.map(
+    ({ typeCode, businessGroupId }) => (
+      hrLookupValuesApi.getByTypeCode(typeCode, { businessGroupId, activeOnly: true })
+    ),
+  ))
+  const lookupValues = [...new Map(
+    lookupValueBatches.flatMap((batch, index) => batch.map((value) => ({
+      ...value,
+      typeId: value.typeId ?? lookupRequests[index].type.id,
+      bgId: value.bgId ?? lookupRequests[index].businessGroupId,
+    }))).map((value) => [String(value.id), value]),
+  ).values()]
 
   const references = {
     businessUnits,
     departments,
     designations,
+    departmentDesignationMappings,
     employmentTypes,
     employmentStatuses,
     shifts,
@@ -60,8 +125,22 @@ export async function loadEmployeeReferences() {
 
   const options = {
     businessUnitOptions: businessUnits.filter(active).map((item) => option(item.id, item.businessUnit, { bgId: String(item.bgId ?? '') })),
-    departmentOptions: departments.filter(active).map((item) => option(item.id, item.departmentName, { bgId: String(item.bgId ?? '') })),
-    designationOptions: designations.filter(active).map((item) => option(item.id, item.designationName, { bgId: String(item.bgId ?? '') })),
+    departmentOptions: mappedBusinessUnitOptions(
+      departments,
+      departmentDesignationMappings,
+      'deptId',
+      'departmentName',
+    ),
+    designationOptions: mappedBusinessUnitOptions(
+      designations,
+      departmentDesignationMappings,
+      'desigId',
+      'designationName',
+      { mappingKey: 'deptId', optionKey: 'departmentId' },
+    ),
+    genderOptions: toSelectOptions(fixedGenderOptions),
+    religionOptions: toSelectOptions(fixedReligionOptions),
+    bloodGroupOptions: toSelectOptions(fixedBloodGroupOptions),
     employmentTypeOptions: employmentTypes.filter(active).map((item) => option(item.id, item.typeName)),
     employmentStatusOptions: employmentStatuses.filter(active).map((item) => option(item.id, item.statusName)),
     shiftOptions: shifts.filter(active).map((item) => option(item.id, item.shiftTitle, { businessUnitId: String(item.buId ?? '') })),

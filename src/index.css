@@ -272,7 +272,7 @@
     border: 0;
     border-radius: 4px;
     background: transparent;
-    color: #475569;
+    color: #457fa6;
     font-family: Roboto, sans-serif;
     font-size: 16px;
     font-weight: 600;
@@ -292,7 +292,7 @@
 
   .health-sidebar-parent:hover {
     background: #fff;
-    color: #1e3a5f;
+    color: #345682;
     box-shadow: 0 1px 5px rgb(49 95 125 / 0.1);
   }
 
@@ -305,7 +305,7 @@
     display: block;
     padding: 5px 10px;
     border-radius: 4px;
-    color: #475569;
+    color: #2c72a1;
     font-family: Roboto, sans-serif;
     font-size: 16px;
     font-weight: 400;

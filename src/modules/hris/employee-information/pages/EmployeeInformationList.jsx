@@ -32,6 +32,18 @@ const columns = [
     ),
   },
   { key: 'BUSINESS_UNIT_NAME', label: 'Business Unit' },
+  {
+    key: 'STATUS',
+    label: 'Status',
+    render: (value) => (
+      <span className={[
+        'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
+        String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
+      ].join(' ')}>
+        {String(value) === '1' ? 'Active' : 'Inactive'}
+      </span>
+    ),
+  },
 ]
 
 function ActionButton({ label, className, onClick, children }) {
@@ -58,6 +70,33 @@ function EmployeeInformationList() {
   const [rows, setRows] = useState([])
   const [options, setOptions] = useState({})
   const [loading, setLoading] = useState(true)
+
+  const handleDelete = async (row) => {
+    try {
+      await employeesApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+      return true
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to delete Employee Information.')
+      return false
+    }
+  }
+
+  const handleStatusChange = async (row) => {
+    const nextStatus = String(row.STATUS) === '1' ? 0 : 1
+    try {
+      const updated = await employeesApi.updateStatus(row.ID, nextStatus)
+      setRows((current) => current.map((item) => (
+        item.ID === row.ID
+          ? { ...item, STATUS: String(updated?.status ?? nextStatus) }
+          : item
+      )))
+      return true
+    } catch (error) {
+      getApiErrorMessage(error, 'Unable to update Employee Information status.')
+      return false
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -95,6 +134,8 @@ function EmployeeInformationList() {
             entityName={'Employee Information'}
             onView={() => navigate(`/hris/hris-forms/employee-information/${row.ID}/view`)}
             onEdit={() => navigate(`/hris/hris-forms/employee-information/${row.ID}/edit`)}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
           />
 
           {/* 4. Human / User Profile Icon Button */}

@@ -46,17 +46,17 @@ export function getOfficeCalendarEventTypeOptions(
 }
 
 export async function loadOfficeCalendarReferences() {
-  const [businessUnits, lookupTypes, lookupValues] = await Promise.all([
+  const [businessUnits, lookupTypes] = await Promise.all([
     businessUnitsApi.list(),
     hrLookupTypesApi.list(),
-    hrLookupValuesApi.list(),
   ])
-  const eventTypeIds = new Set(
-    lookupTypes.filter(isCalendarEventType).map((type) => String(type.id)),
+  const eventLookupTypes = lookupTypes.filter(isCalendarEventType)
+  const eventTypes = await hrLookupValuesApi.getByTypesForBusinessGroups(
+    eventLookupTypes,
+    businessUnits.map((unit) => unit.bgId),
+    { activeOnly: false },
   )
-  const eventTypes = lookupValues
-    .filter((value) => eventTypeIds.has(String(value.typeId)))
-    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))
+  eventTypes.sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))
 
   return {
     businessUnits,

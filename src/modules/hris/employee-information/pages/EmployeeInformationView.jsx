@@ -1,95 +1,115 @@
-/** @file Read-only Employee Information page backed by the Employee GET endpoint. */
-import ApiRecordViewPage from '../../../../components/shared/ApiRecordViewPage'
-import { employeesApi } from '../api/employeeApi'
-import { mapEmployeeFromApi } from '../data/employeeApiMapper'
-import { createEmployeeReferenceNames, loadEmployeeReferences } from '../data/employeeReferences'
+/** @file Employee View using the same read-only layout and tabs as Create/Edit. */
+import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import PageHeader from '../../../../components/shared/PageHeader'
+import { getImageSource } from '../../../../utils/imageDataUrl'
+import { employeeProfilesApi, employeesApi } from '../api/employeeApi'
+import EmployeeField from '../components/EmployeeField'
+import EmployeeInformationForm from '../components/EmployeeInformationForm'
+import EmployeeSectionCard from '../components/EmployeeSectionCard'
+import { mapEmployeeFromApi, withProfileRows } from '../data/employeeApiMapper'
+import { loadEmployeeReferences } from '../data/employeeReferences'
+import { createInitialEmployeeValues } from '../validation/employeeInformationValidation'
 
 const basePath = '/hris/hris-forms/employee-information'
 
-async function loadEmployee(id) {
-  const [record, referenceResult] = await Promise.all([employeesApi.get(id), loadEmployeeReferences()])
-  const mapped = mapEmployeeFromApi(record)
-  const names = createEmployeeReferenceNames(referenceResult.references)
+const emptyErrors = {
+  fields: {}, education: [], training: [], certification: [], jobExperience: [],
+}
+
+function includeOption(options = [], value, label, extra = {}) {
+  if (value == null || value === '' || options.some((option) => String(option.value) === String(value))) {
+    return options
+  }
+  return [...options, { value: String(value), label: label || String(value), ...extra }]
+}
+
+function optionsForExistingRecord(referenceResult, values) {
+  const { references, options } = referenceResult
+  const byId = (records, id) => records.find((record) => String(record.id) === String(id))
+  const unit = byId(references.businessUnits, values.BUSINESS_UNIT_ID)
+  const department = byId(references.departments, values.DEPARTMENT_ID)
+  const designation = byId(references.designations, values.DESIGNATION_ID)
+  const employmentType = byId(references.employmentTypes, values.EMPLOYMENT_TYPE_ID)
+  const employmentStatus = byId(references.employmentStatuses, values.EMPLOYMENT_STATUS)
+  const reportingOfficer = byId(references.employees, values.REPORTING_OFFICER_ID)
+  const level = byId(references.levels, values.HIGHEST_EDUCATION_ID)
+  const lookupName = (id) => byId(references.lookupValues, id)?.value
+
   return {
-    ...mapped,
-    BUSINESS_UNIT_NAME: names.businessUnits.get(mapped.BUSINESS_UNIT_ID) || '',
-    DEPARTMENT_NAME: names.departments.get(mapped.DEPARTMENT_ID) || '',
-    DESIGNATION_NAME: names.designations.get(mapped.DESIGNATION_ID) || '',
-    EMPLOYMENT_TYPE_NAME: names.employmentTypes.get(mapped.EMPLOYMENT_TYPE_ID) || '',
-    EMPLOYMENT_STATUS_NAME: names.employmentStatuses.get(mapped.EMPLOYMENT_STATUS) || '',
-    SHIFT_NAME: names.shifts.get(mapped.SHIFT_ID) || '',
-    REPORTING_OFFICER_NAME: names.employees.get(mapped.REPORTING_OFFICER_ID) || '',
-    GENDER_NAME: names.lookupValues.get(mapped.GENDER_ID) || mapped.GENDER_ID,
-    RELIGION_NAME: names.lookupValues.get(mapped.RELIGION_ID) || mapped.RELIGION_ID,
-    NATIONALITY_NAME: names.lookupValues.get(mapped.NATIONALITY_ID) || mapped.NATIONALITY_ID,
-    BLOOD_GROUP_NAME: names.lookupValues.get(mapped.BLOOD_GROUP) || mapped.BLOOD_GROUP,
-    HIGHEST_EDUCATION_NAME: names.levels.get(mapped.HIGHEST_EDUCATION_ID) || mapped.HIGHEST_EDUCATION_ID,
-    DISABILITY_TYPE_NAME: names.lookupValues.get(mapped.DISABILITY_TYPES) || mapped.DISABILITY_TYPES,
+    ...options,
+    businessUnitOptions: includeOption(options.businessUnitOptions, values.BUSINESS_UNIT_ID, unit?.businessUnit),
+    departmentOptions: includeOption(options.departmentOptions, values.DEPARTMENT_ID, department?.departmentName, {
+      bgId: String(unit?.bgId ?? ''), businessUnitId: String(values.BUSINESS_UNIT_ID),
+    }),
+    designationOptions: includeOption(options.designationOptions, values.DESIGNATION_ID, designation?.designationName, {
+      bgId: String(unit?.bgId ?? ''), businessUnitId: String(values.BUSINESS_UNIT_ID),
+      departmentId: String(values.DEPARTMENT_ID),
+    }),
+    employmentTypeOptions: includeOption(options.employmentTypeOptions, values.EMPLOYMENT_TYPE_ID, employmentType?.typeName),
+    employmentStatusOptions: includeOption(options.employmentStatusOptions, values.EMPLOYMENT_STATUS, employmentStatus?.statusName),
+    reportingOfficerOptions: includeOption(options.reportingOfficerOptions, values.REPORTING_OFFICER_ID, reportingOfficer?.employeeName, {
+      employeeId: reportingOfficer?.employeeCode ?? '', name: reportingOfficer?.employeeName ?? '',
+      bgId: String(reportingOfficer?.bgId ?? ''),
+    }),
+    educationLevelOptions: includeOption(options.educationLevelOptions, values.HIGHEST_EDUCATION_ID, level?.levelOfEdu),
+    genderOptions: includeOption(options.genderOptions, values.GENDER_ID, values.GENDER_ID),
+    religionOptions: includeOption(options.religionOptions, values.RELIGION_ID, values.RELIGION_ID),
+    nationalityOptions: includeOption(options.nationalityOptions, values.NATIONALITY_ID, lookupName(values.NATIONALITY_ID)),
+    bloodGroupOptions: includeOption(options.bloodGroupOptions, values.BLOOD_GROUP, values.BLOOD_GROUP),
+    disabilityTypeOptions: includeOption(options.disabilityTypeOptions, values.DISABILITY_TYPES, lookupName(values.DISABILITY_TYPES)),
   }
 }
 
-const fields = [
-  { key: 'EMPLOYEE_NAME', label: 'Employee Name' },
-  { key: 'EMPLOYEE_ID', label: 'Employee ID' },
-  { key: 'PHOTO', label: 'Photo', type: 'image' },
-  { key: 'BUSINESS_UNIT_NAME', label: 'Business Unit' },
-  { key: 'DEPARTMENT_NAME', label: 'Department' },
-  { key: 'DESIGNATION_NAME', label: 'Designation' },
-  { key: 'EMPLOYMENT_TYPE_NAME', label: 'Employment Type' },
-  { key: 'EMPLOYMENT_STATUS_NAME', label: 'Employment Status' },
-  { key: 'JOINING_DATE', label: 'Joining Date' },
-  { key: 'CONFIRMATION_DATE', label: 'Confirmation Date' },
-  { key: 'PROBATIONARY_PERIOD', label: 'Probationary Period' },
-  { key: 'NOTICE_PERIOD', label: 'Notice Period' },
-  { key: 'SEPARATION_DATE', label: 'Separation Date' },
-  { key: 'SHIFT_NAME', label: 'Shift' },
-  { key: 'OFFICE_IN_TIME', label: 'Office In Time' },
-  { key: 'OFFICE_OUT_TIME', label: 'Office Out Time' },
-  { key: 'OVERTIME_ALLOWANCE', label: 'Overtime Allowance' },
-  { key: 'REPORTING_OFFICER_NAME', label: 'Reporting Officer' },
-  { key: 'FATHER_NAME', label: "Father's Name" },
-  { key: 'MOTHER_NAME', label: "Mother's Name" },
-  { key: 'SPOUSE_NAME', label: 'Spouse Name' },
-  { key: 'DATE_OF_BIRTH', label: 'Date of Birth' },
-  { key: 'BIRTH_PLACE', label: 'Birth Place' },
-  { key: 'GENDER_NAME', label: 'Gender' },
-  { key: 'MARITAL_STATUS', label: 'Marital Status' },
-  { key: 'DATE_OF_MARRIAGE', label: 'Date of Marriage' },
-  { key: 'RELIGION_NAME', label: 'Religion' },
-  { key: 'NATIONALITY_NAME', label: 'Nationality' },
-  { key: 'BLOOD_GROUP_NAME', label: 'Blood Group' },
-  { key: 'HIGHEST_EDUCATION_NAME', label: 'Highest Education' },
-  { key: 'NID', label: 'NID' },
-  { key: 'PASSPORT_NO', label: 'Passport No' },
-  { key: 'DRIVING_LICENSE_NO', label: 'Driving License No' },
-  { key: 'NO_OF_CHILD', label: 'No. of Child' },
-  { key: 'MALE_CHILD', label: 'Male Child' },
-  { key: 'FEMALE_CHILD', label: 'Female Child' },
-  { key: 'PRESENT_ADDRESS', label: 'Present Address', wide: true },
-  { key: 'PERMANENT_ADDRESS', label: 'Permanent Address', wide: true },
-  { key: 'PERSONAL_MOBILE_NO', label: 'Mobile No' },
-  { key: 'WHATSAPP_NO', label: 'WhatsApp No' },
-  { key: 'RESIDENCE_PHONE', label: 'Residence Phone' },
-  { key: 'EMAIL', label: 'Email' },
-  { key: 'FAX', label: 'Fax' },
-  { key: 'DISABILITY_STATUS', label: 'Disability Status' },
-  { key: 'DISABILITY_TYPE_NAME', label: 'Disability Type' },
-  { key: 'DISABILITY_DETAILS', label: 'Disability Details', wide: true },
-  { key: 'HAS_NATIONAL_DISABILITY_ID', label: 'Has National Disability ID' },
-  { key: 'NATIONAL_DISABILITY_ID', label: 'National Disability ID' },
-  { key: 'STATUS', label: 'Status', type: 'status' },
-]
-
-const auditFields = [
-  { key: 'CREATED_BY', label: 'Created By' },
-  { key: 'CREATED_AT', label: 'Created At' },
-  { key: 'UPDATED_BY', label: 'Updated By' },
-  { key: 'UPDATED_AT', label: 'Updated At' },
-]
-
 function EmployeeInformationView() {
-  return <ApiRecordViewPage title={'Employee Information View'} param={'employeeId'} listTo={basePath}
-    editTo={(id) => `${basePath}/${id}/edit`} loader={loadEmployee} fields={fields} auditFields={auditFields} />
+  const { employeeId } = useParams()
+  const [activeTab, setActiveTab] = useState('personal')
+  const [values, setValues] = useState(createInitialEmployeeValues)
+  const [referenceOptions, setReferenceOptions] = useState({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      employeesApi.get(employeeId), employeeProfilesApi.getEducations(employeeId),
+      employeeProfilesApi.getTrainings(employeeId), employeeProfilesApi.getCertifications(employeeId),
+      employeeProfilesApi.getJobExperiences(employeeId), loadEmployeeReferences(),
+    ])
+      .then(([record, educations, trainings, certifications, jobExperiences, referenceResult]) => {
+        if (!active) return
+        const mapped = withProfileRows(mapEmployeeFromApi(record), {
+          educations, trainings, certifications, jobExperiences,
+        })
+        setValues(mapped)
+        setReferenceOptions(optionsForExistingRecord(referenceResult, mapped))
+      })
+      .catch((error) => getApiErrorMessage(error, 'Unable to load Employee Information.'))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [employeeId])
+
+  return (
+    <div className={'erp-list-page erp-employee-page'}>
+      <PageHeader title={'Employee Information View'} actionLabel={'List'} actionTo={basePath}
+        actions={[{ label: 'Edit', to: `${basePath}/${employeeId}/edit` }]} />
+
+      {loading ? <p className={'erp-empty-state'}>Loading Employee Information...</p> : <>
+        <EmployeeInformationForm values={values} errors={emptyErrors} activeTab={activeTab}
+          previewUrl={getImageSource(values.PHOTO)} onTabChange={setActiveTab}
+          referenceOptions={referenceOptions} readOnly />
+
+        <EmployeeSectionCard title={'Audit Information'}>
+          <div className={'erp-form-grid erp-employee-form-grid'}>
+            <EmployeeField name={'CREATED_BY'} label={'Created By'} value={values.CREATED_BY} readOnly />
+            <EmployeeField name={'CREATED_AT'} label={'Created At'} value={values.CREATED_AT} readOnly />
+            <EmployeeField name={'UPDATED_BY'} label={'Updated By'} value={values.UPDATED_BY} readOnly />
+            <EmployeeField name={'UPDATED_AT'} label={'Updated At'} value={values.UPDATED_AT} readOnly />
+          </div>
+        </EmployeeSectionCard>
+      </>}
+    </div>
+  )
 }
 
 export default EmployeeInformationView
