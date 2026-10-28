@@ -47,14 +47,17 @@ function MobileNotificationList() {
       options: references?.businessUnits.map((item) => ({ value: String(item.id), label: item.businessUnit })) || [],
       matches: (row, value) => row.BU_ID.includes(value) },
     { key: 'DEPT_ID', label: 'Search by Department', placeholder: '--Search by Department--',
-      options: references?.departments.map((item) => ({ value: String(item.id), label: item.departmentName })) || [],
+      searchable: true,
+      options: references?.departments
+        .filter((item) => rows.some((row) => row.DEPT_ID.includes(String(item.id))))
+        .map((item) => ({ value: String(item.id), label: item.departmentName })) || [],
       matches: (row, value) => row.DEPT_ID.includes(value) },
     { key: 'NOTIFICATION_TYPE', label: 'Search by Notification Type', placeholder: '--Search by Notification Type--',
       options: references?.notificationTypes.map((item) => ({ value: String(item.id), label: item.value })) || [] },
     { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [
       { label: 'Active', value: '1' }, { label: 'Inactive', value: '0' },
     ] },
-  ], [references])
+  ], [references, rows])
 
   const handleDelete = async (row) => {
     await mobileNotificationsApi.remove(row.ID)

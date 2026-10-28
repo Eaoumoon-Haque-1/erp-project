@@ -4,6 +4,7 @@
  * Changing this file can affect many features; keep props backward-compatible when possible.
  */
 import { useMemo, useState } from 'react'
+import AutocompleteFilter from './AutocompleteFilter'
 import { getEntityNameFromTitle } from './actionAlerts'
 import ListActionContext from './ListActionContext'
 import PageHeader from './PageHeader'
@@ -90,12 +91,30 @@ function ListPage({
           {filters.map((filter) => {
             const options = typeof filter.options === 'function'
               ? filter.options(filterValues)
-              : filter.options
+              : filter.options || (filter.searchable
+                ? [...new Map(rows
+                  .filter((row) => row[filter.key] != null && String(row[filter.key]).trim())
+                  .map((row) => {
+                    const optionValue = String(row[filter.optionValueKey || filter.key])
+                    const optionLabel = String(row[filter.optionLabelKey || filter.key])
+                    return [optionValue, { value: optionValue, label: optionLabel }]
+                  })).values()]
+                : undefined)
             const disabled = typeof filter.disabled === 'function'
               ? filter.disabled(filterValues)
               : filter.disabled || (filter.dependsOn && !filterValues[filter.dependsOn])
 
-            return options ? (
+            return filter.searchable && options ? (
+              <AutocompleteFilter
+                key={`${filter.key}:${filterValues[filter.key] ?? ''}`}
+                label={filter.label}
+                placeholder={filter.placeholder}
+                options={options}
+                value={filterValues[filter.key] ?? ''}
+                disabled={disabled}
+                onChange={(value) => updateFilter(filter.key, value)}
+              />
+            ) : options ? (
               <select
                 key={filter.key}
                 className={'erp-list-control'}

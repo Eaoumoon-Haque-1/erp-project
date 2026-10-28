@@ -32,6 +32,7 @@ function DepartmentEdit() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const departmentNameRef = useRef(null)
   const [department, setDepartment] = useState(null)
   const [values, setValues] = useState(initialDepartmentValues)
@@ -348,6 +349,7 @@ function DepartmentEdit() {
           businessGroup={businessGroup}
           department={department}
           businessUnits={availableBusinessUnits}
+          defaultBusinessUnitId={sessionBusinessUnitId}
           mode={groupModal.mode}
           record={groupModal.record}
           submitting={groupSubmitting}

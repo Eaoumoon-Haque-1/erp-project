@@ -19,15 +19,6 @@ function fieldClass(error) {
     .join(" ");
 }
 
-function RequiredLabel({ htmlFor, children }) {
-  return (
-    <label className={"erp-field-label"} htmlFor={htmlFor}>
-      {children}
-      <span className={"erp-required"} aria-hidden={"true"}>*</span>
-    </label>
-  );
-}
-
 function RemoveButton({ label, onClick }) {
   return (
     <button
@@ -172,9 +163,9 @@ function UserAssignmentTabs({
           <div className={"space-y-4"}>
             <div className={"flex max-w-xl items-end gap-6"}>
               <div className={"flex-1"}>
-                <RequiredLabel htmlFor={"ASSIGN_EMPLOYEE_ID"}>
+                <label className={"erp-field-label"} htmlFor={"ASSIGN_EMPLOYEE_ID"}>
                   Employee
-                </RequiredLabel>
+                </label>
                 <select
                   id={"ASSIGN_EMPLOYEE_ID"}
                   className={fieldClass(employeeError)}
@@ -270,9 +261,9 @@ function UserAssignmentTabs({
           <div className={"space-y-4"}>
             <div className={"flex max-w-xl items-end gap-6"}>
               <div className={"flex-1"}>
-                <RequiredLabel htmlFor={"ASSIGN_BUSINESS_UNIT_ID"}>
+                <label className={"erp-field-label"} htmlFor={"ASSIGN_BUSINESS_UNIT_ID"}>
                   Business Unit
-                </RequiredLabel>
+                </label>
                 <select
                   id={"ASSIGN_BUSINESS_UNIT_ID"}
                   className={fieldClass(businessUnitError)}

@@ -22,7 +22,7 @@ const columns = [
 ]
 
 const filters = [
-  { key: 'DEPARTMENT_NAME', label: 'Search by Department Name', placeholder: '--Search by Department Name--', matches: (row, value) => row.DEPARTMENT_NAME.toLowerCase().includes(value.toLowerCase()) },
+  { key: 'DEPARTMENT_NAME', label: 'Search by Department Name', placeholder: '--Search by Department Name--', searchable: true, matches: (row, value) => row.DEPARTMENT_NAME.toLowerCase().includes(value.toLowerCase()) },
   { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
 ]
 

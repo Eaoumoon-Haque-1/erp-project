@@ -31,13 +31,18 @@ function DesignationGroupModal({
   businessGroup,
   designation,
   businessUnits,
+  defaultBusinessUnitId = '',
   mode = 'create',
   record,
   submitting = false,
 }) {
-  const [values, setValues] = useState(() =>
-    record || createInitialDesignationGroupValues(businessGroup.ID, designation.ID),
+  const defaultUnitAvailable = businessUnits.some(
+    (unit) => String(unit.ID) === String(defaultBusinessUnitId),
   )
+  const [values, setValues] = useState(() => record || {
+    ...createInitialDesignationGroupValues(businessGroup.ID, designation.ID),
+    BU_ID: defaultUnitAvailable ? String(defaultBusinessUnitId) : '',
+  })
   const [errors, setErrors] = useState({})
   const businessUnitRef = useRef(null)
 

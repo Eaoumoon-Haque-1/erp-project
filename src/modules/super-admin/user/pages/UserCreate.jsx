@@ -57,6 +57,7 @@ function UserCreate() {
   const [businessUnitRows, setBusinessUnitRows] = useState([])
   const [employeeOptions, setEmployeeOptions] = useState([])
   const [createdUserId, setCreatedUserId] = useState('')
+  const [autoMainBusinessUnitId, setAutoMainBusinessUnitId] = useState('')
   const [userTypeOptions, setUserTypeOptions] = useState([])
   const [userTypesLoading, setUserTypesLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -112,26 +113,39 @@ function UserCreate() {
     }))
     if (name === 'BG_ID') {
       setBusinessUnitRows([])
+      setAutoMainBusinessUnitId('')
       setEmployeeRows([])
     }
     if (name === 'BU_ID') {
       const selectedUnit = businessUnitOptions.find((option) => option.value === nextValue)
-      if (selectedUnit) {
-        setBusinessUnitRows((current) => {
-          const existing = current.find((row) => row.BU_ID === nextValue)
+      const targetWasManuallyAdded = businessUnitRows.some((row) => (
+        row.BU_ID === nextValue && row.BU_ID !== autoMainBusinessUnitId
+      ))
+      setBusinessUnitRows((current) => {
+        const rowsWithoutReplacedAutoUnit = !createdUserId
+          && autoMainBusinessUnitId
+          && autoMainBusinessUnitId !== nextValue
+          ? current.filter((row) => row.BU_ID !== autoMainBusinessUnitId)
+          : current
+        if (selectedUnit) {
+          const existing = rowsWithoutReplacedAutoUnit.find((row) => row.BU_ID === nextValue)
           if (existing) {
-            return current.map((row) => row.BU_ID === nextValue
+            return rowsWithoutReplacedAutoUnit.map((row) => row.BU_ID === nextValue
               ? { ...row, STATUS: '1' }
               : row)
           }
-          return [...current, {
+          return [...rowsWithoutReplacedAutoUnit, {
             id: `business-unit-map-${Date.now()}`,
             MAPPING_ID: null,
             BU_ID: nextValue,
             NAME: selectedUnit.label,
             STATUS: '1',
           }]
-        })
+        }
+        return rowsWithoutReplacedAutoUnit
+      })
+      if (!createdUserId) {
+        setAutoMainBusinessUnitId(selectedUnit && !targetWasManuallyAdded ? nextValue : '')
       }
       setEmployeeRows((current) => closeCurrentEmployee(current, nextValue))
     }
@@ -188,6 +202,7 @@ function UserCreate() {
       const userId = String(savedUser?.id ?? createdUserId)
       if (!userId) throw new Error('The User was saved without returning its ID, so assignments could not be saved.')
       if (!createdUserId) setCreatedUserId(userId)
+      setAutoMainBusinessUnitId('')
       saveUserEmployeeHistory(userId, employeeRows)
       removeUserEmployeeHistory(USER_CREATE_HISTORY_KEY)
 
@@ -239,6 +254,7 @@ function UserCreate() {
     setEmployeeRows([])
     setBusinessUnitRows([])
     setCreatedUserId('')
+    setAutoMainBusinessUnitId('')
     removeUserEmployeeHistory(USER_CREATE_HISTORY_KEY)
     requestAnimationFrame(() => userNameRef.current?.focus())
   }
@@ -285,6 +301,7 @@ function UserCreate() {
           const removed = businessUnitRows[indexToRemove]
           const remaining = businessUnitRows.filter((_, index) => index !== indexToRemove)
           setBusinessUnitRows(remaining)
+          if (removed?.BU_ID === autoMainBusinessUnitId) setAutoMainBusinessUnitId('')
           if (removed?.BU_ID === values.BU_ID) {
             const nextMainUnitId = remaining.find((row) => row.STATUS === '1')?.BU_ID || ''
             setValues((current) => ({ ...current, BU_ID: nextMainUnitId }))

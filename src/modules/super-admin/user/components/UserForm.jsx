@@ -105,6 +105,7 @@ function UserForm({
   groupOptions = [],
   groupsLoading = false,
   unitsLoading = false,
+  businessUnitReadOnly = false,
   userNameRef,
   businessUnitOptions = [],
   roleOptions = [],
@@ -122,7 +123,7 @@ function UserForm({
   return (
     <div className={'erp-form-grid erp-user-form-grid'}>
       <SelectField name={'BG_ID'} label={'Group Name'} values={values} errors={errors} options={groupOptions} disabled={groupsLoading} placeholder={groupsLoading ? 'Loading Business Groups...' : 'Select Group...'} onChange={onChange} />
-      <SelectField name={'BU_ID'} label={'Business Unit'} values={values} errors={errors} options={businessUnitOptions} disabled={!values.BG_ID || unitsLoading} placeholder={unitsLoading ? 'Loading Business Units...' : 'Select Business Unit...'} onChange={onChange} />
+      <SelectField name={'BU_ID'} label={'Business Unit'} values={values} errors={errors} options={businessUnitOptions} disabled={businessUnitReadOnly || !values.BG_ID || unitsLoading} placeholder={unitsLoading ? 'Loading Business Units...' : 'Select Business Unit...'} onChange={onChange} />
       <TextField name={'FULL_NAME'} label={'Full Name'} values={values} errors={errors} type={'text'} maxLength={100} placeholder={'Enter Full Name'} required onChange={onChange} />
       <SelectField name={'USER_TYPE_ID'} label={'User Type'} values={values} errors={errors} options={userTypeOptions} disabled={!values.BU_ID || userTypesLoading} placeholder={userTypesLoading ? 'Loading User Types...' : values.BU_ID ? 'Select User Type...' : 'Select Business Unit first...'} onChange={onChange} />
       <TextField name={'USER_NAME'} label={'User Name'} values={values} errors={errors} inputRef={userNameRef} type={'text'} maxLength={20} placeholder={'Enter User Name'} required onChange={onChange} />

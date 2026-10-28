@@ -22,7 +22,7 @@ const columns = [
 ]
 
 const filters = [
-  { key: 'DESIGNATION_NAME', label: 'Search by Designation Name', placeholder: '--Search by Designation Name--', matches: (row, value) => row.DESIGNATION_NAME.toLowerCase().includes(value.toLowerCase()) },
+  { key: 'DESIGNATION_NAME', label: 'Search by Designation Name', placeholder: '--Search by Designation Name--', searchable: true, matches: (row, value) => row.DESIGNATION_NAME.toLowerCase().includes(value.toLowerCase()) },
   { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
 ]
 

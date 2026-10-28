@@ -114,9 +114,11 @@ function EmployeeInformationList() {
 
   const filters = useMemo(() => [
     { key: 'BUSINESS_UNIT_ID', label: 'Business Unit', placeholder: '--Search by Business Unit--', options: options.businessUnitOptions || [] },
-    { key: 'DEPARTMENT_ID', label: 'Department', placeholder: '--Search by Department--', options: options.departmentOptions || [] },
+    { key: 'DEPARTMENT_ID', label: 'Department', placeholder: '--Search by Department--', searchable: true,
+      options: [...new Map(rows.filter((row) => row.DEPARTMENT_ID && row.DEPARTMENT_NAME)
+        .map((row) => [row.DEPARTMENT_ID, { value: row.DEPARTMENT_ID, label: row.DEPARTMENT_NAME }])).values()] },
     { key: 'EMPLOYMENT_STATUS', label: 'Employment Status', placeholder: '--Search by Employment Status--', options: options.employmentStatusOptions || [] },
-  ], [options])
+  ], [options, rows])
 
   return (
     <ListPage

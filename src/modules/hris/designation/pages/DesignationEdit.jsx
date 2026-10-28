@@ -32,6 +32,7 @@ function DesignationEdit() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const designationNameRef = useRef(null)
   const [designation, setDesignation] = useState(null)
   const [values, setValues] = useState(initialDesignationValues)
@@ -358,6 +359,7 @@ function DesignationEdit() {
           businessGroup={businessGroup}
           designation={designation}
           businessUnits={availableBusinessUnits}
+          defaultBusinessUnitId={sessionBusinessUnitId}
           mode={groupModal.mode}
           record={groupModal.record}
           submitting={groupSubmitting}

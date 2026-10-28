@@ -49,13 +49,15 @@ function ManualAttendanceUpdateList() {
     { key: 'BU_ID', label: 'Search by Business Unit', placeholder: '--Search by Business Unit--',
       options: (references?.units || []).map((item) => ({ value: String(item.id), label: item.businessUnit })) },
     { key: 'DEPT_ID', label: 'Search by Department', placeholder: '--Search by Department--',
-      options: (references?.departments || []).map((item) => ({ value: String(item.id), label: item.departmentName })) },
+      searchable: true,
+      options: [...new Map(rows.filter((row) => row.DEPT_ID && row.DEPARTMENT_NAME)
+        .map((row) => [row.DEPT_ID, { value: row.DEPT_ID, label: row.DEPARTMENT_NAME }])).values()] },
     { key: 'SHIFT_ID', label: 'Search by Shift', placeholder: '--Search by Shift--',
       options: (references?.shifts || []).map((item) => ({ value: String(item.id), label: item.shiftTitle })) },
     { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [
       { label: 'Active', value: '1' }, { label: 'Inactive', value: '0' },
     ] },
-  ], [references])
+  ], [references, rows])
 
   const handleDelete = async (row) => {
     try {

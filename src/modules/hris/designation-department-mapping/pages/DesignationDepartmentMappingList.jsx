@@ -56,6 +56,7 @@ function DesignationDepartmentMappingList() {
       key: 'DEPT_ID',
       label: 'Search by Department Name',
       placeholder: '--Search by Department Name--',
+      searchable: true,
       options: [...new Map(rows
         .map((row) => [row.DEPT_ID, { value: row.DEPT_ID, label: row.DEPARTMENT_NAME }])).values()],
     },

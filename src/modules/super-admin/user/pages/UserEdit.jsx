@@ -274,6 +274,7 @@ function UserEdit() {
         unitsLoading={unitsLoading}
         userNameRef={userNameRef}
         businessUnitOptions={businessUnitOptions}
+        businessUnitReadOnly
         roleOptions={roleOptions}
         rolesLoading={rolesLoading}
         userTypeOptions={visibleUserTypeOptions}
