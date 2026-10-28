@@ -5,8 +5,6 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { rolesApi } from '../../role/api/roleApi'
-import { userTypesApi } from '../../user-type/api/userTypeApi'
 import { usersApi } from '../api/userApi'
 import { userAssignmentsApi } from '../api/userAssignmentApi'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
@@ -14,13 +12,29 @@ import { applyApiFormErrors, getApiErrorMessage, normalizeApiError } from '../..
 import FormPage from '../../../../components/shared/FormPage'
 import UserAssignmentTabs from '../../../../components/shared/UserAssignmentTabs'
 import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import useBusinessUnitRoleOptions from '../../../../hooks/useBusinessUnitRoleOptions'
 import UserForm from '../components/UserForm'
 import { mapUserToApi } from '../data/userApiMapper'
 import {
   mapBusinessUnitAssignmentsToApi,
-  mapEmployeeAssignmentToApi,
   mapEmployeeOptions,
 } from '../data/userAssignmentApiMapper'
+import {
+  loadUserEmployeeHistory,
+  removeUserEmployeeHistory,
+  saveUserEmployeeHistory,
+  USER_CREATE_HISTORY_KEY,
+} from '../data/userEmployeeHistoryStorage'
+import {
+  addEmployeeHistoryRow,
+  applyUserStatusToEmployeeRows,
+  closeCurrentEmployee,
+} from '../data/userEmployeeHistory'
+import {
+  filterUserTypesByBusinessUnit,
+  isUserTypeAvailableForBusinessUnit,
+  loadUserTypeBusinessUnitOptions,
+} from '../data/userTypeBusinessUnitOptions'
 import {
   USER_TABLE,
   createInitialUserValues,
@@ -32,48 +46,19 @@ const existingUserNames = []
 const existingMobileNumbers = []
 const listPath = '/super-admin/user-creation/user'
 
-function localDateString(date = new Date()) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function previousDate(dateString) {
-  const [year, month, day] = dateString.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  date.setDate(date.getDate() - 1)
-  return localDateString(date)
-}
-
-function applyUserStatusToEmployeeRows(rows, userStatus) {
-  if (rows.length === 0) return rows
-  const today = localDateString()
-
-  if (userStatus === '0') {
-    return rows.map((row) => row.STATUS === '1'
-      ? { ...row, ACTIVE_TO: today, STATUS: '0' }
-      : row)
-  }
-
-  const lastIndex = rows.length - 1
-  return rows.map((row, index) => index === lastIndex
-    ? { ...row, ACTIVE_TO: '', STATUS: '1' }
-    : { ...row, STATUS: '0' })
-}
-
 function UserCreate() {
   const navigate = useNavigate()
   const userNameRef = useRef(null)
   const [values, setValues] = useState(() => createInitialUserValues())
   const [errors, setErrors] = useState({})
   const [activeAssignmentTab, setActiveAssignmentTab] = useState('employee')
-  const [employeeRows, setEmployeeRows] = useState([])
+  const [employeeRows, setEmployeeRows] = useState(() =>
+    loadUserEmployeeHistory(USER_CREATE_HISTORY_KEY))
   const [businessUnitRows, setBusinessUnitRows] = useState([])
   const [employeeOptions, setEmployeeOptions] = useState([])
   const [createdUserId, setCreatedUserId] = useState('')
-  const [roleOptions, setRoleOptions] = useState([])
   const [userTypeOptions, setUserTypeOptions] = useState([])
+  const [userTypesLoading, setUserTypesLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const {
@@ -82,23 +67,27 @@ function UserCreate() {
     groupsLoading,
     unitsLoading,
   } = useBusinessOptions(values.BG_ID)
+  const { roleOptions, rolesLoading, rolesError } = useBusinessUnitRoleOptions(values.BU_ID)
+
+  useEffect(() => {
+    saveUserEmployeeHistory(USER_CREATE_HISTORY_KEY, employeeRows)
+  }, [employeeRows])
 
   useEffect(() => {
     let active = true
     Promise.all([
-      rolesApi.list(),
-      userTypesApi.list(),
+      loadUserTypeBusinessUnitOptions(),
       employeesApi.list(),
     ])
-      .then(([roles, userTypes, employees]) => {
+      .then(([userTypes, employees]) => {
         if (!active) return
-        setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
-        setUserTypeOptions(userTypes.map((type) => ({ value: String(type.id), label: type.typeName })))
+        setUserTypeOptions(userTypes)
         setEmployeeOptions(mapEmployeeOptions(employees))
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load User options.'))
       })
+      .finally(() => { if (active) setUserTypesLoading(false) })
     return () => {
       active = false
     }
@@ -110,7 +99,13 @@ function UserCreate() {
     setValues((current) => ({
       ...current,
       [name]: nextValue,
-      ...(name === 'BG_ID' ? { BU_ID: '' } : {}),
+      ...(name === 'BG_ID' ? { BU_ID: '', ROLE_ID: '' } : {}),
+      ...(name === 'BU_ID' ? { ROLE_ID: '' } : {}),
+      ...(name === 'BG_ID' || (name === 'BU_ID' && !isUserTypeAvailableForBusinessUnit(
+        userTypeOptions,
+        current.USER_TYPE_ID,
+        nextValue,
+      )) ? { USER_TYPE_ID: '' } : {}),
       ...(name === 'FROM_DATE'
         ? { TO_DATE: getUserValidityToDate(nextValue) }
         : {}),
@@ -119,44 +114,65 @@ function UserCreate() {
       setBusinessUnitRows([])
       setEmployeeRows([])
     }
+    if (name === 'BU_ID') {
+      const selectedUnit = businessUnitOptions.find((option) => option.value === nextValue)
+      if (selectedUnit) {
+        setBusinessUnitRows((current) => {
+          const existing = current.find((row) => row.BU_ID === nextValue)
+          if (existing) {
+            return current.map((row) => row.BU_ID === nextValue
+              ? { ...row, STATUS: '1' }
+              : row)
+          }
+          return [...current, {
+            id: `business-unit-map-${Date.now()}`,
+            MAPPING_ID: null,
+            BU_ID: nextValue,
+            NAME: selectedUnit.label,
+            STATUS: '1',
+          }]
+        })
+      }
+      setEmployeeRows((current) => closeCurrentEmployee(current, nextValue))
+    }
     if (name === 'STATUS') {
       setEmployeeRows((current) => applyUserStatusToEmployeeRows(current, nextValue))
     }
     setErrors((current) => ({
       ...current,
       [name]: undefined,
-      ...(name === 'BG_ID' ? { BU_ID: undefined } : {}),
+      ...(name === 'BG_ID' ? { BU_ID: undefined, ROLE_ID: undefined } : {}),
+      ...(name === 'BU_ID' ? { ROLE_ID: undefined } : {}),
+      ...((name === 'BG_ID' || name === 'BU_ID') ? { USER_TYPE_ID: undefined } : {}),
       ...(name === 'FROM_DATE' ? { TO_DATE: undefined } : {}),
     }))
   }
 
-  const visibleEmployeeOptions = employeeOptions.filter(
-    (option) => !values.BG_ID || option.bgId === values.BG_ID,
-  )
-  const selectedEmployee = (
-    employeeRows.find((row) => row.STATUS === '1') || employeeRows.at(-1)
-  )
+  const visibleEmployeeOptions = values.BU_ID
+    ? employeeOptions.filter((option) => option.buId === values.BU_ID)
+    : []
+  const visibleUserTypeOptions = filterUserTypesByBusinessUnit(userTypeOptions, values.BU_ID)
+  const selectedEmployee = employeeRows.find((row) => row.IS_CURRENT === '1')
 
   const stageEmployee = (row) => {
-    if (!row || employeeRows.some((employee) => employee.EMPL_ID === row.EMPL_ID)) return
-    const activeFrom = localDateString()
-    setEmployeeRows((current) => [
-      ...current.map((employee) => employee.STATUS === '1'
-        ? { ...employee, ACTIVE_TO: previousDate(activeFrom), STATUS: '0' }
-        : employee),
-      {
-        ...row,
-        ACTIVE_FROM: activeFrom,
-        ACTIVE_TO: values.STATUS === '1' ? '' : activeFrom,
-        STATUS: values.STATUS === '1' ? '1' : '0',
-      },
-    ])
+    if (!row || employeeRows.some((employee) => (
+      employee.EMPL_ID === row.EMPL_ID && String(employee.STATUS) === '1'
+    ))) return
+    setEmployeeRows((current) => addEmployeeHistoryRow(
+      createdUserId ? current : [],
+      row,
+      values.STATUS,
+    ))
     setErrors((current) => ({ ...current, ASSIGNMENTS: undefined }))
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateUser(values, existingUserNames, existingMobileNumbers)
+    const valuesWithEligibleRole = values.ROLE_ID
+      && !roleOptions.some((option) => option.value === values.ROLE_ID)
+      ? { ...values, ROLE_ID: '' }
+      : values
+    const result = validateUser(valuesWithEligibleRole, existingUserNames, existingMobileNumbers)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) {
@@ -167,20 +183,16 @@ function UserCreate() {
     setMessage('')
     try {
       const savedUser = createdUserId
-        ? await usersApi.update(createdUserId, mapUserToApi(result.values))
-        : await usersApi.create(mapUserToApi(result.values))
+        ? await usersApi.update(createdUserId, mapUserToApi(result.values, selectedEmployee))
+        : await usersApi.create(mapUserToApi(result.values, selectedEmployee))
       const userId = String(savedUser?.id ?? createdUserId)
       if (!userId) throw new Error('The User was saved without returning its ID, so assignments could not be saved.')
       if (!createdUserId) setCreatedUserId(userId)
+      saveUserEmployeeHistory(userId, employeeRows)
+      removeUserEmployeeHistory(USER_CREATE_HISTORY_KEY)
 
       try {
         const assignmentRequests = []
-        if (employeeRows.length > 0) {
-          assignmentRequests.push(userAssignmentsApi.saveEmployee(
-            userId,
-            mapEmployeeAssignmentToApi(employeeRows),
-          ))
-        }
         if (businessUnitRows.length > 0) {
           assignmentRequests.push(userAssignmentsApi.saveBusinessUnits(
             userId,
@@ -211,6 +223,9 @@ function UserCreate() {
         roleId: 'ROLE_ID',
         userTypeId: 'USER_TYPE_ID',
         androidId: 'ANDROID_ID',
+        employeeId: 'ASSIGNMENTS',
+        deptId: 'ASSIGNMENTS',
+        desigId: 'ASSIGNMENTS',
       }))
     } finally {
       setSubmitting(false)
@@ -224,11 +239,12 @@ function UserCreate() {
     setEmployeeRows([])
     setBusinessUnitRows([])
     setCreatedUserId('')
+    removeUserEmployeeHistory(USER_CREATE_HISTORY_KEY)
     requestAnimationFrame(() => userNameRef.current?.focus())
   }
 
   return (
-    <FormPage title={'User Create'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} messageTone={'error'} submitting={submitting}>
+    <FormPage title={'User Create'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={rolesError ? getApiErrorMessage(rolesError, 'Unable to load Roles for this Business Unit.') : message} messageTone={'error'} submitting={submitting}>
       <UserForm
         values={values}
         errors={errors}
@@ -238,7 +254,9 @@ function UserCreate() {
         userNameRef={userNameRef}
         businessUnitOptions={businessUnitOptions}
         roleOptions={roleOptions}
-        userTypeOptions={userTypeOptions}
+        rolesLoading={rolesLoading}
+        userTypeOptions={visibleUserTypeOptions}
+        userTypesLoading={userTypesLoading}
         employeeDisplayValue={selectedEmployee?.DISPLAY_NAME || ''}
         showEmployeeField
         requirePassword
@@ -256,23 +274,23 @@ function UserCreate() {
         generalError={errors.ASSIGNMENTS}
         onTabChange={setActiveAssignmentTab}
         onAddEmployee={stageEmployee}
-        onRemoveEmployee={(indexToRemove) =>
-          setEmployeeRows((current) =>
-            applyUserStatusToEmployeeRows(
-              current.filter((_, index) => index !== indexToRemove),
-              values.STATUS,
-            ),
-          )
-        }
         onAddBusinessUnit={(row) => {
           setBusinessUnitRows((current) => [...current, row])
+          if (!values.BU_ID) {
+            setValues((current) => ({ ...current, BU_ID: row.BU_ID }))
+          }
           setErrors((current) => ({ ...current, ASSIGNMENTS: undefined }))
         }}
-        onRemoveBusinessUnit={(indexToRemove) =>
-          setBusinessUnitRows((current) =>
-            current.filter((_, index) => index !== indexToRemove),
-          )
-        }
+        onRemoveBusinessUnit={(indexToRemove) => {
+          const removed = businessUnitRows[indexToRemove]
+          const remaining = businessUnitRows.filter((_, index) => index !== indexToRemove)
+          setBusinessUnitRows(remaining)
+          if (removed?.BU_ID === values.BU_ID) {
+            const nextMainUnitId = remaining.find((row) => row.STATUS === '1')?.BU_ID || ''
+            setValues((current) => ({ ...current, BU_ID: nextMainUnitId }))
+            setEmployeeRows((current) => closeCurrentEmployee(current, nextMainUnitId))
+          }
+        }}
       />
     </FormPage>
   )

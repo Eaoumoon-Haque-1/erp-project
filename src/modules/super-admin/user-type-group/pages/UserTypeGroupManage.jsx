@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
-import { showError } from '../../../../components/shared/actionAlerts'
 import FormPage from '../../../../components/shared/FormPage'
 import { businessGroupsApi } from '../../business-group/api/businessGroupApi'
 import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
@@ -245,10 +244,6 @@ function UserTypeGroupManage({ editing = false }) {
       tableName={USER_TYPE_GROUP_TABLE}
       onSubmit={handleSubmit}
       onReset={handleReset}
-      onValidate={!editing ? () => {
-        void showError('Create API is not available yet.')
-        return false
-      } : undefined}
       submitting={submitting}
       submitLabel={editing ? 'Update' : 'Save'}
     >

@@ -1,28 +1,20 @@
 /** @file Maps User assignment DTOs to and from UserAssignmentTabs rows. */
-export function mapEmployeeOptions(records = []) {
+export function mapEmployeeOptions(records = [], preserveEmployeeId = '') {
   return records
-    .filter((employee) => Number(employee.status ?? 1) === 1)
+    .filter((employee) => (
+      Number(employee.status ?? 1) === 1
+      || String(employee.id) === String(preserveEmployeeId)
+    ))
     .map((employee) => ({
       value: String(employee.id),
       code: employee.employeeCode || String(employee.id),
       name: employee.employeeName || String(employee.id),
-      label: `${employee.employeeName || employee.id} (${employee.employeeCode || employee.id})`,
+      label: `${employee.employeeName || employee.id} (${employee.id})`,
       bgId: String(employee.bgId ?? ''),
+      buId: String(employee.buId ?? ''),
+      deptId: String(employee.deptId ?? ''),
+      desigId: String(employee.desigId ?? ''),
     }))
-}
-
-export function mapAssignedEmployee(dto) {
-  if (!dto?.employeeId) return []
-  return [{
-    id: `employee-map-${dto.employeeId}`,
-    EMPL_ID: String(dto.employeeId),
-    CODE: dto.employeeCode || String(dto.employeeId),
-    NAME: dto.employeeName || String(dto.employeeId),
-    DISPLAY_NAME: dto.employeeName
-      ? `${dto.employeeName} (${dto.employeeCode || dto.employeeId})`
-      : String(dto.employeeId),
-    STATUS: '1',
-  }]
 }
 
 export function mapAssignedBusinessUnits(dto, unitNames = new Map()) {
@@ -33,13 +25,6 @@ export function mapAssignedBusinessUnits(dto, unitNames = new Map()) {
     NAME: unitNames.get(String(row.buId)) || String(row.buId),
     STATUS: String(row.status ?? 1),
   }))
-}
-
-export function mapEmployeeAssignmentToApi(rows = []) {
-  const currentRow = rows.find((row) => String(row.STATUS) === '1') || rows.at(-1)
-  return {
-    employeeId: currentRow ? Number(currentRow.EMPL_ID) : null,
-  }
 }
 
 export function mapBusinessUnitAssignmentsToApi(userId, bgId, rows = []) {

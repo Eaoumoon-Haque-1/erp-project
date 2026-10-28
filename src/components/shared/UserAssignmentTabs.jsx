@@ -56,7 +56,6 @@ function UserAssignmentTabs({
   generalError,
   onTabChange,
   onAddEmployee,
-  onRemoveEmployee,
   onAddBusinessUnit,
   onRemoveBusinessUnit,
 }) {
@@ -76,8 +75,10 @@ function UserAssignmentTabs({
       (option) => option.value === selectedEmployeeId,
     );
     if (!employee) return;
-    if (employeeRows.some((row) => row.EMPL_ID === selectedEmployeeId)) {
-      setEmployeeError("This Employee is already assigned.");
+    if (employeeRows.some((row) => (
+      row.EMPL_ID === selectedEmployeeId && String(row.STATUS) === "1"
+    ))) {
+      setEmployeeError("This Employee already has an active assignment.");
       return;
     }
     if (employeeRows.length >= maxEmployeeAssignments) {
@@ -90,10 +91,15 @@ function UserAssignmentTabs({
       EMPL_ID: employee.value,
       CODE: employee.code,
       NAME: employee.name,
+      BG_ID: employee.bgId ?? "",
+      BU_ID: employee.buId ?? "",
+      DEPT_ID: employee.deptId ?? "",
+      DESIG_ID: employee.desigId ?? "",
       STATUS: showEmployeeStatus ? employeeStatus : "1",
+      IS_CURRENT: "1",
       DISPLAY_NAME:
         employee.label ??
-        `${employee.name ?? employee.value} (${employee.code ?? employee.value})`,
+        `${employee.name ?? employee.value} (${employee.value})`,
     });
     setSelectedEmployeeId("");
     setEmployeeStatus("1");
@@ -211,17 +217,18 @@ function UserAssignmentTabs({
                 <thead>
                   <tr>
                     <th className={"w-[60px]"}>#</th>
-                    <th>Employee Name</th>
-                    {showEmployeeHistory && <th className={"w-[140px]"}>Active From</th>}
-                    {showEmployeeHistory && <th className={"w-[140px]"}>Active To</th>}
-                    {(showEmployeeStatus || showEmployeeHistory) && <th className={"w-[150px]"}>Status</th>}
-                    <th className={"w-[100px] text-center"}>Action</th>
+                    <th className={showEmployeeHistory ? "w-[43%]" : undefined}>Employee Name</th>
+                    {showEmployeeHistory && <th className={"w-[19%]"}>Active From</th>}
+                    {showEmployeeHistory && <th className={"w-[19%]"}>Active To</th>}
+                    {(showEmployeeStatus || showEmployeeHistory) && (
+                      <th className={showEmployeeHistory ? "w-[19%]" : "w-[150px]"}>Status</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {employeeRows.length === 0 ? (
                     <tr>
-                      <td className={"erp-empty-cell"} colSpan={showEmployeeHistory ? 6 : showEmployeeStatus ? 4 : 3}>
+                      <td className={"erp-empty-cell"} colSpan={showEmployeeHistory ? 5 : showEmployeeStatus ? 3 : 2}>
                         No employee assigned
                       </td>
                     </tr>
@@ -244,12 +251,6 @@ function UserAssignmentTabs({
                             {row.STATUS === "1" ? "Active" : "Inactive"}
                           </span>
                         </td>}
-                        <td className={"text-center"}>
-                          <RemoveButton
-                            label={`Remove ${row.NAME}`}
-                            onClick={() => onRemoveEmployee(index)}
-                          />
-                        </td>
                       </tr>
                     ))
                   )}

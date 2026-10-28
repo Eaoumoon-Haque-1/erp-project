@@ -108,7 +108,9 @@ function UserForm({
   userNameRef,
   businessUnitOptions = [],
   roleOptions = [],
+  rolesLoading = false,
   userTypeOptions = [],
+  userTypesLoading = false,
   employeeDisplayValue = '',
   showEmployeeField = false,
   requirePassword = true,
@@ -122,7 +124,7 @@ function UserForm({
       <SelectField name={'BG_ID'} label={'Group Name'} values={values} errors={errors} options={groupOptions} disabled={groupsLoading} placeholder={groupsLoading ? 'Loading Business Groups...' : 'Select Group...'} onChange={onChange} />
       <SelectField name={'BU_ID'} label={'Business Unit'} values={values} errors={errors} options={businessUnitOptions} disabled={!values.BG_ID || unitsLoading} placeholder={unitsLoading ? 'Loading Business Units...' : 'Select Business Unit...'} onChange={onChange} />
       <TextField name={'FULL_NAME'} label={'Full Name'} values={values} errors={errors} type={'text'} maxLength={100} placeholder={'Enter Full Name'} required onChange={onChange} />
-      <SelectField name={'USER_TYPE_ID'} label={'User Type'} values={values} errors={errors} options={userTypeOptions} onChange={onChange} />
+      <SelectField name={'USER_TYPE_ID'} label={'User Type'} values={values} errors={errors} options={userTypeOptions} disabled={!values.BU_ID || userTypesLoading} placeholder={userTypesLoading ? 'Loading User Types...' : values.BU_ID ? 'Select User Type...' : 'Select Business Unit first...'} onChange={onChange} />
       <TextField name={'USER_NAME'} label={'User Name'} values={values} errors={errors} inputRef={userNameRef} type={'text'} maxLength={20} placeholder={'Enter User Name'} required onChange={onChange} />
       <TextField name={'EMAIL'} label={'Email'} values={values} errors={errors} type={'email'} maxLength={100} placeholder={'Enter Email'} onChange={onChange} />
       <TextField name={'MOBILE_NO'} label={'Mobile No'} values={values} errors={errors} type={'tel'} inputMode={'numeric'} digitsOnly maxLength={11} placeholder={'01XXXXXXXXX'} onChange={onChange} />
@@ -130,7 +132,7 @@ function UserForm({
       <TextField name={'CONFIRM_PASSWORD'} label={'Confirm Password'} values={values} errors={errors} type={'password'} minLength={8} maxLength={64} placeholder={requirePassword ? 'Confirm Password' : 'Confirm only a new password'} required={requirePassword} autoComplete={'new-password'} passwordVisible={showConfirmPassword} onTogglePassword={() => setShowConfirmPassword((current) => !current)} onChange={onChange} />
       <TextField name={'FROM_DATE'} label={'Validate From Date'} values={values} errors={errors} type={'date'} onChange={onChange} />
       <TextField name={'TO_DATE'} label={'Validate To Date'} values={values} errors={errors} type={'date'} min={values.FROM_DATE || undefined} onChange={onChange} />
-      <SelectField name={'ROLE_ID'} label={'User Role'} values={values} errors={errors} options={roleOptions} onChange={onChange} />
+      <SelectField name={'ROLE_ID'} label={'User Role'} values={values} errors={errors} options={roleOptions} disabled={!values.BU_ID || rolesLoading} placeholder={rolesLoading ? 'Loading User Roles...' : values.BU_ID ? 'Select User Role...' : 'Select Business Unit first...'} onChange={onChange} />
       {showEmployeeField && (
         <TextField
           name={'ASSIGNED_EMPLOYEE_NAME'}
@@ -150,7 +152,7 @@ function UserForm({
           <span>Android ID Fixed</span>
         </label>
       </div>
-      <TextField name={'ANDROID_ID'} label={'Android ID'} values={values} errors={errors} type={'text'} maxLength={100} placeholder={'Enter Android ID'} onChange={onChange} />
+      <TextField name={'ANDROID_ID'} label={'Android ID'} values={values} errors={errors} type={'text'} maxLength={100} placeholder={values.IS_ANDROID_FIXED === '1' ? 'Enter Android ID' : 'Enable Android ID Fixed to edit'} readOnly={values.IS_ANDROID_FIXED !== '1'} onChange={onChange} />
       <div>
         <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
         <label className={'erp-switch-field'}>

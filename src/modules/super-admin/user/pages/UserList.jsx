@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
 import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
+import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { rolesApi } from '../../role/api/roleApi'
 import { userTypesApi } from '../../user-type/api/userTypeApi'
 import { usersApi } from '../api/userApi'
@@ -46,14 +47,15 @@ function UserList() {
 
   useEffect(() => {
     let active = true
-    Promise.all([usersApi.list(), rolesApi.list(), userTypesApi.list(), businessUnitsApi.list()])
-      .then(([users, roles, userTypes, units]) => {
+    Promise.all([usersApi.list(), rolesApi.list(), userTypesApi.list(), businessUnitsApi.list(), departmentsApi.list()])
+      .then(([users, roles, userTypes, units, departments]) => {
         if (!active) return
         const lookups = {
           businessGroupId: currentUser.businessGroup.id,
           roles: new Map(roles.map((role) => [String(role.id), role.roleName])),
           userTypes: new Map(userTypes.map((type) => [String(type.id), type.typeName])),
           businessUnits: new Map(units.map((unit) => [String(unit.id), unit.businessUnit])),
+          departments: new Map(departments.map((department) => [String(department.id), department.departmentName])),
         }
         setRoleOptions(roles.map((role) => ({ value: String(role.id), label: role.roleName })))
         setRows(users.map((user) => mapUserFromApi(user, lookups)))
@@ -80,10 +82,7 @@ function UserList() {
 
   const handleStatusChange = async (row) => {
     try {
-      const updated = await usersApi.update(row.ID, {
-        ...row.API_RECORD,
-        status: row.STATUS === '1' ? 0 : 1,
-      })
+      const updated = await usersApi.changeStatus(row.ID, row.STATUS === '1' ? 0 : 1)
       setRows((current) =>
         current.map((item) =>
           item.ID === row.ID

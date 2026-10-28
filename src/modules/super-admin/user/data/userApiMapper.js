@@ -32,17 +32,22 @@ export function mapUserFromApi(record = {}, lookups = {}) {
     USER_TYPE_NAME:
       lookups.userTypes?.get(String(record.userTypeId)) ||
       String(record.userTypeId || ''),
-    DEPARTMENT_NAME: '-',
+    DEPARTMENT_NAME:
+      lookups.departments?.get(String(record.deptId)) || String(record.deptId || '-'),
     API_RECORD: record,
   }
 }
 
-export function mapUserToApi(values, originalRecord = {}) {
+function optionalNumber(value) {
+  return value === '' || value === null || value === undefined
+    ? null
+    : Number(value)
+}
+
+export function mapUserToApi(values, employeeSelection) {
   const payload = {
     bgId: Number(values.BG_ID),
     buId: Number(values.BU_ID),
-    deptId: originalRecord.deptId ?? null,
-    desigId: originalRecord.desigId ?? null,
     userName: values.USER_NAME,
     fullName: values.FULL_NAME,
     email: values.EMAIL,
@@ -54,6 +59,18 @@ export function mapUserToApi(values, originalRecord = {}) {
     isAndroidFixed: Number(values.IS_ANDROID_FIXED),
     androidId: values.ANDROID_ID || null,
     status: Number(values.STATUS),
+  }
+
+  if (employeeSelection !== undefined) {
+    payload.employeeId = employeeSelection
+      ? optionalNumber(employeeSelection.EMPL_ID)
+      : null
+    payload.deptId = employeeSelection
+      ? optionalNumber(employeeSelection.DEPT_ID)
+      : null
+    payload.desigId = employeeSelection
+      ? optionalNumber(employeeSelection.DESIG_ID)
+      : null
   }
 
   if (values.PASSWORD) payload.password = values.PASSWORD
