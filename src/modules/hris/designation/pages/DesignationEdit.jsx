@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ActionForm from '../../../../components/shared/ActionForm'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import PageHeader from '../../../../components/shared/PageHeader'
@@ -29,6 +30,8 @@ import {
 function DesignationEdit() {
   const { designationId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
   const designationNameRef = useRef(null)
   const [designation, setDesignation] = useState(null)
   const [values, setValues] = useState(initialDesignationValues)
@@ -40,7 +43,7 @@ function DesignationEdit() {
   const [groupSubmitting, setGroupSubmitting] = useState(false)
   const [designationGroups, setDesignationGroups] = useState([])
   const [loadedBusinessUnits, setLoadedBusinessUnits] = useState({ groupId: '', records: [] })
-  const { groupOptions, groupsLoading } = useBusinessOptions(values.BG_ID, {
+  const { groupOptions } = useBusinessOptions(values.BG_ID, {
     loadUnits: false,
     preserveGroupId: values.BG_ID,
   })
@@ -54,12 +57,15 @@ function DesignationEdit() {
     let active = true
     Promise.all([
       designationsApi.get(designationId),
-      designationsApi.list(),
+      designationsApi.list(sessionGroupId),
       designationGroupsApi.list(designationId),
     ])
       .then(([record, records, groupRecords]) => {
         if (!active) return
-        const mapped = mapDesignationFromApi(record)
+        const mapped = {
+          ...mapDesignationFromApi(record),
+          BG_ID: sessionGroupId,
+        }
         setDesignation(mapped)
         setValues(mapped)
         setExistingDesignations(records.filter((item) => String(item.id) !== String(designationId)))
@@ -70,7 +76,7 @@ function DesignationEdit() {
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [designationId])
+  }, [designationId, sessionGroupId])
 
   useEffect(() => {
     if (!assignmentGroupId) {
@@ -110,7 +116,10 @@ function DesignationEdit() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDesignation(values, existingDesignations)
+    const result = validateDesignation(
+      { ...values, BG_ID: sessionGroupId },
+      existingDesignations,
+    )
 
     setValues((current) => ({ ...current, ...result.values }))
     setErrors(result.errors)
@@ -267,8 +276,6 @@ function DesignationEdit() {
           <DesignationForm
             values={values}
             errors={errors}
-            groupOptions={groupOptions}
-            groupsLoading={groupsLoading}
             onChange={handleChange}
             designationNameRef={designationNameRef}
           />

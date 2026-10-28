@@ -1,17 +1,12 @@
 /** @file Loads and derives API-backed options for Department–Designation mapping forms. */
 import { useEffect, useMemo, useState } from 'react'
 import { getApiErrorMessage } from '../../../../api/errors'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { departmentGroupsApi } from '../../department-group/api/departmentGroupApi'
 import { departmentsApi } from '../../department/api/departmentApi'
 import { designationGroupsApi } from '../../designation-group/api/designationGroupApi'
 import { designationsApi } from '../../designation/api/designationApi'
 
 export default function useDesignationDepartmentMappingOptions(values, preserve = {}) {
-  const businessOptions = useBusinessOptions(values.BG_ID, {
-    preserveGroupId: preserve.BG_ID,
-    preserveUnitId: preserve.BU_ID,
-  })
   const [records, setRecords] = useState({
     departments: [],
     departmentGroups: [],
@@ -21,11 +16,13 @@ export default function useDesignationDepartmentMappingOptions(values, preserve 
   const [optionsLoading, setOptionsLoading] = useState(true)
 
   useEffect(() => {
+    if (!values.BG_ID || !values.BU_ID) return undefined
+
     let active = true
     Promise.all([
-      departmentsApi.list(),
+      departmentsApi.list(values.BG_ID),
       departmentGroupsApi.list(),
-      designationsApi.list(),
+      designationsApi.list(values.BG_ID),
       designationGroupsApi.list(),
     ])
       .then(([departments, departmentGroups, designations, designationGroups]) => {
@@ -36,7 +33,7 @@ export default function useDesignationDepartmentMappingOptions(values, preserve 
       })
       .finally(() => { if (active) setOptionsLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [values.BG_ID, values.BU_ID])
 
   const departmentOptions = useMemo(() => {
     const eligibleIds = new Set(records.departmentGroups
@@ -56,5 +53,5 @@ export default function useDesignationDepartmentMappingOptions(values, preserve 
       .map((row) => ({ value: String(row.id), label: row.designationName }))
   }, [preserve.DESIG_ID, records.designationGroups, records.designations, values.BG_ID, values.BU_ID])
 
-  return { ...businessOptions, departmentOptions, designationOptions, optionsLoading }
+  return { departmentOptions, designationOptions, optionsLoading }
 }

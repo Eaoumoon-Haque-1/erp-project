@@ -1,17 +1,16 @@
 /** @file API-backed Designation list page. */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
 import { designationsApi } from '../api/designationApi'
 import { mapDesignationFromApi, mapDesignationToApi } from '../data/designationApiMapper'
 
 const basePath = '/hris/employee-settings/designation'
 
 const columns = [
-  { key: 'GROUP_NAME', label: 'Group Name' },
   { key: 'DESIGNATION_NAME', label: 'Designation Name' },
   { key: 'SHORT_NAME', label: 'Short Name', render: (value) => value || 'N/A' },
   { key: 'SORT_ORDER', label: 'Sort Order', render: (value) => value || 'N/A' },
@@ -22,33 +21,43 @@ const columns = [
   },
 ]
 
+const filters = [
+  { key: 'DESIGNATION_NAME', label: 'Search by Designation Name', placeholder: '--Search by Designation Name--', matches: (row, value) => row.DESIGNATION_NAME.toLowerCase().includes(value.toLowerCase()) },
+  { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
+]
+
+function bySortOrder(left, right) {
+  const leftOrder = Number(left.SORT_ORDER)
+  const rightOrder = Number(right.SORT_ORDER)
+  const safeLeftOrder = Number.isFinite(leftOrder) ? leftOrder : Number.POSITIVE_INFINITY
+  const safeRightOrder = Number.isFinite(rightOrder) ? rightOrder : Number.POSITIVE_INFINITY
+
+  return safeLeftOrder - safeRightOrder
+    || left.DESIGNATION_NAME.localeCompare(right.DESIGNATION_NAME)
+}
+
 function DesignationList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
   const [rows, setRows] = useState([])
-  const [groupOptions, setGroupOptions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!sessionGroupId) return undefined
+
     let active = true
-    Promise.all([designationsApi.list(), businessGroupsApi.list()])
-      .then(([designations, groups]) => {
+    designationsApi.list(sessionGroupId)
+      .then((designations) => {
         if (!active) return
-        const groupNames = new Map(groups.map((group) => [String(group.id), group.groupName]))
-        setRows(designations.map((designation) => mapDesignationFromApi(designation, groupNames)))
-        setGroupOptions(groups.map((group) => ({ value: String(group.id), label: group.groupName })))
+        setRows(designations.map((designation) => mapDesignationFromApi(designation)).sort(bySortOrder))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Designations.')
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
-
-  const filters = useMemo(() => [
-    { key: 'BG_ID', label: 'Search by Group Name', placeholder: '--Search by Group Name--', options: groupOptions },
-    { key: 'DESIGNATION_NAME', label: 'Search by Designation Name', placeholder: '--Search by Designation Name--', matches: (row, value) => row.DESIGNATION_NAME.toLowerCase().includes(value.toLowerCase()) },
-    { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
-  ], [groupOptions])
+  }, [sessionGroupId])
 
   const handleDelete = async (row) => {
     try {

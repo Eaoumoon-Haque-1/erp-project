@@ -51,7 +51,6 @@ function EmploymentStatusForm({ values, errors, onChange, statusNameRef }) {
           className={fieldClass(errors.SHORT_NAME)}
           placeholder={'Enter short name'}
           value={values.SHORT_NAME}
-          maxLength={5}
           aria-invalid={Boolean(errors.SHORT_NAME)}
           aria-describedby={
             errors.SHORT_NAME ? 'EMPLOYMENT_STATUS_SHORT_NAME-error' : undefined

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { levelOfEducationsApi } from '../../level-of-education/api/levelOfEducationApi'
 import { degreesApi } from '../api/degreeApi'
 import DegreeEducationMappingForm from '../components/DegreeEducationMappingForm'
@@ -51,7 +52,16 @@ function DegreeEducationMappingCreate() {
     .map((degree) => ({ DEGREE_NAME: degree.degreeName }))
 
   const handleLevelChange = (event) => {
-    setLevelOfEducationId(event.target.value)
+    const nextLevelId = event.target.value
+    const recordsForLevel = [
+      ...existingDegrees.filter((degree) => String(degree.levelOfEduId) === nextLevelId),
+      ...rows.filter((row) => row.LEVEL_OF_EDU_ID === nextLevelId),
+    ]
+    setLevelOfEducationId(nextLevelId)
+    setEntryValues((current) => ({
+      ...current,
+      SORT_ORDER: getNextSortOrder(recordsForLevel),
+    }))
     setErrors((current) => ({ ...current, LEVEL_OF_EDU_ID: undefined }))
   }
 
@@ -72,12 +82,20 @@ function DegreeEducationMappingCreate() {
     if (!result.isValid) return
 
     nextRowId += 1
-    setRows((current) => [...current, {
+    const nextRow = {
       ID: `degree-row-${nextRowId}`,
       LEVEL_OF_EDU_ID: levelOfEducationId,
       ...result.values,
-    }])
-    setEntryValues(initialDegreeEntryValues)
+    }
+    setRows((current) => [...current, nextRow])
+    setEntryValues({
+      ...initialDegreeEntryValues,
+      SORT_ORDER: getNextSortOrder([
+        ...existingDegrees.filter((degree) => String(degree.levelOfEduId) === levelOfEducationId),
+        ...rows.filter((row) => row.LEVEL_OF_EDU_ID === levelOfEducationId),
+        nextRow,
+      ]),
+    })
     setErrors({})
     requestAnimationFrame(() => degreeNameRef.current?.focus())
   }
@@ -116,7 +134,7 @@ function DegreeEducationMappingCreate() {
 
   const handleReset = () => {
     setLevelOfEducationId('')
-    setEntryValues(initialDegreeEntryValues)
+    setEntryValues({ ...initialDegreeEntryValues, SORT_ORDER: '1' })
     setRows([])
     setErrors({})
     requestAnimationFrame(() => degreeNameRef.current?.focus())

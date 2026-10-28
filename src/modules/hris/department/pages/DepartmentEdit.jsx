@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ActionForm from '../../../../components/shared/ActionForm'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import PageHeader from '../../../../components/shared/PageHeader'
@@ -29,6 +30,8 @@ import {
 function DepartmentEdit() {
   const { departmentId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
   const departmentNameRef = useRef(null)
   const [department, setDepartment] = useState(null)
   const [values, setValues] = useState(initialDepartmentValues)
@@ -40,7 +43,7 @@ function DepartmentEdit() {
   const [groupSubmitting, setGroupSubmitting] = useState(false)
   const [departmentGroups, setDepartmentGroups] = useState([])
   const [loadedBusinessUnits, setLoadedBusinessUnits] = useState({ groupId: '', records: [] })
-  const { groupOptions, groupsLoading } = useBusinessOptions(values.BG_ID, {
+  const { groupOptions } = useBusinessOptions(values.BG_ID, {
     loadUnits: false,
     preserveGroupId: values.BG_ID,
   })
@@ -54,12 +57,15 @@ function DepartmentEdit() {
     let active = true
     Promise.all([
       departmentsApi.get(departmentId),
-      departmentsApi.list(),
+      departmentsApi.list(sessionGroupId),
       departmentGroupsApi.list(departmentId),
     ])
       .then(([record, records, groupRecords]) => {
         if (!active) return
-        const mapped = mapDepartmentFromApi(record)
+        const mapped = {
+          ...mapDepartmentFromApi(record),
+          BG_ID: sessionGroupId,
+        }
         setDepartment(mapped)
         setValues(mapped)
         setExistingDepartments(records.filter((item) => String(item.id) !== String(departmentId)))
@@ -70,7 +76,7 @@ function DepartmentEdit() {
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [departmentId])
+  }, [departmentId, sessionGroupId])
 
   useEffect(() => {
     if (!assignmentGroupId) return undefined
@@ -108,7 +114,10 @@ function DepartmentEdit() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDepartment(values, existingDepartments)
+    const result = validateDepartment(
+      { ...values, BG_ID: sessionGroupId },
+      existingDepartments,
+    )
 
     setValues((current) => ({ ...current, ...result.values }))
     setErrors(result.errors)
@@ -257,8 +266,6 @@ function DepartmentEdit() {
           <DepartmentForm
             values={values}
             errors={errors}
-            groupOptions={groupOptions}
-            groupsLoading={groupsLoading}
             onChange={handleChange}
             departmentNameRef={departmentNameRef}
           />

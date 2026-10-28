@@ -1,17 +1,16 @@
 /** @file API-backed Department list page. */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
 import { departmentsApi } from '../api/departmentApi'
 import { mapDepartmentFromApi, mapDepartmentToApi } from '../data/departmentApiMapper'
 
 const basePath = '/hris/employee-settings/department'
 
 const columns = [
-  { key: 'GROUP_NAME', label: 'Group Name' },
   { key: 'DEPARTMENT_NAME', label: 'Department Name' },
   { key: 'SHORT_NAME', label: 'Short Name', render: (value) => value || 'N/A' },
   { key: 'SORT_ORDER', label: 'Sort Order', render: (value) => value || 'N/A' },
@@ -22,33 +21,43 @@ const columns = [
   },
 ]
 
+const filters = [
+  { key: 'DEPARTMENT_NAME', label: 'Search by Department Name', placeholder: '--Search by Department Name--', matches: (row, value) => row.DEPARTMENT_NAME.toLowerCase().includes(value.toLowerCase()) },
+  { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
+]
+
+function bySortOrder(left, right) {
+  const leftOrder = Number(left.SORT_ORDER)
+  const rightOrder = Number(right.SORT_ORDER)
+  const safeLeftOrder = Number.isFinite(leftOrder) ? leftOrder : Number.POSITIVE_INFINITY
+  const safeRightOrder = Number.isFinite(rightOrder) ? rightOrder : Number.POSITIVE_INFINITY
+
+  return safeLeftOrder - safeRightOrder
+    || left.DEPARTMENT_NAME.localeCompare(right.DEPARTMENT_NAME)
+}
+
 function DepartmentList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
   const [rows, setRows] = useState([])
-  const [groupOptions, setGroupOptions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!sessionGroupId) return undefined
+
     let active = true
-    Promise.all([departmentsApi.list(), businessGroupsApi.list()])
-      .then(([departments, groups]) => {
+    departmentsApi.list(sessionGroupId)
+      .then((departments) => {
         if (!active) return
-        const groupNames = new Map(groups.map((group) => [String(group.id), group.groupName]))
-        setRows(departments.map((department) => mapDepartmentFromApi(department, groupNames)))
-        setGroupOptions(groups.map((group) => ({ value: String(group.id), label: group.groupName })))
+        setRows(departments.map((department) => mapDepartmentFromApi(department)).sort(bySortOrder))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Departments.')
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
-
-  const filters = useMemo(() => [
-    { key: 'BG_ID', label: 'Search by Group Name', placeholder: '--Search by Group Name--', options: groupOptions },
-    { key: 'DEPARTMENT_NAME', label: 'Search by Department Name', placeholder: '--Search by Department Name--', matches: (row, value) => row.DEPARTMENT_NAME.toLowerCase().includes(value.toLowerCase()) },
-    { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
-  ], [groupOptions])
+  }, [sessionGroupId])
 
   const handleDelete = async (row) => {
     try {

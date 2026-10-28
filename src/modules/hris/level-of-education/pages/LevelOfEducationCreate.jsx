@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { levelOfEducationsApi } from '../api/levelOfEducationApi'
 import LevelOfEducationForm from '../components/LevelOfEducationForm'
 import { mapLevelOfEducationToApi } from '../data/levelOfEducationApiMapper'
@@ -27,7 +28,12 @@ function LevelOfEducationCreate() {
     let active = true
     levelOfEducationsApi.list()
       .then((records) => {
-        if (active) setExistingRecords(records)
+        if (!active) return
+        setExistingRecords(records)
+        setValues((current) => ({
+          ...current,
+          SORT_ORDER: getNextSortOrder(records),
+        }))
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing Levels of Education.'))
@@ -73,7 +79,10 @@ function LevelOfEducationCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialLevelOfEducationValues)
+    setValues({
+      ...initialLevelOfEducationValues,
+      SORT_ORDER: getNextSortOrder(existingRecords),
+    })
     setErrors({})
     setMessage('')
     requestAnimationFrame(() => levelOfEducationRef.current?.focus())

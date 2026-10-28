@@ -8,7 +8,7 @@ export const initialAssetSpecificationMapValues = {
   ITEM_NAME_LABEL: '',
   SPECIFICATION: '',
   SPECIFICATION_NAME: '',
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   STATUS: '1',
 }
 
@@ -42,7 +42,7 @@ export function validateAssetSpecificationMap(
     errors.SPECIFICATION = 'Select a valid active Specification.'
   }
 
-  if (normalized.SORT_ORDER && !/^[1-9]\d*$/.test(normalized.SORT_ORDER)) {
+  if (!/^[1-9]\d*$/.test(normalized.SORT_ORDER)) {
     errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 

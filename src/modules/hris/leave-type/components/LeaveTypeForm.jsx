@@ -82,7 +82,6 @@ function LeaveTypeForm({
           className={fieldClass(errors.SHORT_NAME)}
           placeholder={'Enter short name'}
           value={values.SHORT_NAME}
-          maxLength={5}
           aria-invalid={Boolean(errors.SHORT_NAME)}
           aria-describedby={
             errors.SHORT_NAME ? 'LEAVE_TYPE_SHORT_NAME-error' : undefined
@@ -103,9 +102,9 @@ function LeaveTypeForm({
           className={fieldClass(errors.SORT_ORDER)}
           placeholder={'Enter sort order'}
           value={values.SORT_ORDER}
-          min={'0'}
-          step={'any'}
-          inputMode={'decimal'}
+          min={'1'}
+          step={'1'}
+          inputMode={'numeric'}
           aria-invalid={Boolean(errors.SORT_ORDER)}
           aria-describedby={
             errors.SORT_ORDER ? 'LEAVE_TYPE_SORT_ORDER-error' : undefined

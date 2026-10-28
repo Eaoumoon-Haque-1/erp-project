@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { leaveTypesApi } from '../api/leaveTypeApi'
 import LeaveTypeForm from '../components/LeaveTypeForm'
@@ -24,7 +25,14 @@ function LeaveTypeCreate() {
   useEffect(() => {
     let active = true
     leaveTypesApi.list()
-      .then((records) => { if (active) setExistingRecords(records) })
+      .then((records) => {
+        if (!active) return
+        setExistingRecords(records)
+        setValues((current) => ({
+          ...current,
+          SORT_ORDER: getNextSortOrder(records),
+        }))
+      })
       .catch((error) => { if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing Leave Types.')) })
     return () => { active = false }
   }, [])
@@ -60,7 +68,10 @@ function LeaveTypeCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialLeaveTypeValues)
+    setValues({
+      ...initialLeaveTypeValues,
+      SORT_ORDER: getNextSortOrder(existingRecords),
+    })
     setErrors({})
     setMessage('')
     requestAnimationFrame(() => typeNameRef.current?.focus())

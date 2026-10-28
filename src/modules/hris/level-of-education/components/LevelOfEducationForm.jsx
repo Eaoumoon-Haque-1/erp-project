@@ -61,7 +61,6 @@ function LevelOfEducationForm({ values, errors, levelOfEducationRef, onChange })
             id={'SHORT_NAME'}
             name={'SHORT_NAME'}
             type={'text'}
-            maxLength={5}
             className={fieldClass(errors.SHORT_NAME)}
             placeholder={'e.g. SSC, BSc'}
             value={values.SHORT_NAME || ''}
@@ -81,12 +80,12 @@ function LevelOfEducationForm({ values, errors, levelOfEducationRef, onChange })
             id={'SORT_ORDER'}
             name={'SORT_ORDER'}
             type={'number'}
-            min={0}
+            min={1}
             className={fieldClass(errors.SORT_ORDER)}
             placeholder={'e.g. 1'}
             value={values.SORT_ORDER || ''}
-            step={'any'}
-            inputMode={'decimal'}
+            step={'1'}
+            inputMode={'numeric'}
             aria-invalid={Boolean(errors.SORT_ORDER)}
             aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
             onChange={onChange}

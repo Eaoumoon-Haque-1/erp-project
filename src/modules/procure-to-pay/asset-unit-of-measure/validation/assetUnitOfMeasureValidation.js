@@ -6,7 +6,7 @@ export function createInitialAssetUnitOfMeasureValues(businessGroup) {
     BG_ID: String(businessGroup?.id ?? ''),
     BU_ID: '',
     UNIT_NAME: '',
-    SORT_ORDER: '',
+    SORT_ORDER: '1',
     STATUS: '1',
   }
 }
@@ -30,7 +30,7 @@ export function validateAssetUnitOfMeasure(values, existingRecords = []) {
   else if (normalized.UNIT_NAME.length > 50) errors.UNIT_NAME = 'Unit Name must not exceed 50 characters.'
   else if (existingRecords.some((record) => text(record.UNIT_NAME).toLowerCase() === normalized.UNIT_NAME.toLowerCase())) errors.UNIT_NAME = 'This Unit Name already exists.'
 
-  if (normalized.SORT_ORDER && (!/^\d+$/.test(normalized.SORT_ORDER) || Number(normalized.SORT_ORDER) < 1)) {
+  if (!/^[1-9]\d*$/.test(normalized.SORT_ORDER)) {
     errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 

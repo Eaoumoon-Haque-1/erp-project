@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { hrLookupTypesApi } from '../../hr-lookup-type/api/hrLookupTypeApi'
 import { hrLookupValuesApi } from '../api/hrLookupValueApi'
 import HrLookupValueForm from '../components/HrLookupValueForm'
@@ -22,18 +23,20 @@ function HrLookupValueCreate() {
   const [values, setValues] = useState(initialHrLookupValueValues)
   const [errors, setErrors] = useState({})
   const [typeOptions, setTypeOptions] = useState([])
+  const [existingRecords, setExistingRecords] = useState([])
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const { groupOptions } = useBusinessOptions('', { loadUnits: false })
 
   useEffect(() => {
     let active = true
-    hrLookupTypesApi.list()
-      .then((records) => {
+    Promise.all([hrLookupTypesApi.list(), hrLookupValuesApi.list()])
+      .then(([types, lookupValues]) => {
         if (!active) return
-        setTypeOptions(records
+        setTypeOptions(types
           .filter((record) => String(record.status ?? 1) === '1')
           .map((record) => ({ value: String(record.id), label: record.typeName })))
+        setExistingRecords(lookupValues)
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load HR Lookup Types.'))
@@ -48,6 +51,12 @@ function HrLookupValueCreate() {
     setValues((current) => ({
       ...current,
       [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
+      ...(['BG_ID', 'TYPE_ID'].includes(name) ? {
+        SORT_ORDER: getNextSortOrder(existingRecords.filter((record) => (
+          String(record.bgId) === String(name === 'BG_ID' ? value : current.BG_ID)
+          && String(record.typeId) === String(name === 'TYPE_ID' ? value : current.TYPE_ID)
+        ))),
+      } : {}),
     }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
@@ -75,7 +84,7 @@ function HrLookupValueCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialHrLookupValueValues)
+    setValues({ ...initialHrLookupValueValues, SORT_ORDER: '1' })
     setErrors({})
     setMessage('')
     requestAnimationFrame(() => typeRef.current?.focus())

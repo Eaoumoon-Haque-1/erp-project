@@ -26,38 +26,12 @@ function fieldClass(error, extra = '') {
 function DepartmentForm({
   values,
   errors,
-  groupOptions = [],
-  groupsLoading = false,
   onChange,
   departmentNameRef,
 }) {
   return (
     // erp-form-grid supplies the project's responsive equal-width columns.
     <div className={'erp-form-grid'}>
-      <div>
-        <label className={'erp-field-label'} htmlFor={'BG_ID'}>
-          Group Name
-          <span className={'erp-required'} aria-hidden={'true'}>*</span>
-        </label>
-        <select
-          id={'BG_ID'}
-          name={'BG_ID'}
-          className={fieldClass(errors.BG_ID)}
-          value={values.BG_ID}
-          required
-          disabled={groupsLoading}
-          aria-invalid={Boolean(errors.BG_ID)}
-          aria-describedby={errors.BG_ID ? 'DEPT_BG_ID-error' : undefined}
-          onChange={onChange}
-        >
-          <option value={''}>{groupsLoading ? 'Loading Group Names...' : '--Select Group Name--'}</option>
-          {groupOptions.map((group) => (
-            <option key={group.value} value={group.value}>{group.label}</option>
-          ))}
-        </select>
-        <FieldError id={'DEPT_BG_ID-error'} message={errors.BG_ID} />
-      </div>
-
       {/* Standard required text-field pattern. */}
       <div>
         <label className={'erp-field-label'} htmlFor={'DEPARTMENT_NAME'}>
@@ -96,7 +70,6 @@ function DepartmentForm({
           className={fieldClass(errors.SHORT_NAME)}
           placeholder={'Enter short name'}
           value={values.SHORT_NAME}
-          maxLength={5}
           aria-invalid={Boolean(errors.SHORT_NAME)}
           aria-describedby={errors.SHORT_NAME ? 'SHORT_NAME-error' : undefined}
           onChange={onChange}
@@ -114,9 +87,9 @@ function DepartmentForm({
           className={fieldClass(errors.SORT_ORDER)}
           placeholder={'Enter sort order'}
           value={values.SORT_ORDER}
-          min={'0'}
-          step={'any'}
-          inputMode={'decimal'}
+          min={'1'}
+          step={'1'}
+          inputMode={'numeric'}
           aria-invalid={Boolean(errors.SORT_ORDER)}
           aria-describedby={errors.SORT_ORDER ? 'SORT_ORDER-error' : undefined}
           onChange={onChange}

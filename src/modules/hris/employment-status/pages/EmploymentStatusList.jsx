@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { employmentStatusesApi } from '../api/employmentStatusApi'
@@ -29,17 +30,27 @@ const columns = [
 
 function EmploymentStatusList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
     employmentStatusesApi.list()
-      .then((records) => { if (active) setRows(records.map(mapEmploymentStatusFromApi)) })
+      .then((records) => {
+        if (!active) return
+        setRows(records.map((record) => ({
+          ...mapEmploymentStatusFromApi(record),
+          BG_ID: String(record.bgId ?? sessionGroupId),
+          BU_ID: String(record.buId ?? sessionBusinessUnitId),
+        })))
+      })
       .catch((error) => getApiErrorMessage(error, 'Unable to load Employment Statuses.'))
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const handleDelete = async (row) => {
     try {
@@ -55,8 +66,17 @@ function EmploymentStatusList() {
   const handleStatusChange = async (row) => {
     try {
       const updated = await employmentStatusesApi.update(row.ID,
-        mapEmploymentStatusToApi({ ...row, STATUS: row.STATUS === '1' ? '0' : '1' }))
-      setRows((current) => current.map((item) => item.ID === row.ID ? mapEmploymentStatusFromApi(updated) : item))
+        mapEmploymentStatusToApi({
+          ...row,
+          BG_ID: sessionGroupId,
+          BU_ID: sessionBusinessUnitId,
+          STATUS: row.STATUS === '1' ? '0' : '1',
+        }))
+      setRows((current) => current.map((item) => item.ID === row.ID ? {
+        ...mapEmploymentStatusFromApi(updated),
+        BG_ID: String(updated?.bgId ?? sessionGroupId),
+        BU_ID: String(updated?.buId ?? sessionBusinessUnitId),
+      } : item))
       return true
     } catch (error) {
       getApiErrorMessage(error, 'Unable to update Employment Status status.')

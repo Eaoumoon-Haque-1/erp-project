@@ -87,8 +87,8 @@ function AssetLookupValueForm({ values, errors, typeOptions, valueRef, onChange 
           type={'number'}
           className={fieldClass(errors.SORT_ORDER)}
           value={values.SORT_ORDER}
-          min={'0.01'}
-          step={'any'}
+          min={'1'}
+          step={'1'}
           placeholder={'Enter sort order'}
           aria-invalid={Boolean(errors.SORT_ORDER)}
           aria-describedby={errors.SORT_ORDER ? 'asset-value-SORT_ORDER-error' : undefined}

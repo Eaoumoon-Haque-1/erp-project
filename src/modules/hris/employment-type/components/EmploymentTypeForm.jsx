@@ -51,7 +51,6 @@ function EmploymentTypeForm({ values, errors, onChange, typeNameRef }) {
           className={fieldClass(errors.SHORT_NAME)}
           placeholder={'Enter short name'}
           value={values.SHORT_NAME}
-          maxLength={5}
           aria-invalid={Boolean(errors.SHORT_NAME)}
           aria-describedby={errors.SHORT_NAME ? 'EMPLOYMENT_SHORT_NAME-error' : undefined}
           onChange={onChange}
@@ -70,7 +69,7 @@ function EmploymentTypeForm({ values, errors, onChange, typeNameRef }) {
           className={fieldClass(errors.SORT_ORDER)}
           placeholder={'Enter sort order'}
           value={values.SORT_ORDER}
-          min={'0'}
+          min={'0.000001'}
           step={'any'}
           inputMode={'decimal'}
           aria-invalid={Boolean(errors.SORT_ORDER)}

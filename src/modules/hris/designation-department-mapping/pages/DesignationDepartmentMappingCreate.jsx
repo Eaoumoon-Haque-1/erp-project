@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { designationDepartmentMappingsApi } from '../api/designationDepartmentMappingApi'
 import DesignationDepartmentMappingForm from '../components/DesignationDepartmentMappingForm'
@@ -13,10 +14,16 @@ const listPath = '/hris/employee-settings/designation-department-mapping'
 
 function DesignationDepartmentMappingCreate() {
   const navigate = useNavigate()
-  const businessUnitRef = useRef(null)
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const departmentRef = useRef(null)
   const designationRef = useRef(null)
-  const [values, setValues] = useState(initialDesignationDepartmentMappingValues)
+  const [values, setValues] = useState(() => ({
+    ...initialDesignationDepartmentMappingValues,
+    BG_ID: sessionGroupId,
+    BU_ID: sessionBusinessUnitId,
+  }))
   const [existingMappings, setExistingMappings] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -24,13 +31,19 @@ function DesignationDepartmentMappingCreate() {
 
   useEffect(() => {
     let active = true
-    designationDepartmentMappingsApi.list()
-      .then((records) => { if (active) setExistingMappings(records) })
+    designationDepartmentMappingsApi.list(sessionBusinessUnitId)
+      .then((records) => {
+        if (!active) return
+        setExistingMappings(records.filter((record) => (
+          String(record.bgId) === sessionGroupId
+          && String(record.buId) === sessionBusinessUnitId
+        )))
+      })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load existing mappings.')
       })
     return () => { active = false }
-  }, [])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -38,20 +51,21 @@ function DesignationDepartmentMappingCreate() {
     setValues((current) => ({
       ...current,
       [name]: nextValue,
-      ...(name === 'BG_ID' ? { BU_ID: '', DEPT_ID: '', DESIG_ID: '' } : {}),
-      ...(name === 'BU_ID' ? { DEPT_ID: '', DESIG_ID: '' } : {}),
     }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDesignationDepartmentMapping(values, existingMappings)
+    const result = validateDesignationDepartmentMapping({
+      ...values,
+      BG_ID: sessionGroupId,
+      BU_ID: sessionBusinessUnitId,
+    }, existingMappings)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) {
-      if (result.errors.BU_ID) businessUnitRef.current?.focus()
-      else if (result.errors.DEPT_ID) departmentRef.current?.focus()
+      if (result.errors.DEPT_ID) departmentRef.current?.focus()
       else if (result.errors.DESIG_ID) designationRef.current?.focus()
       return
     }
@@ -70,13 +84,17 @@ function DesignationDepartmentMappingCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialDesignationDepartmentMappingValues)
+    setValues({
+      ...initialDesignationDepartmentMappingValues,
+      BG_ID: sessionGroupId,
+      BU_ID: sessionBusinessUnitId,
+    })
     setErrors({})
   }
 
   return (
     <FormPage title={'Designation Department Mapping Create'} listTo={listPath} tableName={DESIGNATION_MAPPING_TABLE} onSubmit={handleSubmit} onReset={handleReset} submitting={submitting}>
-      <DesignationDepartmentMappingForm values={values} errors={errors} {...options} onChange={handleChange} businessUnitRef={businessUnitRef} departmentRef={departmentRef} designationRef={designationRef} />
+      <DesignationDepartmentMappingForm values={values} errors={errors} {...options} onChange={handleChange} departmentRef={departmentRef} designationRef={designationRef} />
     </FormPage>
   )
 }

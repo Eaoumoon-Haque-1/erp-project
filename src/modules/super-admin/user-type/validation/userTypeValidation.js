@@ -9,7 +9,7 @@ export const createInitialUserTypeValues = (businessGroupId) => ({
   BG_ID: String(businessGroupId ?? ''),
   TYPE_NAME: '',
   SHORT_NAME: '',
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   STATUS: '1',
 })
 
@@ -42,8 +42,6 @@ export function validateUserType(values, existingTypeNames = [], existingShortNa
   if (normalizedValues.SHORT_NAME) {
     if (normalizedValues.SHORT_NAME.length < 2) {
       errors.SHORT_NAME = 'Short Name must be at least 2 characters.'
-    } else if (normalizedValues.SHORT_NAME.length > 5) {
-      errors.SHORT_NAME = 'Short Name must not exceed 5 characters.'
     } else if (existingShortNames.some(
       (name) => String(name).trim().toLowerCase() === normalizedValues.SHORT_NAME.toLowerCase(),
     )) {
@@ -51,13 +49,8 @@ export function validateUserType(values, existingTypeNames = [], existingShortNa
     }
   }
 
-  if (normalizedValues.SORT_ORDER) {
-    const sortOrder = Number(normalizedValues.SORT_ORDER)
-    if (!Number.isFinite(sortOrder)) {
-      errors.SORT_ORDER = 'Sort Order must be a valid number.'
-    } else if (sortOrder <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be greater than 0.'
-    }
+  if (!/^[1-9]\d*$/.test(normalizedValues.SORT_ORDER)) {
+    errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 
   return {

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { employmentStatusesApi } from '../api/employmentStatusApi'
 import EmploymentStatusForm from '../components/EmploymentStatusForm'
@@ -10,12 +11,15 @@ import { EMPLOYMENT_STATUS_TABLE, initialEmploymentStatusValues, validateEmploym
 
 const listPath = '/hris/employee-settings/employment-status'
 const fieldMap = {
-  statusName: 'STATUS_NAME', shortName: 'SHORT_NAME', sortOrder: 'SORT_ORDER', status: 'STATUS',
+  bgId: 'BG_ID', buId: 'BU_ID', statusName: 'STATUS_NAME', shortName: 'SHORT_NAME', sortOrder: 'SORT_ORDER', status: 'STATUS',
 }
 
 function EmploymentStatusEdit() {
   const { employmentStatusId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const statusNameRef = useRef(null)
   const [values, setValues] = useState(initialEmploymentStatusValues)
   const [originalValues, setOriginalValues] = useState(initialEmploymentStatusValues)
@@ -28,13 +32,17 @@ function EmploymentStatusEdit() {
     Promise.all([employmentStatusesApi.get(employmentStatusId), employmentStatusesApi.list()])
       .then(([record, records]) => {
         if (!active) return
-        const mapped = mapEmploymentStatusFromApi(record)
+        const mapped = {
+          ...mapEmploymentStatusFromApi(record),
+          BG_ID: sessionGroupId,
+          BU_ID: sessionBusinessUnitId,
+        }
         setValues(mapped); setOriginalValues(mapped)
         setExistingRecords(records.filter((item) => String(item.id) !== String(employmentStatusId)))
       })
       .catch((error) => getApiErrorMessage(error, 'Unable to load Employment Status.'))
     return () => { active = false }
-  }, [employmentStatusId])
+  }, [employmentStatusId, sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -44,7 +52,14 @@ function EmploymentStatusEdit() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateEmploymentStatus(values, existingRecords)
+    const result = validateEmploymentStatus(
+      {
+        ...values,
+        BG_ID: sessionGroupId,
+        BU_ID: sessionBusinessUnitId,
+      },
+      existingRecords,
+    )
     setValues(result.values); setErrors(result.errors)
     if (!result.isValid) {
       requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())

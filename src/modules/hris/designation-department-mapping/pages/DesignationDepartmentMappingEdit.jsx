@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ActionForm from '../../../../components/shared/ActionForm'
 import PageHeader from '../../../../components/shared/PageHeader'
 import { designationDepartmentMappingsApi } from '../api/designationDepartmentMappingApi'
@@ -15,7 +16,9 @@ const listPath = '/hris/employee-settings/designation-department-mapping'
 function DesignationDepartmentMappingEdit() {
   const { mappingId } = useParams()
   const navigate = useNavigate()
-  const businessUnitRef = useRef(null)
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const departmentRef = useRef(null)
   const designationRef = useRef(null)
   const [mapping, setMapping] = useState(null)
@@ -30,18 +33,26 @@ function DesignationDepartmentMappingEdit() {
     let active = true
     Promise.all([
       designationDepartmentMappingsApi.get(mappingId),
-      designationDepartmentMappingsApi.list(),
+      designationDepartmentMappingsApi.list(sessionBusinessUnitId),
     ]).then(([record, records]) => {
       if (!active) return
-      const mapped = mapDesignationDepartmentMappingFromApi(record)
+      const mapped = {
+        ...mapDesignationDepartmentMappingFromApi(record),
+        BG_ID: sessionGroupId,
+        BU_ID: sessionBusinessUnitId,
+      }
       setMapping(mapped)
       setValues(mapped)
-      setExistingMappings(records.filter((row) => String(row.id) !== String(mappingId)))
+      setExistingMappings(records.filter((row) => (
+        String(row.id) !== String(mappingId)
+        && String(row.bgId) === sessionGroupId
+        && String(row.buId) === sessionBusinessUnitId
+      )))
     }).catch((error) => {
       if (active) getApiErrorMessage(error, 'Unable to load Department–Designation mapping.')
     }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [mappingId])
+  }, [mappingId, sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -49,15 +60,17 @@ function DesignationDepartmentMappingEdit() {
     setValues((current) => ({
       ...current,
       [name]: nextValue,
-      ...(name === 'BG_ID' ? { BU_ID: '', DEPT_ID: '', DESIG_ID: '' } : {}),
-      ...(name === 'BU_ID' ? { DEPT_ID: '', DESIG_ID: '' } : {}),
     }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDesignationDepartmentMapping(values, existingMappings)
+    const result = validateDesignationDepartmentMapping({
+      ...values,
+      BG_ID: sessionGroupId,
+      BU_ID: sessionBusinessUnitId,
+    }, existingMappings)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) return
@@ -87,7 +100,7 @@ function DesignationDepartmentMappingEdit() {
       <PageHeader title={'Designation Department Mapping Edit'} actionLabel={'List'} actionTo={listPath} />
       <section className={'erp-form-card'}>
         <ActionForm action={'update'} entityName={'Designation Department Mapping'} data-table={DESIGNATION_MAPPING_TABLE} onSubmit={handleSubmit} noValidate>
-          <DesignationDepartmentMappingForm values={values} errors={errors} {...options} onChange={handleChange} businessUnitRef={businessUnitRef} departmentRef={departmentRef} designationRef={designationRef} />
+          <DesignationDepartmentMappingForm values={values} errors={errors} {...options} onChange={handleChange} departmentRef={departmentRef} designationRef={designationRef} />
           <div className={'erp-form-actions'}>
             <button type={'submit'} className={'primary-button'} disabled={submitting}>{submitting ? 'Saving...' : 'Update'}</button>
           </div>

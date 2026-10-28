@@ -462,6 +462,7 @@
 
   .erp-list-search-row {
     width: 100%;
+    margin-left: auto;
     margin-bottom: 16px;
   }
 

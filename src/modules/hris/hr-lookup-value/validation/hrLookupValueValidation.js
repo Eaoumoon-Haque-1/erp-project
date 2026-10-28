@@ -9,7 +9,7 @@ export const initialHrLookupValueValues = {
   BG_ID: '',
   TYPE_ID: '',
   VALUE: '',
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   STATUS: '1',
 }
 
@@ -39,12 +39,8 @@ export function validateHrLookupValue(values) {
     errors.VALUE = 'Value must not exceed 20 characters.'
   }
 
-  if (normalizedValues.SORT_ORDER) {
-    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalizedValues.SORT_ORDER)) {
-      errors.SORT_ORDER = 'Sort Order must be a valid number.'
-    } else if (Number(normalizedValues.SORT_ORDER) <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be greater than 0.'
-    }
+  if (!/^[1-9]\d*$/.test(normalizedValues.SORT_ORDER)) {
+    errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 
   return {

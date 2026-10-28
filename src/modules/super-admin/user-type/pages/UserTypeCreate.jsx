@@ -3,19 +3,18 @@
  * Sections: controlled state/refs, change handlers, validation submit/reset, and form-page composition.
  * Future create API calls belong here; keep field markup in the matching form component.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
 import { userTypesApi } from '../api/userTypeApi'
-import { applyApiFormErrors } from '../../../../api/errors'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import UserTypeForm from '../components/UserTypeForm'
 import { mapUserTypeToApi } from '../data/userTypeApiMapper'
 import { USER_TYPE_TABLE, createInitialUserTypeValues, validateUserType } from '../validation/userTypeValidation'
 
-const existingTypeNames = []
-const existingShortNames = []
 const listPath = '/super-admin/user-creation/user-type'
 
 function UserTypeCreate() {
@@ -24,12 +23,30 @@ function UserTypeCreate() {
   const initialValues = createInitialUserTypeValues(currentUser.businessGroup.id)
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
+  const [existingRecords, setExistingRecords] = useState([])
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const { groupOptions, groupsLoading } = useBusinessOptions('', {
     loadUnits: false,
     preserveGroupId: currentUser.businessGroup.id,
   })
+
+  useEffect(() => {
+    let active = true
+    userTypesApi.list()
+      .then((records) => {
+        if (!active) return
+        setExistingRecords(records)
+        setValues((current) => ({
+          ...current,
+          SORT_ORDER: getNextSortOrder(records),
+        }))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing User Types.'))
+      })
+    return () => { active = false }
+  }, [])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -40,7 +57,11 @@ function UserTypeCreate() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateUserType(values, existingTypeNames, existingShortNames)
+    const result = validateUserType(
+      values,
+      existingRecords.map((record) => record.typeName),
+      existingRecords.map((record) => record.shortName).filter(Boolean),
+    )
     setValues(result.values)
     setErrors(result.errors)
 
@@ -68,7 +89,10 @@ function UserTypeCreate() {
   }
 
   const handleReset = () => {
-    setValues(createInitialUserTypeValues(currentUser.businessGroup.id))
+    setValues({
+      ...createInitialUserTypeValues(currentUser.businessGroup.id),
+      SORT_ORDER: getNextSortOrder(existingRecords),
+    })
     setErrors({})
     requestAnimationFrame(() => typeNameRef.current?.focus())
   }

@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { designationsApi } from '../api/designationApi'
 import DesignationForm from '../components/DesignationForm'
 import { mapDesignationToApi } from '../data/designationApiMapper'
@@ -13,22 +14,33 @@ const listPath = '/hris/employee-settings/designation'
 
 function DesignationCreate() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
   const designationNameRef = useRef(null)
-  const [values, setValues] = useState(initialDesignationValues)
+  const [values, setValues] = useState(() => ({
+    ...initialDesignationValues,
+    BG_ID: sessionGroupId,
+  }))
   const [existingDesignations, setExistingDesignations] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
-  const { groupOptions, groupsLoading } = useBusinessOptions(values.BG_ID, { loadUnits: false })
 
   useEffect(() => {
     let active = true
-    designationsApi.list()
-      .then((records) => { if (active) setExistingDesignations(records) })
+    designationsApi.list(sessionGroupId)
+      .then((records) => {
+        if (!active) return
+        setExistingDesignations(records)
+        setValues((current) => ({
+          ...current,
+          SORT_ORDER: getNextSortOrder(records),
+        }))
+      })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load existing Designations.')
       })
     return () => { active = false }
-  }, [])
+  }, [sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -38,7 +50,10 @@ function DesignationCreate() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDesignation(values, existingDesignations)
+    const result = validateDesignation(
+      { ...values, BG_ID: sessionGroupId },
+      existingDesignations,
+    )
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) {
@@ -60,14 +75,18 @@ function DesignationCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialDesignationValues)
+    setValues({
+      ...initialDesignationValues,
+      BG_ID: sessionGroupId,
+      SORT_ORDER: getNextSortOrder(existingDesignations),
+    })
     setErrors({})
     requestAnimationFrame(() => designationNameRef.current?.focus())
   }
 
   return (
     <FormPage title={'Designation Create'} listTo={listPath} tableName={DESIGNATION_TABLE} onSubmit={handleSubmit} onReset={handleReset} submitting={submitting}>
-      <DesignationForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} onChange={handleChange} designationNameRef={designationNameRef} />
+      <DesignationForm values={values} errors={errors} onChange={handleChange} designationNameRef={designationNameRef} />
     </FormPage>
   )
 }

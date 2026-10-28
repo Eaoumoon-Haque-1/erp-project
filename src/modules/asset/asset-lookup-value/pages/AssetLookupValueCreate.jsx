@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentUser } from '../../../../app/currentUser'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { listAssetLookupTypes } from '../../asset-lookup-type/data/assetLookupTypeStore'
 import AssetLookupValueForm from '../components/AssetLookupValueForm'
 import { createAssetLookupValue, listAssetLookupValues } from '../data/assetLookupValueStore'
@@ -17,7 +18,10 @@ const listPath = '/asset/asset-lookup-value'
 function AssetLookupValueCreate() {
   const navigate = useNavigate()
   const valueRef = useRef(null)
-  const [values, setValues] = useState(() => createInitialAssetLookupValueValues(currentUser.businessGroup))
+  const [values, setValues] = useState(() => ({
+    ...createInitialAssetLookupValueValues(currentUser.businessGroup),
+    SORT_ORDER: getNextSortOrder(listAssetLookupValues()),
+  }))
   const [errors, setErrors] = useState({})
   const typeOptions = useMemo(() => listAssetLookupTypes()
     .filter((record) => record.STATUS === '1')
@@ -51,7 +55,10 @@ function AssetLookupValueCreate() {
   }
 
   const handleReset = () => {
-    setValues(createInitialAssetLookupValueValues(currentUser.businessGroup))
+    setValues({
+      ...createInitialAssetLookupValueValues(currentUser.businessGroup),
+      SORT_ORDER: getNextSortOrder(listAssetLookupValues()),
+    })
     setErrors({})
     requestAnimationFrame(() => valueRef.current?.focus())
   }

@@ -8,7 +8,7 @@ export const EMPLOYMENT_TYPE_TABLE = 'HR_EMPLOYMENT_TYPE'
 export const initialEmploymentTypeValues = {
   TYPE_NAME: '',
   SHORT_NAME: '',
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   STATUS: '1',
 }
 
@@ -35,17 +35,11 @@ export function validateEmploymentType(values, existingRecords = []) {
 
   if (normalizedValues.SHORT_NAME && normalizedValues.SHORT_NAME.length < 2) {
     errors.SHORT_NAME = 'Short Name must be at least 2 characters.'
-  } else if (normalizedValues.SHORT_NAME.length > 5) {
-    errors.SHORT_NAME = 'Short Name must not exceed 5 characters.'
   }
 
-  if (normalizedValues.SORT_ORDER) {
-    const sortOrder = Number(normalizedValues.SORT_ORDER)
-    if (!Number.isFinite(sortOrder)) {
-      errors.SORT_ORDER = 'Sort Order must be a valid number.'
-    } else if (sortOrder <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be greater than 0.'
-    }
+  const sortOrder = Number(normalizedValues.SORT_ORDER)
+  if (!Number.isFinite(sortOrder) || sortOrder <= 0) {
+    errors.SORT_ORDER = 'Sort Order must be a number greater than 0.'
   }
 
   return {

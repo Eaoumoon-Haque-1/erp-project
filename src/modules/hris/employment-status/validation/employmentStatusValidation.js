@@ -6,20 +6,32 @@
 export const EMPLOYMENT_STATUS_TABLE = 'HR_EMPLOYMENT_STATUS'
 
 export const initialEmploymentStatusValues = {
+  BG_ID: '',
+  BU_ID: '',
   STATUS_NAME: '',
   SHORT_NAME: '',
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   STATUS: '1',
 }
 
 export function validateEmploymentStatus(values, existingRecords = []) {
   const normalizedValues = {
+    BG_ID: String(values.BG_ID ?? '').trim(),
+    BU_ID: String(values.BU_ID ?? '').trim(),
     STATUS_NAME: String(values.STATUS_NAME ?? '').trim(),
     SHORT_NAME: String(values.SHORT_NAME ?? '').trim(),
     SORT_ORDER: String(values.SORT_ORDER ?? '').trim(),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
   }
   const errors = {}
+
+  if (!normalizedValues.BG_ID) {
+    errors.BG_ID = 'Business Group is required.'
+  }
+
+  if (!normalizedValues.BU_ID) {
+    errors.BU_ID = 'Business Unit is required.'
+  }
 
   if (!normalizedValues.STATUS_NAME) {
     errors.STATUS_NAME = 'Status Name is required.'
@@ -35,17 +47,11 @@ export function validateEmploymentStatus(values, existingRecords = []) {
 
   if (normalizedValues.SHORT_NAME && normalizedValues.SHORT_NAME.length < 2) {
     errors.SHORT_NAME = 'Short Name must be at least 2 characters.'
-  } else if (normalizedValues.SHORT_NAME.length > 5) {
-    errors.SHORT_NAME = 'Short Name must not exceed 5 characters.'
   }
 
-  if (normalizedValues.SORT_ORDER) {
-    const sortOrder = Number(normalizedValues.SORT_ORDER)
-    if (!Number.isFinite(sortOrder)) {
-      errors.SORT_ORDER = 'Sort Order must be a valid number.'
-    } else if (sortOrder <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be greater than 0.'
-    }
+  const sortOrder = Number(normalizedValues.SORT_ORDER)
+  if (!Number.isFinite(sortOrder) || sortOrder <= 0) {
+    errors.SORT_ORDER = 'Sort Order must be a number greater than 0.'
   }
 
   return {

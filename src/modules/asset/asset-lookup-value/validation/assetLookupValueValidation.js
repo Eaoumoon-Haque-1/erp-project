@@ -11,7 +11,7 @@ export function createInitialAssetLookupValueValues(businessGroup) {
     TYPE_NAME: '',
     VALUE: '',
     VALUE_CODE: '',
-    SORT_ORDER: '',
+    SORT_ORDER: '1',
     STATUS: '1',
   }
 }
@@ -47,11 +47,8 @@ export function validateAssetLookupValue(values, existingRecords = [], typeOptio
   if (!normalizedValues.VALUE_CODE) errors.VALUE_CODE = 'Lookup Value Code is required. Select a Lookup Type to populate it.'
   else if (!selectedType || normalizedValues.VALUE_CODE !== String(selectedType.code ?? '').trim()) errors.VALUE_CODE = 'Lookup Value Code must match the selected Lookup Type Code.'
 
-  if (normalizedValues.SORT_ORDER) {
-    const sortOrder = Number(normalizedValues.SORT_ORDER)
-    if (!Number.isFinite(sortOrder) || sortOrder <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be a number greater than 0.'
-    }
+  if (!/^[1-9]\d*$/.test(normalizedValues.SORT_ORDER)) {
+    errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 
   return {

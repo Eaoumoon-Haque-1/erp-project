@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import AssetSpecificationMapForm from '../components/AssetSpecificationMapForm'
 import { getAssetSpecificationMapReferences } from '../data/assetSpecificationMapOptions'
 import {
@@ -19,7 +20,10 @@ const listPath = '/asset/asset-specification-map'
 function AssetSpecificationMapCreate() {
   const navigate = useNavigate()
   const assetItemRef = useRef(null)
-  const [values, setValues] = useState(initialAssetSpecificationMapValues)
+  const [values, setValues] = useState(() => ({
+    ...initialAssetSpecificationMapValues,
+    SORT_ORDER: getNextSortOrder(listAssetSpecificationMaps()),
+  }))
   const [errors, setErrors] = useState({})
   const references = getAssetSpecificationMapReferences()
 
@@ -60,7 +64,10 @@ function AssetSpecificationMapCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialAssetSpecificationMapValues)
+    setValues({
+      ...initialAssetSpecificationMapValues,
+      SORT_ORDER: getNextSortOrder(listAssetSpecificationMaps()),
+    })
     setErrors({})
     requestAnimationFrame(() => assetItemRef.current?.focus())
   }

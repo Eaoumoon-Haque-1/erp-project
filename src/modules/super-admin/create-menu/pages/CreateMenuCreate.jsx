@@ -10,6 +10,7 @@ import { modulesApi } from '../../module/api/moduleApi'
 import { menusApi } from '../api/menuApi'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import CreateMenuForm from '../components/CreateMenuForm'
 import { mapMenuToApi } from '../data/menuApiMapper'
 import { MENU_TABLE, initialMenuValues, validateMenu } from '../validation/createMenuValidation'
@@ -34,6 +35,10 @@ function CreateMenuCreate() {
       .then(([modules, menus]) => {
         if (active) {
           setExistingMenus(menus)
+          setValues((current) => ({
+            ...current,
+            SORT_ORDER: getNextSortOrder(menus),
+          }))
           setModuleOptions(
             modules
               .filter((module) => Number(module.status ?? 1) === 1)
@@ -166,7 +171,10 @@ function CreateMenuCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialMenuValues)
+    setValues({
+      ...initialMenuValues,
+      SORT_ORDER: getNextSortOrder(existingMenus),
+    })
     setErrors({})
     requestAnimationFrame(() => menuNameRef.current?.focus())
   }

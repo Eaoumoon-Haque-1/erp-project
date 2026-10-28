@@ -8,7 +8,7 @@ export const LEVEL_OF_EDUCATION_TABLE = 'HR_LEVEL_OF_EDU'
 export const initialLevelOfEducationValues = {
   LEVEL_OF_EDU: '',
   SHORT_NAME: '',
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   STATUS: '1',
 }
 
@@ -32,19 +32,12 @@ export function validateLevelOfEducation(values, existingLevelNames = []) {
   if (trimmedShort) {
     if (trimmedShort.length < 2) {
       errors.SHORT_NAME = 'Short Name must be at least 2 characters.'
-    } else if (trimmedShort.length > 5) {
-      errors.SHORT_NAME = 'Short Name cannot exceed 5 characters.'
     }
   }
 
   const sortOrderStr = (values.SORT_ORDER || '').trim()
-  if (sortOrderStr) {
-    const num = Number(sortOrderStr)
-    if (!Number.isFinite(num)) {
-      errors.SORT_ORDER = 'Sort Order must be a valid number.'
-    } else if (num <= 0) {
-      errors.SORT_ORDER = 'Sort Order must be greater than 0.'
-    }
+  if (!/^[1-9]\d*$/.test(sortOrderStr)) {
+    errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 
   if (!values.STATUS && values.STATUS !== '0') {

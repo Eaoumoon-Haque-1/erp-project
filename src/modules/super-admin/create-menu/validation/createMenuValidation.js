@@ -13,7 +13,7 @@ export const initialMenuValues = {
   IS_TOP_MENU: '0',
   MODULE_ID: '',
   PERMISSION_ID: [],
-  SORT_ORDER: '',
+  SORT_ORDER: '1',
   ROUTE_NAME: '',
   STATUS: '1',
 }
@@ -72,10 +72,8 @@ export function validateMenu(values, existingMenuNames = []) {
     }
   }
 
-  if (normalizedValues.SORT_ORDER && !Number.isFinite(Number(normalizedValues.SORT_ORDER))) {
-    errors.SORT_ORDER = 'Sort Order must be a valid number.'
-  } else if (normalizedValues.SORT_ORDER && Number(normalizedValues.SORT_ORDER) <= 0) {
-    errors.SORT_ORDER = 'Sort Order must be greater than 0.'
+  if (!/^[1-9]\d*$/.test(normalizedValues.SORT_ORDER)) {
+    errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
   }
 
   return {

@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { departmentsApi } from '../api/departmentApi'
 import DepartmentForm from '../components/DepartmentForm'
 import { mapDepartmentToApi } from '../data/departmentApiMapper'
@@ -13,22 +14,33 @@ const listPath = '/hris/employee-settings/department'
 
 function DepartmentCreate() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
   const departmentNameRef = useRef(null)
-  const [values, setValues] = useState(initialDepartmentValues)
+  const [values, setValues] = useState(() => ({
+    ...initialDepartmentValues,
+    BG_ID: sessionGroupId,
+  }))
   const [existingDepartments, setExistingDepartments] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
-  const { groupOptions, groupsLoading } = useBusinessOptions(values.BG_ID, { loadUnits: false })
 
   useEffect(() => {
     let active = true
-    departmentsApi.list()
-      .then((records) => { if (active) setExistingDepartments(records) })
+    departmentsApi.list(sessionGroupId)
+      .then((records) => {
+        if (!active) return
+        setExistingDepartments(records)
+        setValues((current) => ({
+          ...current,
+          SORT_ORDER: getNextSortOrder(records),
+        }))
+      })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load existing Departments.')
       })
     return () => { active = false }
-  }, [])
+  }, [sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -38,7 +50,10 @@ function DepartmentCreate() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateDepartment(values, existingDepartments)
+    const result = validateDepartment(
+      { ...values, BG_ID: sessionGroupId },
+      existingDepartments,
+    )
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) return
@@ -57,14 +72,18 @@ function DepartmentCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialDepartmentValues)
+    setValues({
+      ...initialDepartmentValues,
+      BG_ID: sessionGroupId,
+      SORT_ORDER: getNextSortOrder(existingDepartments),
+    })
     setErrors({})
     requestAnimationFrame(() => departmentNameRef.current?.focus())
   }
 
   return (
     <FormPage title={'Department Create'} listTo={listPath} tableName={DEPARTMENT_TABLE} onSubmit={handleSubmit} onReset={handleReset} submitting={submitting}>
-      <DepartmentForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} onChange={handleChange} departmentNameRef={departmentNameRef} />
+      <DepartmentForm values={values} errors={errors} onChange={handleChange} departmentNameRef={departmentNameRef} />
     </FormPage>
   )
 }

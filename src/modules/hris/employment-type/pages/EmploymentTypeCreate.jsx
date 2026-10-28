@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
+import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { employmentTypesApi } from '../api/employmentTypeApi'
 import EmploymentTypeForm from '../components/EmploymentTypeForm'
 import { mapEmploymentTypeToApi } from '../data/employmentTypeApiMapper'
@@ -22,7 +23,14 @@ function EmploymentTypeCreate() {
   useEffect(() => {
     let active = true
     employmentTypesApi.list()
-      .then((records) => { if (active) setExistingRecords(records) })
+      .then((records) => {
+        if (!active) return
+        setExistingRecords(records)
+        setValues((current) => ({
+          ...current,
+          SORT_ORDER: getNextSortOrder(records),
+        }))
+      })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing Employment Types.'))
       })
@@ -60,7 +68,10 @@ function EmploymentTypeCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialEmploymentTypeValues)
+    setValues({
+      ...initialEmploymentTypeValues,
+      SORT_ORDER: getNextSortOrder(existingRecords),
+    })
     setErrors({})
     setMessage('')
     requestAnimationFrame(() => typeNameRef.current?.focus())
