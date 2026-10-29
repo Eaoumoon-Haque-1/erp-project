@@ -129,11 +129,11 @@ function UserAssignmentTabs({
       <div
         className={"erp-employee-tab-list"}
         role={"tablist"}
-        aria-label={"Assign Employee and BU tabs"}
+        aria-label={"Assign Employee and Business Unit tabs"}
       >
         {[
           { key: "employee", label: "Assign Employee" },
-          { key: "bu", label: "Assign BU" },
+          { key: "bu", label: "Assign Business Unit" },
         ].map((tab) => (
           <button
             key={tab.key}
