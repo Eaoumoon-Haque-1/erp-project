@@ -5,8 +5,7 @@
  */
 export const USER_TYPE_TABLE = 'HR_USER_TYPE'
 
-export const createInitialUserTypeValues = (businessGroupId) => ({
-  BG_ID: String(businessGroupId ?? ''),
+export const createInitialUserTypeValues = () => ({
   TYPE_NAME: '',
   SHORT_NAME: '',
   SORT_ORDER: '1',
@@ -15,17 +14,12 @@ export const createInitialUserTypeValues = (businessGroupId) => ({
 
 export function validateUserType(values, existingTypeNames = [], existingShortNames = []) {
   const normalizedValues = {
-    BG_ID: String(values.BG_ID ?? ''),
     TYPE_NAME: String(values.TYPE_NAME ?? '').trim(),
     SHORT_NAME: String(values.SHORT_NAME ?? '').trim(),
     SORT_ORDER: String(values.SORT_ORDER ?? '').trim(),
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
   }
   const errors = {}
-
-  if (!normalizedValues.BG_ID) {
-    errors.BG_ID = 'Group Name is required.'
-  }
 
   if (!normalizedValues.TYPE_NAME) {
     errors.TYPE_NAME = 'Type Name is required.'

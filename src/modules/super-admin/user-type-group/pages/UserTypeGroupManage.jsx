@@ -56,13 +56,14 @@ function UserTypeGroupManage({ editing = false }) {
     .map((group) => ({ value: String(group.id), label: group.groupName })), [groups, values.BG_ID])
 
   const userTypeOptions = useMemo(() => userTypes
-    .filter((type) => String(type.bgId) === values.BG_ID)
     .filter((type) => String(type.status ?? 1) === '1' || String(type.id) === values.USER_TYPE_ID)
-    .map((type) => ({ value: String(type.id), label: type.typeName })), [userTypes, values.BG_ID, values.USER_TYPE_ID])
+    .map((type) => ({ value: String(type.id), label: type.typeName })), [userTypes, values.USER_TYPE_ID])
 
   const businessUnitOptions = useMemo(() => businessUnits
     .filter((unit) => String(unit.status ?? 1) === '1' || rows.some((row) => row.BU_ID === String(unit.id)))
     .map((unit) => ({ value: String(unit.id), label: unit.businessUnit })), [businessUnits, rows])
+  const selectedUserTypeName = userTypeOptions.find((type) => type.value === values.USER_TYPE_ID)?.label || ''
+  const selectedGroupName = groupOptions.find((group) => group.value === values.BG_ID)?.label || ''
 
   const applyMapping = (record, units) => {
     const names = new Map(units.map((unit) => [String(unit.id), unit.businessUnit]))
@@ -81,7 +82,13 @@ function UserTypeGroupManage({ editing = false }) {
       const units = suppliedUnits || await businessUnitsApi.listByGroup(groupId)
       if (!suppliedUnits) setBusinessUnits(units)
       const record = await getMappingOrEmpty(userTypeId, groupId)
-      applyMapping(record, units)
+      const recordGroupId = String(record.bgId ?? groupId)
+      applyMapping(
+        recordGroupId === String(groupId)
+          ? record
+          : { userTypeId: Number(userTypeId), bgId: Number(groupId), businessUnits: [] },
+        units,
+      )
     } catch (error) {
       setRows([])
       setRemovedRows([])
@@ -101,13 +108,13 @@ function UserTypeGroupManage({ editing = false }) {
         if (editing) {
           const selectedType = typeRecords.find((type) => String(type.id) === String(userTypeGroupId))
           if (!selectedType) throw new Error('The selected User Type was not found.')
-          const bgId = String(selectedType.bgId ?? '')
+          const record = await userTypeGroupsApi.getByUserType(selectedType.id)
+          if (!active) return
+          const bgId = String(record.bgId ?? '')
           setValues({ BG_ID: bgId, USER_TYPE_ID: String(selectedType.id), STATUS: '1' })
           const units = await businessUnitsApi.listByGroup(bgId)
           if (!active) return
           setBusinessUnits(units)
-          const record = await getMappingOrEmpty(selectedType.id, bgId)
-          if (!active) return
           applyMapping(record, units)
         }
       })
@@ -122,7 +129,7 @@ function UserTypeGroupManage({ editing = false }) {
 
   const handleChange = (event) => {
     const { name, value } = event.target
-    setValues((current) => ({ ...current, [name]: value, ...(name === 'BG_ID' ? { USER_TYPE_ID: '' } : {}) }))
+    setValues((current) => ({ ...current, [name]: value }))
     setErrors((current) => ({ ...current, [name]: undefined }))
     if (name === 'BG_ID') {
       setRows([])
@@ -132,15 +139,35 @@ function UserTypeGroupManage({ editing = false }) {
       if (value) {
         setUnitsLoading(true)
         businessUnitsApi.listByGroup(value)
-          .then(setBusinessUnits)
+          .then((units) => {
+            setBusinessUnits(units)
+            if (editing && values.USER_TYPE_ID) {
+              loadMapping(values.USER_TYPE_ID, value, units).catch(() => {})
+            }
+          })
           .catch((error) => getApiErrorMessage(error, 'Unable to load Business Units.'))
           .finally(() => setUnitsLoading(false))
       }
     }
-    if (name === 'USER_TYPE_ID') loadMapping(value, values.BG_ID).catch(() => {})
+    if (name === 'USER_TYPE_ID') {
+      if (editing && value && values.BG_ID) loadMapping(value, values.BG_ID).catch(() => {})
+      else if (!editing) {
+        setRows([])
+        setRemovedRows([])
+        setAssignment(initialBusinessUnitAssignment)
+      }
+    }
   }
 
   const appendBusinessUnit = (nextAssignment) => {
+    const contextErrors = {}
+    if (!values.USER_TYPE_ID) contextErrors.USER_TYPE_ID = 'Type Name is required.'
+    if (!values.BG_ID) contextErrors.BG_ID = 'Business Group is required.'
+    if (Object.keys(contextErrors).length > 0) {
+      setErrors((current) => ({ ...current, ...contextErrors }))
+      return false
+    }
+
     const assignmentResult = validateBusinessUnitAssignment(nextAssignment, rows)
     setAssignment(assignmentResult.values)
     setAssignmentErrors(assignmentResult.errors)
@@ -166,10 +193,9 @@ function UserTypeGroupManage({ editing = false }) {
         return
       }
 
-      const selectedUnit = businessUnits.find((unit) => String(unit.id) === String(value))
       const nextAssignment = {
         BU_ID: String(value),
-        STATUS: String(selectedUnit?.status ?? 1) === '0' ? '0' : '1',
+        STATUS: assignment.STATUS,
       }
       if (appendBusinessUnit(nextAssignment)) {
         setAssignment(initialBusinessUnitAssignment)
@@ -247,10 +273,10 @@ function UserTypeGroupManage({ editing = false }) {
       submitting={submitting}
       submitLabel={editing ? 'Update' : 'Save'}
     >
-      <UserTypeGroupForm values={values} errors={errors} groupOptions={groupOptions} userTypeOptions={userTypeOptions} groupsLoading={loading} typesLoading={loading} fieldsDisabled={mappingLoading || (editing && loading)} groupReadOnly={editing} typeReadOnly={editing} typeRef={typeRef} onChange={handleChange} />
+      <UserTypeGroupForm values={values} errors={errors} userTypeOptions={userTypeOptions} typesLoading={loading} fieldsDisabled={mappingLoading || (editing && loading)} typeReadOnly={editing} typeRef={typeRef} onChange={handleChange} />
       <div className={'erp-role-divider'} />
-      <BusinessUnitAssignment values={assignment} errors={{ ...assignmentErrors, BU_ID: assignmentErrors.BU_ID || errors.BUSINESS_UNITS }} businessUnitOptions={businessUnitOptions} unitsLoading={unitsLoading || mappingLoading} groupSelected={Boolean(values.BG_ID && values.USER_TYPE_ID)} hasAssignments={rows.length > 0} onChange={handleAssignmentChange} onNewRow={handleNewRow} />
-      <BusinessUnitAssignmentTable rows={rows} query={query} onQueryChange={setQuery} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+      <BusinessUnitAssignment values={assignment} errors={{ ...assignmentErrors, BU_ID: assignmentErrors.BU_ID || errors.BUSINESS_UNITS }} groupId={values.BG_ID} groupError={errors.BG_ID} groupOptions={groupOptions} businessUnitOptions={businessUnitOptions} groupsLoading={loading} unitsLoading={unitsLoading || mappingLoading} groupSelected={Boolean(values.BG_ID)} groupReadOnly={editing} hasAssignments={rows.length > 0} onGroupChange={handleChange} onChange={handleAssignmentChange} onNewRow={handleNewRow} />
+      <BusinessUnitAssignmentTable rows={rows} userTypeName={selectedUserTypeName} businessGroupName={selectedGroupName} query={query} onQueryChange={setQuery} onDelete={handleDelete} onStatusChange={handleStatusChange} />
     </FormPage>
   )
 }

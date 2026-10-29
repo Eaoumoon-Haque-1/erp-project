@@ -1257,10 +1257,10 @@
 
   .erp-user-type-group-assignment-grid {
     display: grid;
-    grid-template-columns: minmax(320px, 1fr) 220px 48px;
+    grid-template-columns: minmax(240px, 1fr) minmax(280px, 1fr) 180px 48px;
     gap: 30px;
     align-items: start;
-    max-width: 900px;
+    max-width: 1200px;
   }
 
   .erp-user-type-group-assignment-grid .erp-role-add-button {
@@ -2521,7 +2521,7 @@
     }
 
     .erp-user-type-group-assignment-grid {
-      grid-template-columns: minmax(0, 1fr) 180px 48px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 160px 48px;
       gap: 18px;
     }
 

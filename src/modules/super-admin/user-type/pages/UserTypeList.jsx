@@ -5,7 +5,6 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { businessGroupsApi } from '../../business-group/api/businessGroupApi'
 import { userTypesApi } from '../api/userTypeApi'
 import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
@@ -31,7 +30,6 @@ const filters = [
 ]
 
 const columns = [
-  { key: 'GROUP_NAME', label: 'Group Name' },
   { key: 'TYPE_NAME', label: 'Type Name' },
   { key: 'SHORT_NAME', label: 'Short Name', render: (value) => value || 'N/A' },
   { key: 'SORT_ORDER', label: 'Sort Order', render: (value) => value || 'N/A' },
@@ -54,19 +52,9 @@ function UserTypeList() {
 
   useEffect(() => {
     let active = true
-    Promise.all([userTypesApi.list(), businessGroupsApi.list()])
-      .then(([records, groups]) => {
-        if (active) {
-          const groupNames = new Map(
-            groups.map((group) => [String(group.id), group.groupName]),
-          )
-          setRows(
-            records.map((record) => ({
-              ...mapUserTypeFromApi(record),
-              GROUP_NAME: groupNames.get(String(record.bgId)) || 'N/A',
-            })),
-          )
-        }
+    userTypesApi.list()
+      .then((records) => {
+        if (active) setRows(records.map((record) => mapUserTypeFromApi(record)))
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load User Types.'))
@@ -100,7 +88,6 @@ function UserTypeList() {
             ? {
                 ...item,
                 ...mapUserTypeFromApi(updated),
-                GROUP_NAME: item.GROUP_NAME,
               }
             : item,
         ),

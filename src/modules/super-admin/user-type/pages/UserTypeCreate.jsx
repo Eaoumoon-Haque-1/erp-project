@@ -5,11 +5,9 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { currentUser } from '../../../../app/currentUser'
 import { userTypesApi } from '../api/userTypeApi'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { getNextSortOrder } from '../../../../utils/sortOrder'
 import UserTypeForm from '../components/UserTypeForm'
 import { mapUserTypeToApi } from '../data/userTypeApiMapper'
@@ -20,17 +18,12 @@ const listPath = '/super-admin/user-creation/user-type'
 function UserTypeCreate() {
   const navigate = useNavigate()
   const typeNameRef = useRef(null)
-  const initialValues = createInitialUserTypeValues(currentUser.businessGroup.id)
+  const initialValues = createInitialUserTypeValues()
   const [values, setValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
   const [existingRecords, setExistingRecords] = useState([])
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { groupOptions, groupsLoading } = useBusinessOptions('', {
-    loadUnits: false,
-    preserveGroupId: currentUser.businessGroup.id,
-  })
-
   useEffect(() => {
     let active = true
     userTypesApi.list()
@@ -80,8 +73,6 @@ function UserTypeCreate() {
         typeName: 'TYPE_NAME',
         shortName: 'SHORT_NAME',
         sortOrder: 'SORT_ORDER',
-        bgId: 'BG_ID',
-        businessGroup: 'BG_ID',
       }))
     } finally {
       setSubmitting(false)
@@ -90,7 +81,7 @@ function UserTypeCreate() {
 
   const handleReset = () => {
     setValues({
-      ...createInitialUserTypeValues(currentUser.businessGroup.id),
+      ...createInitialUserTypeValues(),
       SORT_ORDER: getNextSortOrder(existingRecords),
     })
     setErrors({})
@@ -99,7 +90,7 @@ function UserTypeCreate() {
 
   return (
     <FormPage title={'User Type Create'} listTo={listPath} tableName={USER_TYPE_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} submitting={submitting}>
-      <UserTypeForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} typeNameRef={typeNameRef} onChange={handleChange} />
+      <UserTypeForm values={values} errors={errors} typeNameRef={typeNameRef} onChange={handleChange} />
     </FormPage>
   )
 }

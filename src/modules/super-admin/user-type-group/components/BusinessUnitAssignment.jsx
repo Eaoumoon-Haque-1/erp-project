@@ -6,15 +6,52 @@
 function BusinessUnitAssignment({
   values,
   errors,
+  groupId = "",
+  groupError = "",
+  groupOptions = [],
   businessUnitOptions = [],
+  groupsLoading = false,
   unitsLoading = false,
   groupSelected = false,
+  groupReadOnly = false,
   hasAssignments = false,
+  onGroupChange,
   onChange,
   onNewRow,
 }) {
   return (
     <div className={"erp-user-type-group-assignment-grid"}>
+      <div>
+        <label className={"erp-field-label"} htmlFor={"BG_ID"}>
+          Business Group
+          <span className={"erp-required"} aria-hidden={"true"}>*</span>
+        </label>
+        <select
+          id={"BG_ID"}
+          name={"BG_ID"}
+          className={[
+            "erp-form-control",
+            groupReadOnly ? "erp-readonly" : "",
+            groupError ? "erp-form-control-invalid" : "",
+          ].filter(Boolean).join(" ")}
+          value={groupId}
+          required
+          disabled={groupsLoading || groupReadOnly}
+          aria-invalid={Boolean(groupError)}
+          aria-describedby={groupError ? "user-type-group-BG_ID-error" : undefined}
+          onChange={onGroupChange}
+        >
+          <option value={""}>
+            {groupsLoading ? "Loading Business Groups..." : "--Select Business Group--"}
+          </option>
+          {groupOptions.map((group) => (
+            <option key={group.value} value={group.value}>{group.label}</option>
+          ))}
+        </select>
+        {groupError && (
+          <p id={"user-type-group-BG_ID-error"} className={"erp-field-error"}>{groupError}</p>
+        )}
+      </div>
       <div>
         <label className={"erp-field-label"} htmlFor={"BU_ID"}>
           Business Unit

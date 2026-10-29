@@ -8,13 +8,14 @@ import { businessGroupsApi } from '../../business-group/api/businessGroupApi'
 import { businessUnitsApi } from '../../business-unit/api/businessUnitApi'
 import { userTypesApi } from '../../user-type/api/userTypeApi'
 import { userTypeGroupsApi } from '../api/userTypeGroupApi'
+import { normalizeUserTypeGroupStatus } from '../data/userTypeGroupApiMapper'
 
 async function getMappingOrEmpty(userType) {
   try {
     return await userTypeGroupsApi.getByUserType(userType.id)
   } catch (error) {
     if (error?.response?.status === 404) {
-      return { userTypeId: userType.id, bgId: userType.bgId, businessUnits: [] }
+      return { userTypeId: userType.id, bgId: null, businessUnits: [] }
     }
     throw error
   }
@@ -36,7 +37,7 @@ const filters = [
 ]
 
 const columns = [
-  { key: 'GROUP_NAME', label: 'Group Name' },
+  { key: 'GROUP_NAME', label: 'Business Group' },
   { key: 'USER_TYPE_NAME', label: 'Type Name' },
   { key: 'BUSINESS_UNIT_NAME', label: 'Business Unit' },
   {
@@ -57,37 +58,36 @@ function UserTypeGroupList() {
 
   useEffect(() => {
     let active = true
-    Promise.all([userTypesApi.list(), businessGroupsApi.list()])
-      .then(async ([types, groups]) => {
+    Promise.all([userTypesApi.list(), businessGroupsApi.list(), businessUnitsApi.list()])
+      .then(async ([types, groups, units]) => {
         if (!active) return
         const groupNames = new Map(groups.map((group) => [String(group.id), group.groupName]))
-        const groupIds = [...new Set(types.map((type) => String(type.bgId)).filter(Boolean))]
-        const [unitGroups, mappings] = await Promise.all([
-          Promise.all(groupIds.map(async (bgId) => [bgId, await businessUnitsApi.listByGroup(bgId)])),
-          Promise.all(types.map(getMappingOrEmpty)),
-        ])
+        const mappings = await Promise.all(types.map(getMappingOrEmpty))
         if (!active) return
 
-        const unitNames = new Map(unitGroups.flatMap(([, units]) =>
-          units.map((unit) => [String(unit.id), unit.businessUnit])))
+        const unitsById = new Map(units.map((unit) => [String(unit.id), unit]))
         const typeById = new Map(types.map((type) => [String(type.id), type]))
         setRows(mappings.flatMap((mapping) => {
           const type = typeById.get(String(mapping.userTypeId))
           if (!type) return []
-          return (mapping.businessUnits || []).map((assignment, index) => ({
-            ROW_ID: assignment.id == null
-              ? `${type.id}-${assignment.buId}-${index}`
-              : `mapping-${assignment.id}`,
-            ID: String(type.id),
-            BG_ID: String(mapping.bgId ?? type.bgId),
-            BU_ID: String(assignment.buId),
-            MAPPING_ID: assignment.id ?? null,
-            GROUP_NAME: groupNames.get(String(mapping.bgId ?? type.bgId)) || 'N/A',
-            USER_TYPE_NAME: type.typeName,
-            BUSINESS_UNIT_NAME: unitNames.get(String(assignment.buId)) || `Business Unit #${assignment.buId}`,
-            USER_TYPE_STATUS: String(type.status ?? 1),
-            STATUS: String(assignment.status ?? 1),
-          }))
+          return (mapping.businessUnits || []).map((assignment, index) => {
+            const unit = unitsById.get(String(assignment.buId))
+            const groupId = String(mapping.bgId ?? unit?.bgId ?? '')
+            return {
+              ROW_ID: assignment.id == null
+                ? `${type.id}-${assignment.buId}-${index}`
+                : `mapping-${assignment.id}`,
+              ID: String(type.id),
+              BG_ID: groupId,
+              BU_ID: String(assignment.buId),
+              MAPPING_ID: assignment.id ?? null,
+              GROUP_NAME: groupNames.get(groupId) || 'N/A',
+              USER_TYPE_NAME: type.typeName,
+              BUSINESS_UNIT_NAME: unit?.businessUnit || `Business Unit #${assignment.buId}`,
+              USER_TYPE_STATUS: normalizeUserTypeGroupStatus(type.status),
+              STATUS: normalizeUserTypeGroupStatus(assignment.status),
+            }
+          })
         }))
       })
       .catch((error) => {

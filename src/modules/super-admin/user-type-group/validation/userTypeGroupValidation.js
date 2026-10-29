@@ -23,7 +23,7 @@ export function validateUserTypeGroup(values) {
     STATUS: String(values.STATUS) === '0' ? '0' : '1',
   }
   const errors = {}
-  if (!normalizedValues.BG_ID) errors.BG_ID = 'Group Name is required.'
+  if (!normalizedValues.BG_ID) errors.BG_ID = 'Business Group is required.'
   if (!normalizedValues.USER_TYPE_ID) errors.USER_TYPE_ID = 'Type Name is required.'
 
   return {

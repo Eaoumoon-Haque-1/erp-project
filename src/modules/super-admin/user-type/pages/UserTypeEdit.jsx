@@ -1,11 +1,9 @@
 /** @file API-backed User Type edit page. */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { currentUser } from '../../../../app/currentUser'
 import { userTypesApi } from '../api/userTypeApi'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import UserTypeForm from '../components/UserTypeForm'
 import { mapUserTypeFromApi, mapUserTypeToApi } from '../data/userTypeApiMapper'
 import {
@@ -20,23 +18,18 @@ function UserTypeEdit() {
   const { userTypeId } = useParams()
   const navigate = useNavigate()
   const typeNameRef = useRef(null)
-  const initialValues = createInitialUserTypeValues(currentUser.businessGroup.id)
+  const initialValues = createInitialUserTypeValues()
   const [values, setValues] = useState(initialValues)
   const [originalValues, setOriginalValues] = useState(initialValues)
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { groupOptions, groupsLoading } = useBusinessOptions('', {
-    loadUnits: false,
-    preserveGroupId: originalValues.BG_ID,
-  })
-
   useEffect(() => {
     let active = true
     userTypesApi.get(userTypeId)
       .then((record) => {
         if (!active) return
-        const mapped = mapUserTypeFromApi(record, currentUser.businessGroup.id)
+        const mapped = mapUserTypeFromApi(record)
         setValues(mapped)
         setOriginalValues(mapped)
       })
@@ -73,8 +66,6 @@ function UserTypeEdit() {
         typeName: 'TYPE_NAME',
         shortName: 'SHORT_NAME',
         sortOrder: 'SORT_ORDER',
-        bgId: 'BG_ID',
-        businessGroup: 'BG_ID',
       }))
     } finally {
       setSubmitting(false)
@@ -90,7 +81,7 @@ function UserTypeEdit() {
 
   return (
     <FormPage title={'User Type Edit'} listTo={listPath} tableName={USER_TYPE_TABLE} onSubmit={handleSubmit} onReset={handleReset} submitLabel={'Update'} message={message} submitting={submitting}>
-      <UserTypeForm values={values} errors={errors} groupOptions={groupOptions} groupsLoading={groupsLoading} typeNameRef={typeNameRef} onChange={handleChange} />
+      <UserTypeForm values={values} errors={errors} typeNameRef={typeNameRef} onChange={handleChange} />
     </FormPage>
   )
 }

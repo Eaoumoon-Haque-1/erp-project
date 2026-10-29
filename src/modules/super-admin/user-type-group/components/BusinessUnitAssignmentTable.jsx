@@ -21,7 +21,15 @@ function DeleteIcon() {
   );
 }
 
-function BusinessUnitAssignmentTable({ rows, query, onQueryChange, onDelete, onStatusChange }) {
+function BusinessUnitAssignmentTable({
+  rows,
+  userTypeName = '',
+  businessGroupName = '',
+  query,
+  onQueryChange,
+  onDelete,
+  onStatusChange,
+}) {
   const normalizedQuery = query.trim().toLowerCase();
   const visibleRows = rows.filter(
     (row) =>
@@ -46,6 +54,8 @@ function BusinessUnitAssignmentTable({ rows, query, onQueryChange, onDelete, onS
         <table className={"erp-table"}>
           <thead>
             <tr>
+              <th>Type Name</th>
+              <th>Business Group</th>
               <th>Business Unit</th>
               <th>Status</th>
               <th>Action</th>
@@ -54,13 +64,15 @@ function BusinessUnitAssignmentTable({ rows, query, onQueryChange, onDelete, onS
           <tbody>
             {visibleRows.length === 0 ? (
               <tr>
-                <td className={"erp-empty-cell"} colSpan={3}>
+                <td className={"erp-empty-cell"} colSpan={5}>
                   No data found
                 </td>
               </tr>
             ) : (
               visibleRows.map((row) => (
                 <tr key={row.ID}>
+                  <td>{userTypeName || 'N/A'}</td>
+                  <td>{businessGroupName || 'N/A'}</td>
                   <td>{row.BUSINESS_UNIT_NAME}</td>
                   <td>
                     <label className={"erp-switch-field"}>
