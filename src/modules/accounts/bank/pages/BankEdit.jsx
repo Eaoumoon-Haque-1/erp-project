@@ -7,6 +7,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
+import { usersApi } from '../../../super-admin/user/api/userApi'
 import { bankApi } from '../api/bankApi'
 import BankForm from '../components/BankForm'
 import { mapBankFromApi, mapBankToApi } from '../data/bankApiMapper'
@@ -21,6 +23,7 @@ function BankEdit() {
   const bankNameRef = useRef(null)
   const [submitting, setSubmitting] = useState(false)
   const [original, setOriginal] = useState(null)
+  const [auditLog, setAuditLog] = useState(null)
   const form = useBankForm(initialBankValues, [])
   const { reset } = form
 
@@ -32,11 +35,37 @@ function BankEdit() {
 
   useEffect(() => {
     let active = true
-    bankApi
-      .get(bankId)
-      .then((record) => {
+    Promise.all([
+      bankApi.get(bankId),
+      usersApi.list().catch(() => []),
+      employeesApi.list().catch(() => []),
+    ])
+      .then(([record, users, employees]) => {
         if (!active) return
-        const mapped = mapBankFromApi(record)
+        // Map admin_users.id -> admin_users.user_name
+        const userMap = new Map(
+          (users || []).map((u) => {
+            const id = String(u.id ?? u.ID ?? '')
+            const userName = u.userName ?? u.user_name ?? u.USER_NAME ?? id
+            return [id, userName]
+          }),
+        )
+        // Map hr_employee.id -> "employee_code: employee_name" (e.g. "EMP-000004: Rakib")
+        const empMap = new Map(
+          (employees || []).map((e) => {
+            const id = String(e.id ?? e.ID ?? '')
+            const code = String(
+              e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
+            ).trim()
+            const name = String(
+              e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
+            ).trim()
+            const display =
+              code && name ? `${code}: ${name}` : code || name || id
+            return [id, display]
+          }),
+        )
+        const mapped = mapBankFromApi(record, new Map(), new Map(), userMap, empMap)
         const loaded = {
           values: {
             ID: mapped.ID,
@@ -49,6 +78,21 @@ function BankEdit() {
           rows: mapped.BANK_DETAILS,
         }
         setOriginal(loaded)
+        setAuditLog({
+          CREATED_USER_ID: mapped.CREATED_USER_ID,
+          CREATED_USER_NAME: mapped.CREATED_USER_NAME,
+          CREATED_EMP_ID: mapped.CREATED_EMP_ID,
+          CREATED_EMP_NAME: mapped.CREATED_EMP_NAME,
+          CREATED_DATETIME: mapped.CREATED_DATETIME,
+          CREATED_APP: mapped.CREATED_APP,
+          UPDATED_USER_ID: mapped.UPDATED_USER_ID,
+          UPDATED_USER_NAME: mapped.UPDATED_USER_NAME,
+          UPDATED_EMP_ID: mapped.UPDATED_EMP_ID,
+          UPDATED_EMP_NAME: mapped.UPDATED_EMP_NAME,
+          UPDATED_DATETIME: mapped.UPDATED_DATETIME,
+          UPDATED_APP: mapped.UPDATED_APP,
+          STATUS: mapped.STATUS,
+        })
         reset(loaded.values, loaded.rows)
       })
       .catch((error) => {
@@ -89,6 +133,7 @@ function BankEdit() {
       listTo={listPath}
       tableName={AFM_BANK_TABLE}
       submitLabel={'Update'}
+      hideActions
       onSubmit={handleSubmit}
       onValidate={() => form.validate().isValid}
       onReset={handleReset}
@@ -102,6 +147,9 @@ function BankEdit() {
         groupsLoading={groupsLoading}
         businessUnitOptions={businessUnitOptions}
         unitsLoading={unitsLoading}
+        auditLog={auditLog}
+        submitLabel={'Update'}
+        submitting={submitting}
         bankNameRef={bankNameRef}
         onChange={form.handleChange}
         onRowChange={form.handleRowChange}
