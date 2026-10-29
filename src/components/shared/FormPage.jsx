@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Shared reusable UI/workflow component: FormPage.
  * Sections: reusable helpers, component behavior, accessibility, and rendered UI.
  * Changing this file can affect many features; keep props backward-compatible when possible.
@@ -27,6 +27,8 @@ function FormPage({
   draftLabel = 'Save as Draft',
   submitLabel = 'Save',
   onValidate,
+  hideActions = false,
+  afterActions = null,
 }) {
   const entityName = getEntityNameFromTitle(title)
   const action = submitLabel.toLowerCase().includes('update') ? 'update' : 'create'
@@ -57,25 +59,28 @@ function FormPage({
         {/* Feature controls are provided through children; this shell owns only shared actions. */}
         <form data-table={tableName} onSubmit={handleSubmit} onReset={onReset} noValidate>
           {children}
-          <div className={'erp-form-actions'}>
-            <button type={'reset'} className={'secondary-button'} disabled={submitting}>
-              Reset
-            </button>
-            {onDraft && (
-              // Draft is optional; ordinary forms do not render this button.
-              <button
-                type={'button'}
-                className={'secondary-button'}
-                disabled={submitting}
-                onClick={handleDraft}
-              >
-                {draftLabel}
+          {!hideActions && (
+            <div className={'erp-form-actions'}>
+              <button type={'reset'} className={'secondary-button'} disabled={submitting}>
+                Reset
               </button>
-            )}
-            <button type={'submit'} className={'primary-button'} disabled={submitting}>
-              {submitting ? 'Saving...' : submitLabel}
-            </button>
-          </div>
+              {onDraft && (
+                // Draft is optional; ordinary forms do not render this button.
+                <button
+                  type={'button'}
+                  className={'secondary-button'}
+                  disabled={submitting}
+                  onClick={handleDraft}
+                >
+                  {draftLabel}
+                </button>
+              )}
+              <button type={'submit'} className={'primary-button'} disabled={submitting}>
+                {submitting ? 'Saving...' : submitLabel}
+              </button>
+            </div>
+          )}
+          {afterActions}
         </form>
       </section>
     </div>

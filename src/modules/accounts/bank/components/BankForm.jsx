@@ -36,6 +36,32 @@ function tableInputClass(error, extraClasses = '') {
     .join(' ')
 }
 
+function tableTextareaClass(error, extraClasses = '') {
+  return [
+    'w-full min-h-[28px] px-2 py-1 border rounded text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-white transition-colors resize-y',
+    error ? 'border-rose-500 bg-rose-50/20' : 'border-gray-300',
+    extraClasses,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
+function formatAuditDateTime(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  const time = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  })
+  return `${day}/${month}/${year} ${time}`
+}
+
 function BankForm({
   values,
   errors = {},
@@ -45,6 +71,9 @@ function BankForm({
   businessUnitOptions = [],
   unitsLoading = false,
   businessUnitLocked = false,
+  auditLog = null,
+  submitLabel = '',
+  submitting = false,
   bankNameRef,
   onChange,
   onRowChange,
@@ -57,18 +86,6 @@ function BankForm({
           SECTION 1: BANK INFORMATION (MASTER DATA)
           ========================================================================= */}
       <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
-        <div className={'flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100'}>
-          <div className={'flex items-center gap-2'}>
-            <div className={'w-1.5 h-4 bg-[#038b8d] rounded-full'} />
-            <h2 className={'text-sm font-semibold text-gray-800 tracking-tight'}>
-              Bank Information
-            </h2>
-          </div>
-          <span className={'text-[11px] text-gray-500'}>
-            Fields marked with <span className={'text-rose-500 font-bold'}>*</span> are required
-          </span>
-        </div>
-
         <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5'}>
           {/* 1. Group Name */}
           <div>
@@ -282,15 +299,17 @@ function BankForm({
 
                       {/* Address */}
                       <td className={'px-1.5 py-1 border-r border-gray-100'}>
-                        <input
+                        <textarea
                           id={`ADDRESS-${row._ROW_ID}`}
                           name={'ADDRESS'}
-                          type={'text'}
-                          className={tableInputClass(rowErrors.ADDRESS)}
+                          rows={1}
+                          className={tableTextareaClass(rowErrors.ADDRESS)}
                           value={row.ADDRESS || ''}
                           maxLength={500}
                           placeholder={'Branch address'}
                           aria-label={`Address ${index + 1}`}
+                          aria-invalid={Boolean(rowErrors.ADDRESS)}
+                          aria-describedby={rowErrors.ADDRESS ? `ADDRESS-${row._ROW_ID}-error` : undefined}
                           onChange={(e) => onRowChange(row._ROW_ID, 'ADDRESS', e.target.value)}
                         />
                         <FieldError id={`ADDRESS-${row._ROW_ID}-error`} message={rowErrors.ADDRESS} />
@@ -441,6 +460,158 @@ function BankForm({
           </span>
         </div>
       </div>
+
+      {submitLabel && (
+        <div className={'erp-form-actions'}>
+          <button
+            type={'reset'}
+            className={'secondary-button'}
+            disabled={submitting}
+          >
+            Reset
+          </button>
+          <button
+            type={'submit'}
+            className={'primary-button'}
+            disabled={submitting}
+          >
+            {submitting ? 'Saving...' : submitLabel}
+          </button>
+        </div>
+      )}
+
+      {/* =========================================================================
+          SECTION 3: AUDIT LOG DATA (DISPLAYED ON EDIT)
+          ========================================================================= */}
+      {auditLog && (
+        <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
+          <div className={'flex items-center justify-between pb-2 mb-3 border-b border-gray-100'}>
+            <div className={'flex items-center gap-2'}>
+              <div className={'w-1.5 h-4 bg-[#038b8d] rounded-full'} />
+              <h3 className={'text-sm font-semibold text-gray-800 tracking-tight'}>
+                Audit Log :
+              </h3>
+            </div>
+            <span
+              data-column={'STATUS'}
+              className={[
+                'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none text-white',
+                String(values.STATUS ?? auditLog.STATUS ?? '1') === '1'
+                  ? 'bg-[#32c497]'
+                  : 'bg-[#fa5c70]',
+              ].join(' ')}
+            >
+              {String(values.STATUS ?? auditLog.STATUS ?? '1') === '1'
+                ? 'Active'
+                : 'Inactive'}
+            </span>
+          </div>
+
+          <div className={'space-y-3 text-xs'}>
+            {/* Row 1: Created Audit Info */}
+            <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'}>
+              <div
+                data-column={'CREATED_USER_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created By (User):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {auditLog.CREATED_USER_NAME || auditLog.CREATED_USER_ID || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'CREATED_EMP_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created By (Employee):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {auditLog.CREATED_EMP_NAME || auditLog.CREATED_EMP_ID || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'CREATED_DATETIME'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created At:
+                </span>
+                <span className={'font-semibold text-gray-800'}>
+                  {formatAuditDateTime(auditLog.CREATED_DATETIME)}
+                </span>
+              </div>
+
+              <div
+                data-column={'CREATED_APP'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created From:
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {auditLog.CREATED_APP || '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* Row 2: Updated Audit Info */}
+            <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'}>
+              <div
+                data-column={'UPDATED_USER_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated By (User):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {auditLog.UPDATED_USER_NAME || auditLog.UPDATED_USER_ID || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'UPDATED_EMP_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated By (Employee):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {auditLog.UPDATED_EMP_NAME || auditLog.UPDATED_EMP_ID || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'UPDATED_DATETIME'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated At:
+                </span>
+                <span className={'font-semibold text-gray-800'}>
+                  {formatAuditDateTime(auditLog.UPDATED_DATETIME)}
+                </span>
+              </div>
+
+              <div
+                data-column={'UPDATED_APP'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated From:
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {auditLog.UPDATED_APP || '-'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
