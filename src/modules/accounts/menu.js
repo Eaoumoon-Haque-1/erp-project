@@ -18,6 +18,21 @@ export const accountsMenu = [{
           key: 'afm-bank-information',
           path: '/accounts/voucher-setup/bank',
         },
+        {
+          label: 'Lookup Type',
+          key: 'afm-lookup-type',
+          path: '/accounts/voucher-setup/lookup',
+        },
+        {
+          label: 'Payment Type Mapping',
+          key: 'afm-payment-type-mapping',
+          path: '/accounts/voucher-setup/payment-type-mapping',
+        },
+        {
+          label: 'Voucher Type Mapping',
+          key: 'afm-voucher-type-mapping',
+          path: '/accounts/voucher-setup/voucher-type-mapping',
+        },
       ],
     },
   ],

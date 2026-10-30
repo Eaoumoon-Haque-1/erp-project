@@ -13,7 +13,9 @@ import {
 
 // Every environment must provide its API root explicitly. Keeping the address
 // out of source avoids accidentally deploying an old development endpoint.
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || ''
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.trim()
+  || (import.meta.env.DEV ? 'http://localhost:8080/api/v1' : '')
 
 if (!API_BASE_URL) {
   throw new Error(
