@@ -1,10 +1,11 @@
 /**
  * @file Voucher and Payment Type Mapping List page.
- * Displays all mappings with search filters and row actions.
+ * Displays all mappings for the logged-in user's Business Unit with search filters and row actions.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
@@ -69,42 +70,115 @@ const columns = [
 
 function VoucherTypeMappingList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
   const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(Boolean(sessionBusinessUnitId))
   const [businessUnits, setBusinessUnits] = useState([])
   const [voucherTypes, setVoucherTypes] = useState([])
   const [paymentTypes, setPaymentTypes] = useState([])
 
   useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
+
     let active = true
 
     Promise.all([
-      voucherTypeMappingApi.list(),
+      voucherTypeMappingApi.list({ buId: sessionBusinessUnitId }),
       businessGroupsApi.list().catch(() => []),
       businessUnitsApi.list().catch(() => []),
+      afmLookupApi.list({ buId: sessionBusinessUnitId }).catch(() => null),
       afmLookupApi
-        .getValuesByTypeCode(VOUCHER_TYPE_LOOKUP_CODE, undefined, 1)
+        .getValuesByTypeCode(VOUCHER_TYPE_LOOKUP_CODE, sessionBusinessUnitId, 1)
         .catch(() => []),
       afmLookupApi
-        .getValuesByTypeCode(PAYMENT_TYPE_LOOKUP_CODE, undefined, 1)
+        .getValuesByTypeCode(PAYMENT_TYPE_LOOKUP_CODE, sessionBusinessUnitId, 1)
         .catch(() => []),
     ])
-      .then(async ([mappings, groups, units, vTypes, pTypes]) => {
+      .then(async ([mappings, groups, units, lookupTypes, vTypes, pTypes]) => {
         if (!active) return
-        let finalPTypes = pTypes || []
+
+        const hasLookupTypesList = Array.isArray(lookupTypes)
+        const buLookupTypes = hasLookupTypesList
+          ? lookupTypes.filter(
+              (t) =>
+                String(t.buId ?? t.BU_ID ?? '') === sessionBusinessUnitId &&
+                String(t.status ?? t.STATUS ?? 1) === '1',
+            )
+          : []
+
+        const allowedTypeIds = new Set(
+          buLookupTypes.map((t) => String(t.id ?? t.ID ?? '')).filter(Boolean),
+        )
+        const allowedValueIds = new Set()
+        buLookupTypes.forEach((t) => {
+          ;(t.lookupValues || []).forEach((v) => {
+            if (v?.id != null) allowedValueIds.add(String(v.id))
+          })
+        })
+
+        const filterLookupValuesByBu = (items = []) =>
+          (items || []).filter((item) => {
+            const itemBuId = item?.buId ?? item?.BU_ID ?? item?.bu_id
+            if (itemBuId != null && String(itemBuId) !== '') {
+              return String(itemBuId) === sessionBusinessUnitId
+            }
+            if (hasLookupTypesList) {
+              const itemTypeId =
+                item?.typeNameId ??
+                item?.TYPE_NAME_ID ??
+                item?.typeId ??
+                item?.TYPE_ID
+              if (itemTypeId != null && String(itemTypeId) !== '') {
+                return allowedTypeIds.has(String(itemTypeId))
+              }
+              if (item?.id != null) {
+                return allowedValueIds.has(String(item.id))
+              }
+              return false
+            }
+            return true
+          })
+
+        let finalVTypes = filterLookupValuesByBu(vTypes)
+        let finalPTypes = filterLookupValuesByBu(pTypes)
+
         if (finalPTypes.length === 0) {
           const fallbackPTypes = await afmLookupApi
-            .getValuesByTypeCode(PAYMENT_TYPE_FALLBACK_CODE, undefined, 1)
+            .getValuesByTypeCode(
+              PAYMENT_TYPE_FALLBACK_CODE,
+              sessionBusinessUnitId,
+              1,
+            )
             .catch(() => [])
-          if (active && fallbackPTypes?.length) finalPTypes = fallbackPTypes
+          if (active && fallbackPTypes?.length) {
+            finalPTypes = filterLookupValuesByBu(fallbackPTypes)
+          }
         }
         if (!active) return
-        setBusinessUnits(units)
-        setVoucherTypes(vTypes || [])
+
+        const filteredUnits = (units || []).filter(
+          (u) => String(u.id ?? u.ID ?? '') === sessionBusinessUnitId,
+        )
+        setBusinessUnits(filteredUnits)
+        setVoucherTypes(finalVTypes)
         setPaymentTypes(finalPTypes)
-        const groupMap = new Map(groups.map((g) => [String(g.id), g.groupName]))
-        const unitMap = new Map(units.map((u) => [String(u.id), u.businessUnit]))
-        setRows(mappings.map((m) => mapVoucherMappingFromApi(m, groupMap, unitMap)))
+
+        const groupMap = new Map((groups || []).map((g) => [String(g.id), g.groupName]))
+        const unitMap = new Map((units || []).map((u) => [String(u.id), u.businessUnit]))
+
+        const filteredMappings = (mappings || []).filter((m) => {
+          const itemBuId = String(m.buId ?? m.BU_ID ?? '')
+          const itemBgId = String(m.bgId ?? m.BG_ID ?? '')
+          if (itemBuId !== sessionBusinessUnitId) return false
+          if (sessionGroupId && itemBgId && itemBgId !== sessionGroupId) return false
+          return true
+        })
+
+        setRows(
+          filteredMappings.map((m) => mapVoucherMappingFromApi(m, groupMap, unitMap)),
+        )
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Voucher Type Mappings.')
@@ -116,7 +190,7 @@ function VoucherTypeMappingList() {
     return () => {
       active = false
     }
-  }, [])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const businessUnitOptions = useMemo(
     () =>
