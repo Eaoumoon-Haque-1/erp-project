@@ -5,6 +5,8 @@
 export const DEPRECIATION_CATEGORY_TABLE = 'ASSET_DEPRI_CATEGORY'
 
 export const initialDepreciationCategoryValues = {
+  BG_ID: '',
+  BU_ID: '',
   DEPRI_CATEGORY: '',
   DEPRI_METHOD: '',
   DEPRI_METHOD_NAME: '',

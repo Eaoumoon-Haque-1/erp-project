@@ -1,13 +1,24 @@
-/** @file List controller for temporary Asset Lookup Value records. */
-import { useMemo, useState } from 'react'
+/** @file API-backed list controller for Asset Lookup Value records. */
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { assetLookupTypesApi } from '../../asset-lookup-type/api/assetLookupTypeApi'
+import { assetLookupValuesApi } from '../api/assetLookupValueApi'
 import {
-  listAssetLookupValues,
-  removeAssetLookupValue,
-  updateAssetLookupValue,
-} from '../data/assetLookupValueStore'
+  mapAssetLookupValueFromApi,
+  mapAssetLookupValueToApi,
+} from '../data/assetLookupValueApiMapper'
+
+const basePath = '/asset/asset-lookup-value'
+
+function sortOrderValue(value) {
+  if (value === '' || value == null) return Number.POSITIVE_INFINITY
+  const number = Number(value)
+  return Number.isFinite(number) ? number : Number.POSITIVE_INFINITY
+}
 
 const columns = [
   { key: 'TYPE_NAME', label: 'Lookup Type' },
@@ -30,13 +41,19 @@ const columns = [
 
 function AssetLookupValueList() {
   const navigate = useNavigate()
-  const [rows, setRows] = useState(() => listAssetLookupValues())
+  const { session } = useAuth()
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const [rows, setRows] = useState([])
+  const [typeOptions, setTypeOptions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+
   const filters = useMemo(() => [
     {
-      key: 'TYPE_NAME',
+      key: 'TYPE_ID',
       label: 'Search by Lookup Type',
       placeholder: '--Search by Lookup Type--',
-      options: [...new Map(rows.map((row) => [row.TYPE_NAME, { label: row.TYPE_NAME, value: row.TYPE_NAME }])).values()],
+      options: typeOptions,
     },
     {
       key: 'VALUE',
@@ -56,30 +73,79 @@ function AssetLookupValueList() {
       placeholder: '--Search by Status--',
       options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }],
     },
-  ], [rows])
+  ], [typeOptions])
 
-  const handleDelete = (row) => {
-    removeAssetLookupValue(row.ID)
-    setRows(listAssetLookupValues())
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      assetLookupValuesApi.list({ businessUnitId: sessionBusinessUnitId }),
+      assetLookupTypesApi.list(sessionBusinessUnitId),
+    ])
+      .then(([records, types]) => {
+        if (!active) return
+        const typeNames = new Map(types.map((type) => [String(type.id), type.typeName]))
+        setTypeOptions(types.map((type) => ({
+          value: String(type.id),
+          label: type.typeName,
+        })))
+        setRows(records
+          .map((record) => mapAssetLookupValueFromApi(
+            record,
+            typeNames.get(String(record.typeId)) || String(record.typeId ?? 'N/A'),
+          ))
+          .sort((left, right) => (
+            sortOrderValue(left.SORT_ORDER) - sortOrderValue(right.SORT_ORDER)
+          )))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Lookup Values.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [sessionBusinessUnitId])
+
+  const handleDelete = async (row) => {
+    try {
+      await assetLookupValuesApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to delete Asset Lookup Value.'))
+    }
   }
 
-  const handleStatusChange = (row) => {
-    updateAssetLookupValue(row.ID, { ...row, STATUS: row.STATUS === '1' ? '0' : '1' })
-    setRows(listAssetLookupValues())
+  const handleStatusChange = async (row) => {
+    try {
+      const updated = await assetLookupValuesApi.update(
+        row.ID,
+        mapAssetLookupValueToApi({ ...row, STATUS: row.STATUS === '1' ? '0' : '1' }),
+      )
+      setRows((current) => current.map((item) => (
+        item.ID === row.ID
+          ? mapAssetLookupValueFromApi(updated, row.TYPE_NAME)
+          : item
+      )))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to update Asset Lookup Value status.'))
+    }
   }
 
   return (
     <ListPage
       title={'Asset Lookup Value List'}
       createLabel={'New'}
-      createTo={'/asset/asset-lookup-value/create'}
+      createTo={`${basePath}/create`}
       filters={filters}
       columns={columns}
       rows={rows}
+      loading={loading}
+      message={message}
       renderActions={(row) => (
         <ListRowActions
           row={row}
-          onEdit={() => navigate(`/asset/asset-lookup-value/${row.ID}/edit`)}
+          onView={() => navigate(`${basePath}/${row.ID}/view`)}
+          onEdit={() => navigate(`${basePath}/${row.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}
         />
@@ -89,4 +155,3 @@ function AssetLookupValueList() {
 }
 
 export default AssetLookupValueList
-

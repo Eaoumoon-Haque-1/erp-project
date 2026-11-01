@@ -119,6 +119,8 @@ function UserEdit() {
             BU_ID: String(user.buId),
             NAME: unitNames.get(String(user.buId)) || String(user.buId),
             STATUS: '1',
+            ACTIVE_FROM: String(user.fromDate ?? '').slice(0, 10),
+            ACTIVE_TO: '',
           }]
         }
 
@@ -168,8 +170,8 @@ function UserEdit() {
       if (selectedUnit) {
         setBusinessUnitRows((current) => {
           const existing = current.find((row) => row.BU_ID === nextValue)
-          if (existing) return current.map((row) => row.BU_ID === nextValue ? { ...row, STATUS: '1' } : row)
-          return [...current, { id: `business-unit-map-${Date.now()}`, MAPPING_ID: null, BU_ID: nextValue, NAME: selectedUnit.label, STATUS: '1' }]
+          if (existing) return current.map((row) => row.BU_ID === nextValue ? { ...row, STATUS: '1', ACTIVE_TO: '' } : row)
+          return [...current, { id: `business-unit-map-${Date.now()}`, MAPPING_ID: null, BU_ID: nextValue, NAME: selectedUnit.label, STATUS: '1', ACTIVE_FROM: localDateString(), ACTIVE_TO: '' }]
         })
       }
       setEmployeeRows((current) => closeCurrentEmployee(current, nextValue))
@@ -292,6 +294,7 @@ function UserEdit() {
         maxEmployeeAssignments={Number.POSITIVE_INFINITY}
         showEmployeeStatus={false}
         showEmployeeHistory
+        showBusinessUnitHistory
         activeTab={activeAssignmentTab}
         generalError={errors.ASSIGNMENTS}
         onTabChange={setActiveAssignmentTab}

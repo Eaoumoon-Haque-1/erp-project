@@ -83,6 +83,11 @@ export const superAdminMenu = [
             path: "/super-admin/user-creation/user",
           },
           {
+            label: "Individual User Create",
+            key: "individual-user-create",
+            path: "/super-admin/user-creation/individual-user/create",
+          },
+          {
             label: "User Create Self Service",
             key: "user-create-self-service",
             path: "/super-admin/user-creation/user-create-self-service",

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import useAssetLookupValues from '../../asset-lookup-value/data/useAssetLookupValues'
 import AssetAuditForm from '../components/AssetAuditForm'
 import { updateAssetAuditField } from '../data/assetAuditFormState'
 import { getAssetAuditReferences } from '../data/assetAuditOptions'
@@ -16,7 +17,8 @@ function AssetAuditEdit() {
   const record = getAssetAudit(assetAuditId)
   const [values, setValues] = useState(record)
   const [errors, setErrors] = useState({})
-  const references = getAssetAuditReferences(listAssetAudits(), record)
+  const lookupValues = useAssetLookupValues()
+  const references = getAssetAuditReferences(listAssetAudits(), record, lookupValues)
   if (!record || !values) return <Navigate to={listPath} replace />
   const handleChange = (event) => { const { name, value } = event.target; setValues((current) => updateAssetAuditField(current, name, value, references)); setErrors((current) => ({ ...current, [name]: undefined })) }
   const handleSubmit = (event) => { event.preventDefault(); const others = listAssetAudits().filter((item) => item.ID !== record.ID); const result = validateAssetAudit(values, others, references); setValues(result.values); setErrors(result.errors); if (!result.isValid) { requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus()); return }; updateAssetAudit(record.ID, result.values); navigate(listPath) }

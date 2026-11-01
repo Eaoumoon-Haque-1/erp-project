@@ -1,24 +1,108 @@
-/** @file Create controller for Depreciation Category. */
-import { useRef, useState } from 'react'
+/** @file API-backed Depreciation Category create page. */
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import { departmentOptions } from '../../../hris/employee-information/data/employeeOptions'
+import { depreciationCategoriesApi } from '../api/depreciationCategoryApi'
 import DepreciationCategoryForm from '../components/DepreciationCategoryForm'
-import { getAssetTypeOptions, getDepreciationMethodOptions } from '../data/depreciationCategoryOptions'
-import { createDepreciationCategory, listDepreciationCategories } from '../data/depreciationCategoryStore'
-import { DEPRECIATION_CATEGORY_TABLE, initialDepreciationCategoryValues, validateDepreciationCategory } from '../validation/depreciationCategoryValidation'
+import {
+  mapDepreciationCategoryFromApi,
+  mapDepreciationCategoryToApi,
+} from '../data/depreciationCategoryApiMapper'
+import { loadDepreciationCategoryReferences } from '../data/depreciationCategoryOptions'
+import {
+  DEPRECIATION_CATEGORY_TABLE,
+  initialDepreciationCategoryValues,
+  validateDepreciationCategory,
+} from '../validation/depreciationCategoryValidation'
 
 const listPath = '/asset/depreciation-category'
+const emptyReferences = { methodOptions: [], assetTypeOptions: [], departmentOptions: [] }
+const fieldMap = {
+  depriCategory: 'DEPRI_CATEGORY', depriMethodId: 'DEPRI_METHOD',
+  assetTypeId: 'ASSET_TYPE', depriLife: 'DEPRI_LIFE',
+  depriPercentage: 'DEPRI_PERCENTAGE', assetOwnerId: 'ASSET_OWNER', status: 'STATUS',
+}
 
 function DepreciationCategoryCreate() {
-  const navigate = useNavigate(); const categoryRef = useRef(null)
-  const [values, setValues] = useState(initialDepreciationCategoryValues); const [errors, setErrors] = useState({})
-  const methodOptions = getDepreciationMethodOptions(); const assetTypeOptions = getAssetTypeOptions()
-  const change = (event) => { const { name, type, value, checked } = event.target; setValues((current) => ({ ...current, [name]: type === 'checkbox' ? (checked ? '1' : '0') : value, ...(name === 'DEPRI_METHOD' ? { DEPRI_METHOD_NAME: methodOptions.find((option) => option.value === value)?.label || '' } : {}), ...(name === 'ASSET_TYPE' ? { ASSET_TYPE_NAME: assetTypeOptions.find((option) => option.value === value)?.label || '' } : {}), ...(name === 'ASSET_OWNER' ? { ASSET_OWNER_NAME: departmentOptions.find((option) => option.value === value)?.label || '' } : {}) })); setErrors((current) => ({ ...current, [name]: undefined })) }
-  const submit = (event) => { event.preventDefault(); const result = validateDepreciationCategory(values, listDepreciationCategories()); setValues(result.values); setErrors(result.errors); if (!result.isValid) { requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.focus()); return } createDepreciationCategory(result.values); navigate(listPath) }
-  const reset = () => { setValues(initialDepreciationCategoryValues); setErrors({}); requestAnimationFrame(() => categoryRef.current?.focus()) }
-  return <FormPage title={'Depreciation Category Create'} listTo={listPath} tableName={DEPRECIATION_CATEGORY_TABLE} onSubmit={submit} onReset={reset}><DepreciationCategoryForm values={values} errors={errors} methodOptions={methodOptions} assetTypeOptions={assetTypeOptions} departmentOptions={departmentOptions} categoryRef={categoryRef} onChange={change} /></FormPage>
+  const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const categoryRef = useRef(null)
+  const [values, setValues] = useState(initialDepreciationCategoryValues)
+  const [errors, setErrors] = useState({})
+  const [references, setReferences] = useState(emptyReferences)
+  const [existingRecords, setExistingRecords] = useState([])
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      loadDepreciationCategoryReferences(sessionBusinessUnitId, sessionGroupId),
+      depreciationCategoriesApi.list(sessionBusinessUnitId),
+    ])
+      .then(([loadedReferences, records]) => {
+        if (!active) return
+        setReferences(loadedReferences)
+        setExistingRecords(records.map((record) => mapDepreciationCategoryFromApi(record, loadedReferences)))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Depreciation Category references.'))
+      })
+    return () => { active = false }
+  }, [sessionBusinessUnitId, sessionGroupId])
+
+  const handleChange = (event) => {
+    const { name, type, value, checked } = event.target
+    setValues((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
+      ...(name === 'DEPRI_METHOD' ? { DEPRI_METHOD_NAME: references.methodOptions.find((option) => option.value === value)?.label || '' } : {}),
+      ...(name === 'ASSET_TYPE' ? { ASSET_TYPE_NAME: references.assetTypeOptions.find((option) => option.value === value)?.label || '' } : {}),
+      ...(name === 'ASSET_OWNER' ? { ASSET_OWNER_NAME: references.departmentOptions.find((option) => option.value === value)?.label || '' } : {}),
+    }))
+    setErrors((current) => ({ ...current, [name]: undefined }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    const result = validateDepreciationCategory(values, existingRecords)
+    setValues({ ...values, ...result.values })
+    setErrors(result.errors)
+    if (!result.isValid) {
+      requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.focus())
+      return
+    }
+    setSubmitting(true)
+    setMessage('')
+    try {
+      await depreciationCategoriesApi.create(mapDepreciationCategoryToApi(result.values, {
+        bgId: sessionGroupId,
+        buId: sessionBusinessUnitId,
+      }))
+      navigate(listPath)
+    } catch (error) {
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Depreciation Category.', fieldMap))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleReset = () => {
+    setValues(initialDepreciationCategoryValues)
+    setErrors({})
+    setMessage('')
+    requestAnimationFrame(() => categoryRef.current?.focus())
+  }
+
+  return (
+    <FormPage title={'Depreciation Category Create'} listTo={listPath} tableName={DEPRECIATION_CATEGORY_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} submitting={submitting}>
+      <DepreciationCategoryForm values={values} errors={errors} methodOptions={references.methodOptions} assetTypeOptions={references.assetTypeOptions} departmentOptions={references.departmentOptions} categoryRef={categoryRef} onChange={handleChange} />
+    </FormPage>
+  )
 }
 
 export default DepreciationCategoryCreate
-

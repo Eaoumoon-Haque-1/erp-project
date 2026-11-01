@@ -2,14 +2,13 @@
 import { reportingOfficerOptions } from '../../../hris/employee-information/data/employeeOptions'
 import { listAssetAssignments } from '../../asset-assign-employee/data/assetAssignEmployeeStore'
 import { listAssetReceives } from '../../asset-receive-register/data/assetReceiveRegisterStore'
-import { listAssetLookupValues } from '../../asset-lookup-value/data/assetLookupValueStore'
 import { listBulkAssetReceives } from '../../bulk-asset-receive-for-split/data/bulkAssetReceiveStore'
 
 const fallbackDisposalTypes = ['Sale', 'Scrap', 'Donation', 'Write-off', 'Lost', 'Retirement']
 const fallbackReasons = ['Obsolete', 'Damaged', 'Beyond Repair', 'End of Useful Life', 'Lost', 'Replacement']
 
-function configuredOptions(typeName, fallback) {
-  const configured = listAssetLookupValues()
+function configuredOptions(lookupValues, typeName, fallback) {
+  const configured = lookupValues
     .filter((record) => record.STATUS === '1' && record.TYPE_NAME.trim().toLowerCase() === typeName.toLowerCase())
     .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
     .map((record) => ({ value: record.ID, label: record.VALUE }))
@@ -34,7 +33,7 @@ export const disposalStatusOptions = [
   { value: 'CANCELLED', label: 'Cancelled' }, { value: 'COMPLETED', label: 'Completed' },
 ]
 
-export function getAssetDisposalReferences(existingRecords = [], currentRecord = null) {
+export function getAssetDisposalReferences(existingRecords = [], currentRecord = null, lookupValues = []) {
   const blockedAssets = new Set(existingRecords
     .filter((record) => record.STATUS === '1' && record.ID !== currentRecord?.ID)
     .map((record) => record.ASSET_RECORD_ID))
@@ -49,8 +48,8 @@ export function getAssetDisposalReferences(existingRecords = [], currentRecord =
 
   return {
     eligibleAssets: receives.filter((option) => !blockedAssets.has(option.value) && !assignedAssets.has(option.value)),
-    disposalTypes: configuredOptions('Disposal Type', fallbackDisposalTypes),
-    reasons: configuredOptions('Disposal Reason', fallbackReasons),
+    disposalTypes: configuredOptions(lookupValues, 'Disposal Type', fallbackDisposalTypes),
+    reasons: configuredOptions(lookupValues, 'Disposal Reason', fallbackReasons),
     approvers: reportingOfficerOptions,
     statuses: disposalStatusOptions,
   }

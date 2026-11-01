@@ -37,7 +37,14 @@ function EmploymentTypeEdit() {
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
-    setValues((current) => ({ ...current, [name]: type === 'checkbox' ? (checked ? '1' : '0') : value }))
+    const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
+    setValues((current) => ({
+      ...current,
+      [name]: nextValue,
+      ...(name === 'IS_DATE_FIELD_REQUIRED' && nextValue === '0'
+        ? { DATE_FIELD_LABEL: '' }
+        : {}),
+    }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
@@ -55,7 +62,9 @@ function EmploymentTypeEdit() {
       navigate(listPath)
     } catch (error) {
       setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Employment Type.', {
-        typeName: 'TYPE_NAME', shortName: 'SHORT_NAME', sortOrder: 'SORT_ORDER', status: 'STATUS',
+        typeName: 'TYPE_NAME', shortName: 'SHORT_NAME', isDefault: 'IS_DEFAULT',
+        sortOrder: 'SORT_ORDER', isDateFieldRequired: 'IS_DATE_FIELD_REQUIRED',
+        dateFieldLabel: 'DATE_FIELD_LABEL', category: 'CATEGORY', status: 'STATUS',
       }))
     } finally {
       setSubmitting(false)

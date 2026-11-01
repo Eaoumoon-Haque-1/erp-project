@@ -230,14 +230,20 @@ function UserTypeGroupManage({ editing = false }) {
     event.preventDefault()
     const result = validateUserTypeGroup(values)
     const nextErrors = { ...result.errors }
-    if (rows.length === 0) nextErrors.BUSINESS_UNITS = 'Add at least one Business Unit.'
+    const missingNewAssignment = !editing && rows.length === 0
+    if (missingNewAssignment) nextErrors.BUSINESS_UNITS = 'Add at least one Business Unit.'
     setValues(result.values)
     setErrors(nextErrors)
-    if (!result.isValid || rows.length === 0) return
+    if (!result.isValid || missingNewAssignment) return
 
     setSubmitting(true)
     try {
-      await userTypeGroupsApi.save(values.USER_TYPE_ID, mapUserTypeGroupToApi(result.values, rows))
+      await Promise.all(removedRows.map((row) => (
+        userTypeGroupsApi.removeMapping(row.MAPPING_ID)
+      )))
+      if (rows.length > 0) {
+        await userTypeGroupsApi.save(values.USER_TYPE_ID, mapUserTypeGroupToApi(result.values, rows))
+      }
       navigate(listPath)
     } catch (error) {
       applyApiFormErrors(error, setErrors, 'Unable to save User Type Business Units.', {

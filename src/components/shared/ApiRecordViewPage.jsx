@@ -45,12 +45,7 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields, audit
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const editPath = editTo && record ? editTo(id, record) : ''
-  const visibleAuditFields = record
-    ? auditFields.filter((field) => {
-      const value = getFieldValue(field, record)
-      return value !== null && value !== undefined && value !== ''
-    })
-    : []
+  const visibleAuditFields = record ? auditFields : []
 
   useEffect(() => {
     let active = true

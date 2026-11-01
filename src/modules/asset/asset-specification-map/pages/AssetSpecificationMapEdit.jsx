@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import useAssetLookupValues from '../../asset-lookup-value/data/useAssetLookupValues'
 import AssetSpecificationMapForm from '../components/AssetSpecificationMapForm'
 import { getAssetSpecificationMapReferences } from '../data/assetSpecificationMapOptions'
 import {
@@ -23,7 +24,8 @@ function AssetSpecificationMapEdit() {
   const record = getAssetSpecificationMap(assetSpecificationMapId)
   const [values, setValues] = useState(record)
   const [errors, setErrors] = useState({})
-  const references = getAssetSpecificationMapReferences()
+  const lookupValues = useAssetLookupValues()
+  const references = getAssetSpecificationMapReferences(lookupValues)
 
   if (!record || !values) return <Navigate to={listPath} replace />
 

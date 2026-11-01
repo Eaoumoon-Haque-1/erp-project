@@ -55,7 +55,7 @@ export function mapUserToApi(values, employeeSelection) {
     fromDate: toDateTime(values.FROM_DATE),
     toDate: toDateTime(values.TO_DATE),
     roleId: Number(values.ROLE_ID),
-    userTypeId: Number(values.USER_TYPE_ID),
+    userTypeId: optionalNumber(values.USER_TYPE_ID),
     isAndroidFixed: Number(values.IS_ANDROID_FIXED),
     androidId: values.ANDROID_ID || null,
     status: Number(values.STATUS),

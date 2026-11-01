@@ -1,18 +1,66 @@
-/** @file Active master options and dependent-field derivation for ASSET_ITEM. */
-import { listAssetGroups } from '../../asset-group/data/assetGroupStore'
-import { listDepreciationCategories } from '../../depreciation-category/data/depreciationCategoryStore'
-import { listAssetUnitsOfMeasure } from '../../../procure-to-pay/asset-unit-of-measure/data/assetUnitOfMeasureStore'
+/** @file API-backed Asset Item references and dependent-field derivation. */
+import { assetUomsApi, depriCategoriesApi, lookupValuesApi } from '../../../../api/assetReferences'
+import { departmentsApi } from '../../../hris/department/api/departmentApi'
+import { assetGroupsApi } from '../../asset-group/api/assetGroupApi'
+import { mapAssetGroupFromApi } from '../../asset-group/data/assetGroupApiMapper'
 
-export function getAssetItemReferences() {
-  const assetGroups = listAssetGroups().filter((record) => record.STATUS === '1')
-  const depreciationCategories = listDepreciationCategories()
+export function getAssetItemReferences({
+  assetGroupRecords = [],
+  categoryRecords = [],
+  uomRecords = [],
+  lookupValueRecords = [],
+  departmentRecords = [],
+} = {}) {
+  const lookupNames = new Map(lookupValueRecords.map((record) => [
+    String(record.id),
+    record.value ?? record.lookupValue ?? record.valueName ?? record.name ?? '',
+  ]))
+  const departmentNames = new Map(departmentRecords.map((record) => [
+    String(record.id),
+    record.departmentName ?? '',
+  ]))
+  const assetGroups = assetGroupRecords
+    .map((record) => mapAssetGroupFromApi(record, departmentNames))
     .filter((record) => record.STATUS === '1')
-  const uomOptions = listAssetUnitsOfMeasure()
-    .filter((record) => record.STATUS === '1')
-    .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
-    .map((record) => ({ value: record.ID, label: record.UNIT_NAME }))
+  const depreciationCategories = categoryRecords
+    .filter((record) => String(record.status ?? 1) === '1')
+    .map((record) => ({
+      ID: String(record.id ?? ''),
+      DEPRI_CATEGORY: record.depriCategory ?? '',
+      DEPRI_METHOD: String(record.depriMethodId ?? ''),
+      DEPRI_METHOD_NAME: lookupNames.get(String(record.depriMethodId)) || '',
+      ASSET_TYPE: String(record.assetTypeId ?? ''),
+      ASSET_TYPE_NAME: lookupNames.get(String(record.assetTypeId)) || '',
+      DEPRI_LIFE: record.depriLife == null ? '' : String(record.depriLife),
+      DEPRI_PERCENTAGE: record.depriPercentage == null ? '' : String(record.depriPercentage),
+      ASSET_OWNER: String(record.assetOwnerId ?? ''),
+      ASSET_OWNER_NAME: departmentNames.get(String(record.assetOwnerId)) || '',
+      STATUS: String(record.status ?? 1),
+    }))
+  const uomOptions = uomRecords
+    .filter((record) => String(record.status ?? 1) === '1')
+    .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0))
+    .map((record) => ({ value: String(record.id), label: record.unitName ?? '' }))
 
   return { assetGroups, depreciationCategories, uomOptions }
+}
+
+export async function loadAssetItemReferences(businessUnitId, businessGroupId) {
+  const [assetGroupRecords, categoryRecords, uomRecords, lookupValueRecords, departmentRecords] = await Promise.all([
+    assetGroupsApi.list(businessUnitId),
+    depriCategoriesApi.list(businessUnitId),
+    assetUomsApi.list(businessUnitId),
+    lookupValuesApi.list(businessUnitId),
+    departmentsApi.listByGroup(businessGroupId),
+  ])
+
+  return getAssetItemReferences({
+    assetGroupRecords,
+    categoryRecords,
+    uomRecords,
+    lookupValueRecords,
+    departmentRecords,
+  })
 }
 
 export function deriveAssetItemFields(name, value, current, references) {

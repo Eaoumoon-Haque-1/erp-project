@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useAuth from '../../../../auth/useAuth'
 import { usersApi } from '../api/userApi'
 import { userAssignmentsApi } from '../api/userAssignmentApi'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
@@ -29,6 +30,7 @@ import {
   addEmployeeHistoryRow,
   applyUserStatusToEmployeeRows,
   closeCurrentEmployee,
+  localDateString,
 } from '../data/userEmployeeHistory'
 import {
   filterUserTypesByBusinessUnit,
@@ -46,18 +48,37 @@ const existingUserNames = []
 const existingMobileNumbers = []
 const listPath = '/super-admin/user-creation/user'
 
-function UserCreate() {
+function UserCreate({ fixedBusinessContext = false, title = 'User Create' }) {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = fixedBusinessContext ? String(session?.bgId ?? '') : ''
+  const sessionBusinessUnitId = fixedBusinessContext ? String(session?.buId ?? '') : ''
+  const createSessionBusinessUnitRow = () => sessionBusinessUnitId ? [{
+    id: `business-unit-session-${sessionBusinessUnitId}`,
+    MAPPING_ID: null,
+    BU_ID: sessionBusinessUnitId,
+    NAME: session?.businessUnitName || sessionBusinessUnitId,
+    STATUS: '1',
+    ACTIVE_FROM: localDateString(),
+    ACTIVE_TO: '',
+  }] : []
   const userNameRef = useRef(null)
-  const [values, setValues] = useState(() => createInitialUserValues())
+  const [values, setValues] = useState(() => ({
+    ...createInitialUserValues(sessionGroupId),
+    BU_ID: sessionBusinessUnitId,
+  }))
   const [errors, setErrors] = useState({})
   const [activeAssignmentTab, setActiveAssignmentTab] = useState('employee')
   const [employeeRows, setEmployeeRows] = useState(() =>
     loadUserEmployeeHistory(USER_CREATE_HISTORY_KEY))
-  const [businessUnitRows, setBusinessUnitRows] = useState([])
+  const [businessUnitRows, setBusinessUnitRows] = useState(
+    createSessionBusinessUnitRow,
+  )
   const [employeeOptions, setEmployeeOptions] = useState([])
   const [createdUserId, setCreatedUserId] = useState('')
-  const [autoMainBusinessUnitId, setAutoMainBusinessUnitId] = useState('')
+  const [autoMainBusinessUnitId, setAutoMainBusinessUnitId] = useState(
+    sessionBusinessUnitId,
+  )
   const [userTypeOptions, setUserTypeOptions] = useState([])
   const [userTypesLoading, setUserTypesLoading] = useState(true)
   const [message, setMessage] = useState('')
@@ -128,10 +149,11 @@ function UserCreate() {
           ? current.filter((row) => row.BU_ID !== autoMainBusinessUnitId)
           : current
         if (selectedUnit) {
+          const activeFrom = localDateString()
           const existing = rowsWithoutReplacedAutoUnit.find((row) => row.BU_ID === nextValue)
           if (existing) {
             return rowsWithoutReplacedAutoUnit.map((row) => row.BU_ID === nextValue
-              ? { ...row, STATUS: '1' }
+              ? { ...row, STATUS: '1', ACTIVE_TO: '' }
               : row)
           }
           return [...rowsWithoutReplacedAutoUnit, {
@@ -140,6 +162,8 @@ function UserCreate() {
             BU_ID: nextValue,
             NAME: selectedUnit.label,
             STATUS: '1',
+            ACTIVE_FROM: activeFrom,
+            ACTIVE_TO: '',
           }]
         }
         return rowsWithoutReplacedAutoUnit
@@ -248,25 +272,30 @@ function UserCreate() {
   }
 
   const handleReset = () => {
-    setValues(createInitialUserValues())
+    setValues({
+      ...createInitialUserValues(sessionGroupId),
+      BU_ID: sessionBusinessUnitId,
+    })
     setErrors({})
     setActiveAssignmentTab('employee')
     setEmployeeRows([])
-    setBusinessUnitRows([])
+    setBusinessUnitRows(fixedBusinessContext ? createSessionBusinessUnitRow() : [])
     setCreatedUserId('')
-    setAutoMainBusinessUnitId('')
+    setAutoMainBusinessUnitId(sessionBusinessUnitId)
     removeUserEmployeeHistory(USER_CREATE_HISTORY_KEY)
     requestAnimationFrame(() => userNameRef.current?.focus())
   }
 
   return (
-    <FormPage title={'User Create'} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={rolesError ? getApiErrorMessage(rolesError, 'Unable to load Roles for this Business Unit.') : message} messageTone={'error'} submitting={submitting}>
+    <FormPage title={title} listTo={listPath} tableName={USER_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={rolesError ? getApiErrorMessage(rolesError, 'Unable to load Roles for this Business Unit.') : message} messageTone={'error'} submitting={submitting}>
       <UserForm
         values={values}
         errors={errors}
         groupOptions={groupOptions}
         groupsLoading={groupsLoading}
         unitsLoading={unitsLoading}
+        businessGroupReadOnly={fixedBusinessContext}
+        businessUnitReadOnly={fixedBusinessContext}
         userNameRef={userNameRef}
         businessUnitOptions={businessUnitOptions}
         roleOptions={roleOptions}
@@ -286,6 +315,7 @@ function UserCreate() {
         maxEmployeeAssignments={Number.POSITIVE_INFINITY}
         showEmployeeStatus={false}
         showEmployeeHistory
+        showBusinessUnitHistory
         activeTab={activeAssignmentTab}
         generalError={errors.ASSIGNMENTS}
         onTabChange={setActiveAssignmentTab}
@@ -297,6 +327,7 @@ function UserCreate() {
           }
           setErrors((current) => ({ ...current, ASSIGNMENTS: undefined }))
         }}
+        protectedBusinessUnitId={fixedBusinessContext ? sessionBusinessUnitId : ''}
         onRemoveBusinessUnit={(indexToRemove) => {
           const removed = businessUnitRows[indexToRemove]
           const remaining = businessUnitRows.filter((_, index) => index !== indexToRemove)

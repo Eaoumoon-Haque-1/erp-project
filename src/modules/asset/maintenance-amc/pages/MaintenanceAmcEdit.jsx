@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import useAssetLookupValues from '../../asset-lookup-value/data/useAssetLookupValues'
 import MaintenanceAmcForm from '../components/MaintenanceAmcForm'
 import { updateMaintenanceAmcField } from '../data/maintenanceAmcFormState'
 import { getMaintenanceReferences } from '../data/maintenanceAmcOptions'
@@ -16,7 +17,8 @@ function MaintenanceAmcEdit() {
   const record = getMaintenanceRecord(maintenanceId)
   const [values, setValues] = useState(record)
   const [errors, setErrors] = useState({})
-  const references = getMaintenanceReferences()
+  const lookupValues = useAssetLookupValues()
+  const references = getMaintenanceReferences(lookupValues)
 
   if (!record || !values) return <Navigate to={listPath} replace />
 

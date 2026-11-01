@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import useAssetLookupValues from '../../asset-lookup-value/data/useAssetLookupValues'
 import MaintenanceAmcForm from '../components/MaintenanceAmcForm'
 import { updateMaintenanceAmcField } from '../data/maintenanceAmcFormState'
 import { getMaintenanceReferences } from '../data/maintenanceAmcOptions'
@@ -14,7 +15,8 @@ function MaintenanceAmcCreate() {
   const navigate = useNavigate()
   const [values, setValues] = useState(initialMaintenanceAmcValues)
   const [errors, setErrors] = useState({})
-  const references = getMaintenanceReferences()
+  const lookupValues = useAssetLookupValues()
+  const references = getMaintenanceReferences(lookupValues)
 
   const handleChange = (event) => {
     const { name, value } = event.target

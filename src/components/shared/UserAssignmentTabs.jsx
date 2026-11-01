@@ -5,6 +5,14 @@
  */
 import { useState } from "react";
 
+function localDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function FieldError({ message }) {
   if (!message) return null;
   return <p className={"erp-field-error"}>{message}</p>;
@@ -43,12 +51,14 @@ function UserAssignmentTabs({
   maxEmployeeAssignments = Number.POSITIVE_INFINITY,
   showEmployeeStatus = true,
   showEmployeeHistory = false,
+  showBusinessUnitHistory = false,
   activeTab,
   generalError,
   onTabChange,
   onAddEmployee,
   onAddBusinessUnit,
   onRemoveBusinessUnit,
+  protectedBusinessUnitId = "",
 }) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [employeeStatus, setEmployeeStatus] = useState("1");
@@ -113,11 +123,16 @@ function UserAssignmentTabs({
       return;
     }
 
+    const activeFrom = localDateString();
     onAddBusinessUnit({
       id: `business-unit-map-${Date.now()}`,
       BU_ID: businessUnit.value,
       NAME: businessUnit.label,
       STATUS: businessUnitStatus,
+      ...(showBusinessUnitHistory ? {
+        ACTIVE_FROM: activeFrom,
+        ACTIVE_TO: businessUnitStatus === "1" ? "" : activeFrom,
+      } : {}),
     });
     setSelectedBusinessUnitId("");
     setBusinessUnitStatus("1");
@@ -310,6 +325,8 @@ function UserAssignmentTabs({
                   <tr>
                     <th className={"w-[60px]"}>#</th>
                     <th>Business Unit</th>
+                    {showBusinessUnitHistory && <th className={"w-[170px]"}>Active From</th>}
+                    {showBusinessUnitHistory && <th className={"w-[170px]"}>Active To</th>}
                     <th className={"w-[150px]"}>Status</th>
                     <th className={"w-[100px] text-center"}>Action</th>
                   </tr>
@@ -317,7 +334,7 @@ function UserAssignmentTabs({
                 <tbody>
                   {businessUnitRows.length === 0 ? (
                     <tr>
-                      <td className={"erp-empty-cell"} colSpan={4}>
+                      <td className={"erp-empty-cell"} colSpan={showBusinessUnitHistory ? 6 : 4}>
                         No business unit assigned
                       </td>
                     </tr>
@@ -326,6 +343,8 @@ function UserAssignmentTabs({
                       <tr key={row.id ?? `${row.BU_ID}-${index}`}>
                         <td>{index + 1}</td>
                         <td>{row.NAME}</td>
+                        {showBusinessUnitHistory && <td>{row.ACTIVE_FROM || "N/A"}</td>}
+                        {showBusinessUnitHistory && <td>{row.ACTIVE_TO || "—"}</td>}
                         <td>
                           <span
                             className={[
@@ -339,10 +358,14 @@ function UserAssignmentTabs({
                           </span>
                         </td>
                         <td className={"text-center"}>
-                          <RemoveButton
-                            label={`Remove ${row.NAME}`}
-                            onClick={() => onRemoveBusinessUnit(index)}
-                          />
+                          {String(row.BU_ID) === String(protectedBusinessUnitId) ? (
+                            <span aria-label={"Required Business Unit"}>—</span>
+                          ) : (
+                            <RemoveButton
+                              label={`Remove ${row.NAME}`}
+                              onClick={() => onRemoveBusinessUnit(index)}
+                            />
+                          )}
                         </td>
                       </tr>
                     ))

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
+import useAssetLookupValues from '../../asset-lookup-value/data/useAssetLookupValues'
 import AssetDisposalForm from '../components/AssetDisposalForm'
 import { updateAssetDisposalField } from '../data/assetDisposalFormState'
 import { getAssetDisposalReferences } from '../data/assetDisposalOptions'
@@ -16,7 +17,8 @@ function AssetDisposalEdit() {
   const record = getAssetDisposal(disposalId)
   const [values, setValues] = useState(record)
   const [errors, setErrors] = useState({})
-  const references = getAssetDisposalReferences(listAssetDisposals(), record)
+  const lookupValues = useAssetLookupValues()
+  const references = getAssetDisposalReferences(listAssetDisposals(), record, lookupValues)
   if (!record || !values) return <Navigate to={listPath} replace />
   const handleChange = (event) => { const { name, value } = event.target; setValues((current) => updateAssetDisposalField(current, name, value, references)); setErrors((current) => ({ ...current, [name]: undefined })) }
   const handleSubmit = (event) => { event.preventDefault(); const others = listAssetDisposals().filter((item) => item.ID !== record.ID); const result = validateAssetDisposal(values, others, references); setValues(result.values); setErrors(result.errors); if (!result.isValid) { requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus()); return }; updateAssetDisposal(record.ID, result.values); navigate(listPath) }

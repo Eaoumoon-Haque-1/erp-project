@@ -1,0 +1,12 @@
+/** @file Asset Group endpoint contract. */
+import apiClient from '../../../../api/client'
+import { createCrudApi, unwrapApiResponse } from '../../../../api/createCrudApi'
+
+const resourcePath = '/asset-groups'
+
+export const assetGroupsApi = {
+  ...createCrudApi(resourcePath),
+  list: (buId) => unwrapApiResponse(apiClient.get(resourcePath, {
+    params: buId ? { buId } : undefined,
+  })),
+}

@@ -1,6 +1,5 @@
 /** @file Active Asset, Vendor, and configured Maintenance Type references. */
 import { listAssetItems } from '../../asset-item-information/data/assetItemInformationStore'
-import { listAssetLookupValues } from '../../asset-lookup-value/data/assetLookupValueStore'
 import { listVendorSuppliers } from '../../vendor-supplier-master/data/vendorSupplierMasterStore'
 
 const fallbackMaintenanceTypes = [
@@ -10,8 +9,8 @@ const fallbackMaintenanceTypes = [
   { value: 'WARRANTY_SERVICE', label: 'Warranty Service' },
 ]
 
-export function getMaintenanceReferences() {
-  const configuredTypes = listAssetLookupValues()
+export function getMaintenanceReferences(lookupValues = []) {
+  const configuredTypes = lookupValues
     .filter((record) => record.STATUS === '1' && record.TYPE_NAME.trim().toLowerCase() === 'maintenance type')
     .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
     .map((record) => ({ value: record.ID, label: record.VALUE, configured: true }))

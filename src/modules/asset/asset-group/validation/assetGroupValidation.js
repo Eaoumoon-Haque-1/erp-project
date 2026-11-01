@@ -5,6 +5,8 @@
 export const ASSET_GROUP_TABLE = 'ASSET_GROUP'
 
 export const initialAssetGroupValues = {
+  BG_ID: '',
+  BU_ID: '',
   ASSET_GROUP: '',
   ASSET_OWNER_ID: '',
   ASSET_OWNER_NAME: '',

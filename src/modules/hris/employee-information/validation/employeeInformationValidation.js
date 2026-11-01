@@ -61,8 +61,10 @@ export const createInitialEmployeeValues = () => ({
   DEPARTMENT_ID: "",
   DESIGNATION_ID: "",
   EMPLOYMENT_TYPE_ID: "",
+  WORK_SCHEDULE: "",
   JOINING_DATE: "",
   CONFIRMATION_DATE: "",
+  PROBATION_STATUS: "",
   EMPLOYMENT_STATUS: "",
   PROBATIONARY_PERIOD: "",
   NOTICE_PERIOD: "",
@@ -97,11 +99,13 @@ export const createInitialEmployeeValues = () => ({
   THANA:"",
   DISTRICT: "",
   OFFICE_MOBILE_NO: "",
+  SIM_OWNER: "",
   PERSONAL_MOBILE_NO: "",
   WHATSAPP_NO: "",
   EMERGENCY_MOBILE_NO: "",
   EMAIL: "",
   OFFICE_EMAIL: "",
+  EMAIL_OWNER: "",
   DISABILITY_STATUS: "NO",
   DISABILITY_TYPES: "",
   DISABILITY_DETAILS: "",
@@ -418,7 +422,7 @@ export function validateEmployeeInformation(inputValues) {
   [["PRESENT_ADDRESS", "Present Address"], ["PERMANENT_ADDRESS", "Permanent Address"]]
     .forEach(([key, label]) => max(fields, key, values[key], 500, label));
   [
-    ["OFFICE_MOBILE_NO", "Office Mobile No"],
+    ["OFFICE_MOBILE_NO", "Contact Mobile No"],
     ["PERSONAL_MOBILE_NO", "Personal Mobile No"],
     ["EMERGENCY_MOBILE_NO", "Emergency Contact"],
     ["WHATSAPP_NO", "WhatsApp No"],
@@ -437,9 +441,11 @@ export function validateEmployeeInformation(inputValues) {
   if (values.EMAIL && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.EMAIL))
     fields.EMAIL = "Enter a valid email address.";
   if (values.OFFICE_EMAIL && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.OFFICE_EMAIL))
-    fields.OFFICE_EMAIL = "Enter a valid office email address.";
+    fields.OFFICE_EMAIL = "Enter a valid contact email address.";
   max(fields, "EMAIL", values.EMAIL, 150, "Email");
-  max(fields, "OFFICE_EMAIL", values.OFFICE_EMAIL, 150, "Office Email");
+  max(fields, "OFFICE_EMAIL", values.OFFICE_EMAIL, 150, "Contact Email");
+  max(fields, "SIM_OWNER", values.SIM_OWNER, 100, "SIM Owner");
+  max(fields, "EMAIL_OWNER", values.EMAIL_OWNER, 100, "Email Owner");
   if (values.DISABILITY_STATUS === "YES") {
     max(
       fields,

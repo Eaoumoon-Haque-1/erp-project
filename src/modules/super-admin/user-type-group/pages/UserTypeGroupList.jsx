@@ -127,6 +127,22 @@ function UserTypeGroupList() {
     }
   }
 
+  const handleDelete = async (row) => {
+    if (row.MAPPING_ID == null) {
+      throw new Error('This assignment does not have a saved mapping ID.')
+    }
+
+    try {
+      await userTypeGroupsApi.removeMapping(row.MAPPING_ID)
+      setRows((current) => current.filter((item) => item.ROW_ID !== row.ROW_ID))
+    } catch (error) {
+      throw new Error(
+        getApiErrorMessage(error, 'Unable to delete the User Type Business Unit assignment.'),
+        { cause: error },
+      )
+    }
+  }
+
   return (
     <ListPage
       title={'User Type Business Unit Assignments'}
@@ -145,7 +161,9 @@ function UserTypeGroupList() {
           onEdit={row.USER_TYPE_STATUS === '1'
             ? () => navigate(`/super-admin/user-creation/user-type-group/${row.ID}/edit`)
             : undefined}
+          onDelete={row.MAPPING_ID != null ? handleDelete : undefined}
           onStatusChange={row.USER_TYPE_STATUS === '1' ? handleStatusChange : undefined}
+          entityName={'User Type Business Unit assignment'}
         />
       )}
     />

@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useAuth from "../../../../auth/useAuth";
 import { getApiErrorMessage, normalizeApiError } from "../../../../api/errors";
 import ActionForm from "../../../../components/shared/ActionForm";
 import PageHeader from "../../../../components/shared/PageHeader";
@@ -81,6 +82,26 @@ function getNextEmployeeCode(employees = []) {
   return `EMP-${String(latest.number + 1).padStart(latest.width, '0')}`
 }
 
+function getProbationCompletionDate(joiningDate, probationMonths) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(joiningDate ?? ""));
+  const months = Number(probationMonths);
+  if (!match || !Number.isInteger(months) || months <= 0) return "";
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const targetMonthStart = new Date(Date.UTC(year, monthIndex + months, 1));
+  const targetYear = targetMonthStart.getUTCFullYear();
+  const targetMonthIndex = targetMonthStart.getUTCMonth();
+  const lastDay = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
+
+  return [
+    targetYear,
+    String(targetMonthIndex + 1).padStart(2, "0"),
+    String(Math.min(day, lastDay)).padStart(2, "0"),
+  ].join("-");
+}
+
 const visibleEmployeeFields = new Set([
   "BUSINESS_UNIT_ID",
   "EMPLOYEE_NAME",
@@ -88,6 +109,7 @@ const visibleEmployeeFields = new Set([
   "PHOTO",
   "DEPARTMENT_ID",
   "DESIGNATION_ID",
+  "HIGHEST_EDUCATION_ID",
   "EMPLOYMENT_TYPE_ID",
   "JOINING_DATE",
   "CONFIRMATION_DATE",
@@ -95,6 +117,11 @@ const visibleEmployeeFields = new Set([
   "PROBATIONARY_PERIOD",
   "NOTICE_PERIOD",
   "SEPARATION_DATE",
+  "OFFICE_EMAIL",
+  "OFFICE_MOBILE_NO",
+  "RELIGION_ID",
+  "GENDER_ID",
+  "BLOOD_GROUP",
 ]);
 
 const tabFields = {
@@ -109,13 +136,9 @@ const tabFields = {
     "FATHER_NAME",
     "MOTHER_NAME",
     "DATE_OF_BIRTH",
-    "GENDER_ID",
-    "RELIGION_ID",
     "NATIONALITY_ID",
     "HEIGHT_ID",
     "WEIGHT_ID",
-    "BLOOD_GROUP",
-    "HIGHEST_EDUCATION_ID",
     "NID",
     "PASSPORT_NO",
     "DRIVING_LICENSE_NO",
@@ -140,12 +163,10 @@ const tabFields = {
     "PERMANENT_ADDRESS",
     "DISTRICT",
     "THANA",
-    "OFFICE_MOBILE_NO",
     "PERSONAL_MOBILE_NO",
     "WHATSAPP_NO",
     "EMERGENCY_MOBILE_NO",
     "EMAIL",
-    "OFFICE_EMAIL",
   ],
 };
 
@@ -171,8 +192,13 @@ function EmployeeInformationCreate() {
   const { employeeId } = useParams();
   const isEdit = Boolean(employeeId);
   const navigate = useNavigate();
+  const { session } = useAuth();
+  const sessionBusinessUnitId = String(session?.buId ?? "");
   const photoInputRef = useRef(null);
-  const [values, setValues] = useState(createInitialEmployeeValues);
+  const [values, setValues] = useState(() => ({
+    ...createInitialEmployeeValues(),
+    BUSINESS_UNIT_ID: isEdit ? "" : sessionBusinessUnitId,
+  }));
   const [errors, setErrors] = useState(emptyErrors);
   const [activeTab, setActiveTab] = useState("personal");
   const [referenceOptions, setReferenceOptions] = useState(emptyReferenceOptions);
@@ -220,13 +246,14 @@ function EmployeeInformationCreate() {
         } else {
           setValues((current) => ({
             ...current,
+            BUSINESS_UNIT_ID: sessionBusinessUnitId,
             EMPLOYEE_ID: getNextEmployeeCode(referenceResult.references.employees),
           }));
         }
       })
       .catch((error) => getApiErrorMessage(error, `Unable to load ${isEdit ? "Employee Information" : "employee dropdown options"}.`));
     return () => { active = false; };
-  }, [employeeId, isEdit]);
+  }, [employeeId, isEdit, sessionBusinessUnitId]);
 
   const handleChange = (event) => {
     const { name, type, value, files } = event.target;
@@ -234,6 +261,14 @@ function EmployeeInformationCreate() {
     setValues((current) => ({
       ...current,
       [name]: nextValue,
+      ...((name === "JOINING_DATE" || name === "PROBATIONARY_PERIOD")
+        ? {
+            CONFIRMATION_DATE: getProbationCompletionDate(
+              name === "JOINING_DATE" ? nextValue : current.JOINING_DATE,
+              name === "PROBATIONARY_PERIOD" ? nextValue : current.PROBATIONARY_PERIOD,
+            ),
+          }
+        : {}),
       ...(name === "MALE_CHILD" || name === "FEMALE_CHILD"
         ? {
             NO_OF_CHILD: String(
@@ -273,6 +308,9 @@ function EmployeeInformationCreate() {
       fields: {
         ...current.fields,
         [name]: undefined,
+        ...((name === "JOINING_DATE" || name === "PROBATIONARY_PERIOD")
+          ? { CONFIRMATION_DATE: undefined }
+          : {}),
         ...(name === "DISABILITY_STATUS"
           ? {
               DISABILITY_TYPES: undefined,
@@ -405,7 +443,10 @@ function EmployeeInformationCreate() {
   };
 
   const handleReset = () => {
-    setValues(isEdit && originalValues ? originalValues : createInitialEmployeeValues());
+    setValues(isEdit && originalValues ? originalValues : {
+      ...createInitialEmployeeValues(),
+      BUSINESS_UNIT_ID: sessionBusinessUnitId,
+    });
     setErrors(emptyErrors());
     setActiveTab("personal");
     if (photoInputRef.current) photoInputRef.current.value = "";
@@ -439,6 +480,15 @@ function EmployeeInformationCreate() {
           onRemoveRow={handleRemoveRow}
           onReorderRows={handleReorderRows}
           referenceOptions={referenceOptions}
+          showBusinessUnitField={isEdit}
+          businessUnitReadOnly
+          businessUnitDisplayName={isEdit
+            ? referenceOptions.businessUnitOptions.find(
+              (option) => option.value === values.BUSINESS_UNIT_ID,
+            )?.label || ''
+            : session?.businessUnitName || referenceOptions.businessUnitOptions.find(
+              (option) => option.value === sessionBusinessUnitId,
+            )?.label || ''}
         />
         <section className={"erp-employee-card erp-employee-submit-card"}>
           <div className={"erp-form-actions"}>

@@ -1,74 +1,157 @@
-/** @file Edit controller for Asset Lookup Value temporary records. */
-import { useMemo, useRef, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+/** @file API-backed edit controller for Asset Lookup Value. */
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import { listAssetLookupTypes } from '../../asset-lookup-type/data/assetLookupTypeStore'
+import { assetLookupTypesApi } from '../../asset-lookup-type/api/assetLookupTypeApi'
+import { assetLookupValuesApi } from '../api/assetLookupValueApi'
 import AssetLookupValueForm from '../components/AssetLookupValueForm'
 import {
-  getAssetLookupValue,
-  listAssetLookupValues,
-  updateAssetLookupValue,
-} from '../data/assetLookupValueStore'
+  mapAssetLookupValueFromApi,
+  mapAssetLookupValueToApi,
+} from '../data/assetLookupValueApiMapper'
 import {
   ASSET_LOOKUP_VALUE_TABLE,
+  createInitialAssetLookupValueValues,
   validateAssetLookupValue,
 } from '../validation/assetLookupValueValidation'
 
 const listPath = '/asset/asset-lookup-value'
+const fieldMap = {
+  typeId: 'TYPE_ID', value: 'VALUE', typeCode: 'VALUE_CODE', valueCode: 'VALUE_CODE',
+  sortOrder: 'SORT_ORDER', status: 'STATUS',
+}
 
 function AssetLookupValueEdit() {
   const { assetLookupValueId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const valueRef = useRef(null)
-  const record = getAssetLookupValue(assetLookupValueId)
-  const [values, setValues] = useState(record)
+  const [values, setValues] = useState(createInitialAssetLookupValueValues)
+  const [originalValues, setOriginalValues] = useState(createInitialAssetLookupValueValues)
+  const [typeOptions, setTypeOptions] = useState([])
+  const [existingRecords, setExistingRecords] = useState([])
   const [errors, setErrors] = useState({})
-  const typeOptions = useMemo(() => listAssetLookupTypes()
-    .filter((type) => type.STATUS === '1' || type.ID === record?.TYPE_ID)
-    .map((type) => ({ value: type.ID, label: type.TYPE_NAME, code: type.CODE })), [record?.TYPE_ID])
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  if (!record || !values) return <Navigate to={listPath} replace />
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      assetLookupValuesApi.get(assetLookupValueId),
+      assetLookupTypesApi.list(sessionBusinessUnitId),
+      assetLookupValuesApi.list({ businessUnitId: sessionBusinessUnitId }),
+    ])
+      .then(([record, types, records]) => {
+        if (!active) return
+        const type = types.find((item) => String(item.id) === String(record.typeId))
+        const mapped = mapAssetLookupValueFromApi(record, type?.typeName)
+        setValues(mapped)
+        setOriginalValues(mapped)
+        setTypeOptions(types
+          .filter((item) => String(item.status ?? 1) === '1' || String(item.id) === mapped.TYPE_ID)
+          .map((item) => ({
+            value: String(item.id),
+            label: item.typeName,
+            code: item.typeCode,
+          })))
+        setExistingRecords(records.filter((item) => String(item.id) !== String(assetLookupValueId)))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Lookup Value.'))
+      })
+    return () => { active = false }
+  }, [assetLookupValueId, sessionBusinessUnitId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
     const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
+    const selectedType = name === 'TYPE_ID'
+      ? typeOptions.find((option) => option.value === value)
+      : null
     setValues((current) => ({
       ...current,
       [name]: nextValue,
       ...(name === 'TYPE_ID' ? {
-        TYPE_NAME: typeOptions.find((option) => option.value === value)?.label || '',
-        VALUE_CODE: typeOptions.find((option) => option.value === value)?.code || '',
+        TYPE_NAME: selectedType?.label || '',
+        TYPE_CODE: selectedType?.code || '',
+        VALUE_CODE: selectedType?.code || '',
       } : {}),
     }))
-    setErrors((current) => ({ ...current, [name]: undefined, ...(name === 'TYPE_ID' ? { VALUE_CODE: undefined } : {}) }))
+    setErrors((current) => ({
+      ...current,
+      [name]: undefined,
+      ...(name === 'TYPE_ID' ? { VALUE_CODE: undefined } : {}),
+    }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const otherRecords = listAssetLookupValues().filter((item) => item.ID !== record.ID)
-    const result = validateAssetLookupValue(values, otherRecords, typeOptions)
-    setValues({ ...values, ...result.values })
+    const mappedExistingRecords = existingRecords.map((record) => ({
+      TYPE_ID: String(record.typeId ?? ''),
+      VALUE: record.value ?? '',
+    }))
+    const result = validateAssetLookupValue(values, mappedExistingRecords, typeOptions)
+    setValues((current) => ({ ...current, ...result.values }))
     setErrors(result.errors)
     if (!result.isValid) {
       requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.focus())
       return
     }
-    updateAssetLookupValue(record.ID, result.values)
-    navigate(listPath)
+
+    setSubmitting(true)
+    setMessage('')
+    try {
+      await assetLookupValuesApi.update(
+        assetLookupValueId,
+        mapAssetLookupValueToApi(result.values, {
+          bgId: sessionGroupId || values.BG_ID,
+          buId: sessionBusinessUnitId || values.BU_ID,
+        }),
+      )
+      navigate(listPath)
+    } catch (error) {
+      setMessage(applyApiFormErrors(
+        error,
+        setErrors,
+        'Unable to update Asset Lookup Value.',
+        fieldMap,
+      ))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReset = () => {
-    setValues(record)
+    setValues(originalValues)
     setErrors({})
+    setMessage('')
     requestAnimationFrame(() => valueRef.current?.focus())
   }
 
   return (
-    <FormPage title={'Asset Lookup Value Edit'} listTo={listPath} tableName={ASSET_LOOKUP_VALUE_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset}>
-      <AssetLookupValueForm values={values} errors={errors} typeOptions={typeOptions} valueRef={valueRef} onChange={handleChange} />
+    <FormPage
+      title={'Asset Lookup Value Edit'}
+      listTo={listPath}
+      tableName={ASSET_LOOKUP_VALUE_TABLE}
+      submitLabel={'Update'}
+      onSubmit={handleSubmit}
+      onReset={handleReset}
+      message={message}
+      submitting={submitting}
+    >
+      <AssetLookupValueForm
+        values={values}
+        errors={errors}
+        typeOptions={typeOptions}
+        valueRef={valueRef}
+        onChange={handleChange}
+      />
     </FormPage>
   )
 }
 
 export default AssetLookupValueEdit
-

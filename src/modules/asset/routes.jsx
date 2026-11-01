@@ -2,6 +2,7 @@
 import AssetGroupCreate from './asset-group/pages/AssetGroupCreate'
 import AssetGroupEdit from './asset-group/pages/AssetGroupEdit'
 import AssetGroupList from './asset-group/pages/AssetGroupList'
+import AssetGroupView from './asset-group/pages/AssetGroupView'
 import AssetAssignEmployeeCreate from './asset-assign-employee/pages/AssetAssignEmployeeCreate'
 import AssetAssignEmployeeEdit from './asset-assign-employee/pages/AssetAssignEmployeeEdit'
 import AssetAssignEmployeeList from './asset-assign-employee/pages/AssetAssignEmployeeList'
@@ -23,15 +24,18 @@ import AssetTransferList from './asset-transfer/pages/AssetTransferList'
 import AssetItemInformationCreate from './asset-item-information/pages/AssetItemInformationCreate'
 import AssetItemInformationEdit from './asset-item-information/pages/AssetItemInformationEdit'
 import AssetItemInformationList from './asset-item-information/pages/AssetItemInformationList'
+import AssetItemInformationView from './asset-item-information/pages/AssetItemInformationView'
 import AssetReceiveRegisterCreate from './asset-receive-register/pages/AssetReceiveRegisterCreate'
 import AssetReceiveRegisterEdit from './asset-receive-register/pages/AssetReceiveRegisterEdit'
 import AssetReceiveRegisterList from './asset-receive-register/pages/AssetReceiveRegisterList'
 import AssetLookupTypeCreate from './asset-lookup-type/pages/AssetLookupTypeCreate'
 import AssetLookupTypeEdit from './asset-lookup-type/pages/AssetLookupTypeEdit'
 import AssetLookupTypeList from './asset-lookup-type/pages/AssetLookupTypeList'
+import AssetLookupTypeView from './asset-lookup-type/pages/AssetLookupTypeView'
 import AssetLookupValueCreate from './asset-lookup-value/pages/AssetLookupValueCreate'
 import AssetLookupValueEdit from './asset-lookup-value/pages/AssetLookupValueEdit'
 import AssetLookupValueList from './asset-lookup-value/pages/AssetLookupValueList'
+import AssetLookupValueView from './asset-lookup-value/pages/AssetLookupValueView'
 import AssetSpecificationMapCreate from './asset-specification-map/pages/AssetSpecificationMapCreate'
 import AssetSpecificationMapEdit from './asset-specification-map/pages/AssetSpecificationMapEdit'
 import AssetSpecificationMapList from './asset-specification-map/pages/AssetSpecificationMapList'
@@ -44,6 +48,7 @@ import CustodianList from './custodian/pages/CustodianList'
 import DepreciationCategoryCreate from './depreciation-category/pages/DepreciationCategoryCreate'
 import DepreciationCategoryEdit from './depreciation-category/pages/DepreciationCategoryEdit'
 import DepreciationCategoryList from './depreciation-category/pages/DepreciationCategoryList'
+import DepreciationCategoryView from './depreciation-category/pages/DepreciationCategoryView'
 import LocationMasterCreate from './location-master/pages/LocationMasterCreate'
 import LocationMasterEdit from './location-master/pages/LocationMasterEdit'
 import LocationMasterList from './location-master/pages/LocationMasterList'
@@ -78,9 +83,11 @@ export const assetRoutes = [
   { path: 'asset/asset-repair/:repairId/edit', element: <AssetRepairEdit /> },
   { path: 'asset/asset-group', element: <AssetGroupList /> },
   { path: 'asset/asset-group/create', element: <AssetGroupCreate /> },
+  { path: 'asset/asset-group/:assetGroupId/view', element: <AssetGroupView /> },
   { path: 'asset/asset-group/:assetGroupId/edit', element: <AssetGroupEdit /> },
   { path: 'asset/asset-item-information', element: <AssetItemInformationList /> },
   { path: 'asset/asset-item-information/create', element: <AssetItemInformationCreate /> },
+  { path: 'asset/asset-item-information/:assetItemId/view', element: <AssetItemInformationView /> },
   { path: 'asset/asset-item-information/:assetItemId/edit', element: <AssetItemInformationEdit /> },
   { path: 'asset/asset-receive-register', element: <AssetReceiveRegisterList /> },
   { path: 'asset/asset-receive-register/create', element: <AssetReceiveRegisterCreate /> },
@@ -99,12 +106,15 @@ export const assetRoutes = [
   { path: 'asset/location-master/:locationMasterId/edit', element: <LocationMasterEdit /> },
   { path: 'asset/asset-lookup-type', element: <AssetLookupTypeList /> },
   { path: 'asset/asset-lookup-type/create', element: <AssetLookupTypeCreate /> },
+  { path: 'asset/asset-lookup-type/:assetLookupTypeId/view', element: <AssetLookupTypeView /> },
   { path: 'asset/asset-lookup-type/:assetLookupTypeId/edit', element: <AssetLookupTypeEdit /> },
   { path: 'asset/asset-lookup-value', element: <AssetLookupValueList /> },
   { path: 'asset/asset-lookup-value/create', element: <AssetLookupValueCreate /> },
+  { path: 'asset/asset-lookup-value/:assetLookupValueId/view', element: <AssetLookupValueView /> },
   { path: 'asset/asset-lookup-value/:assetLookupValueId/edit', element: <AssetLookupValueEdit /> },
   { path: 'asset/depreciation-category', element: <DepreciationCategoryList /> },
   { path: 'asset/depreciation-category/create', element: <DepreciationCategoryCreate /> },
+  { path: 'asset/depreciation-category/:depreciationCategoryId/view', element: <DepreciationCategoryView /> },
   { path: 'asset/depreciation-category/:depreciationCategoryId/edit', element: <DepreciationCategoryEdit /> },
   { path: 'asset/gate-pass', element: <GatePassList /> },
   { path: 'asset/gate-pass/create', element: <GatePassCreate /> },

@@ -4,11 +4,13 @@
  */
 export const ASSET_LOOKUP_VALUE_TABLE = 'ASSET_LOOKUP_VALUE'
 
-export function createInitialAssetLookupValueValues(businessGroup) {
+export function createInitialAssetLookupValueValues({ businessGroupId = '', businessUnitId = '' } = {}) {
   return {
-    BG_ID: String(businessGroup?.id ?? ''),
+    BG_ID: String(businessGroupId),
+    BU_ID: String(businessUnitId),
     TYPE_ID: '',
     TYPE_NAME: '',
+    TYPE_CODE: '',
     VALUE: '',
     VALUE_CODE: '',
     SORT_ORDER: '1',
@@ -19,8 +21,10 @@ export function createInitialAssetLookupValueValues(businessGroup) {
 export function validateAssetLookupValue(values, existingRecords = [], typeOptions = []) {
   const normalizedValues = {
     BG_ID: String(values.BG_ID ?? ''),
+    BU_ID: String(values.BU_ID ?? ''),
     TYPE_ID: String(values.TYPE_ID ?? ''),
     TYPE_NAME: String(values.TYPE_NAME ?? '').trim(),
+    TYPE_CODE: String(values.TYPE_CODE ?? values.VALUE_CODE ?? '').trim(),
     VALUE: String(values.VALUE ?? '').trim(),
     VALUE_CODE: String(values.VALUE_CODE ?? '').trim(),
     SORT_ORDER: String(values.SORT_ORDER ?? '').trim(),
@@ -47,8 +51,8 @@ export function validateAssetLookupValue(values, existingRecords = [], typeOptio
   if (!normalizedValues.VALUE_CODE) errors.VALUE_CODE = 'Lookup Value Code is required. Select a Lookup Type to populate it.'
   else if (!selectedType || normalizedValues.VALUE_CODE !== String(selectedType.code ?? '').trim()) errors.VALUE_CODE = 'Lookup Value Code must match the selected Lookup Type Code.'
 
-  if (!/^[1-9]\d*$/.test(normalizedValues.SORT_ORDER)) {
-    errors.SORT_ORDER = 'Sort Order must be a positive whole number.'
+  if (!normalizedValues.SORT_ORDER || !Number.isFinite(Number(normalizedValues.SORT_ORDER)) || Number(normalizedValues.SORT_ORDER) <= 0) {
+    errors.SORT_ORDER = 'Sort Order must be greater than 0.'
   }
 
   return {

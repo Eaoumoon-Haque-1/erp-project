@@ -44,6 +44,7 @@ import UserTypeGroupEdit from "./user-type-group/pages/UserTypeGroupEdit";
 import UserTypeGroupView from "./user-type-group/pages/UserTypeGroupView";
 import UserList from "./user/pages/UserList";
 import UserCreate from "./user/pages/UserCreate";
+import IndividualUserCreate from "./user/pages/IndividualUserCreate";
 import UserEdit from "./user/pages/UserEdit";
 import UserView from "./user/pages/UserView";
 import UserCreateSelfServiceList from "./user-create-self-service/pages/UserCreateSelfServiceList";
@@ -230,6 +231,10 @@ export const superAdminRoutes = [
       {
         path: "user-creation/user/create",
         element: <UserCreate />,
+      },
+      {
+        path: "user-creation/individual-user/create",
+        element: <IndividualUserCreate />,
       },
       {
         path: "user-creation/user/:userId/edit",

@@ -10,6 +10,7 @@ function EmployeeField({
   name,
   label,
   value = "",
+  displayValue,
   error,
   required = false,
   options,
@@ -116,7 +117,7 @@ function EmployeeField({
           name={name}
           type={type}
           className={className}
-          value={value}
+          value={displayValue ?? value}
           placeholder={placeholder}
           maxLength={maxLength}
           min={min}

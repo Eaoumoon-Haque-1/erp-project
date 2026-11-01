@@ -1,21 +1,21 @@
-/** @file List-page controller for temporary Asset Item Information records. */
-import { useMemo, useState } from 'react'
+/** @file API-backed Asset Item Information list page. */
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import {
-  listAssetItems,
-  removeAssetItem,
-  updateAssetItem,
-} from '../data/assetItemInformationStore'
+import { assetItemsApi } from '../api/assetItemApi'
+import { mapAssetItemFromApi, mapAssetItemToApi } from '../data/assetItemApiMapper'
+import { loadAssetItemReferences } from '../data/assetItemInformationOptions'
 
 const columns = [
   { key: 'ITEM_NAME', label: 'Item Name' },
   { key: 'ITEM_GROUP_NAME', label: 'Item Group' },
   { key: 'DEPRI_CATEGORY_NAME', label: 'Depreciation Category' },
-  { key: 'CATEGORY_TYPE', label: 'Asset Type' },
+  { key: 'CATEGORY_TYPE', label: 'Asset Type', render: (value) => value || 'N/A' },
   { key: 'UOM_NAME', label: 'UOM' },
-  { key: 'ASSET_OWNER', label: 'Asset Owner' },
+  { key: 'ASSET_OWNER', label: 'Asset Owner', render: (value) => value || 'N/A' },
   {
     key: 'STATUS',
     label: 'Status',
@@ -32,7 +32,31 @@ const columns = [
 
 function AssetItemInformationList() {
   const navigate = useNavigate()
-  const [rows, setRows] = useState(() => listAssetItems())
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      loadAssetItemReferences(sessionBusinessUnitId, sessionGroupId),
+      assetItemsApi.list(sessionBusinessUnitId),
+    ])
+      .then(([references, records]) => {
+        if (active) setRows(records.map((record) => mapAssetItemFromApi(record, references)))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Items.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [sessionBusinessUnitId, sessionGroupId])
+
   const filters = useMemo(() => [
     {
       key: 'ITEM_NAME',
@@ -53,21 +77,31 @@ function AssetItemInformationList() {
       key: 'STATUS',
       label: 'Search by Status',
       placeholder: '--Search by Status--',
-      options: [
-        { label: 'Active', value: '1' },
-        { label: 'Inactive', value: '0' },
-      ],
+      options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }],
     },
   ], [rows])
 
-  const handleDelete = (row) => {
-    removeAssetItem(row.ID)
-    setRows(listAssetItems())
+  const handleDelete = async (row) => {
+    try {
+      await assetItemsApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to delete Asset Item.'))
+    }
   }
 
-  const handleStatusChange = (row) => {
-    updateAssetItem(row.ID, { ...row, STATUS: row.STATUS === '1' ? '0' : '1' })
-    setRows(listAssetItems())
+  const handleStatusChange = async (row) => {
+    try {
+      const updated = await assetItemsApi.update(row.ID, mapAssetItemToApi({
+        ...row,
+        STATUS: row.STATUS === '1' ? '0' : '1',
+      }))
+      setRows((current) => current.map((item) => (
+        item.ID === row.ID ? { ...item, STATUS: String(updated.status ?? item.STATUS) } : item
+      )))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to update Asset Item status.'))
+    }
   }
 
   return (
@@ -78,9 +112,12 @@ function AssetItemInformationList() {
       filters={filters}
       columns={columns}
       rows={rows}
+      loading={loading}
+      message={message}
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={() => navigate(`/asset/asset-item-information/${row.ID}/view`)}
           onEdit={() => navigate(`/asset/asset-item-information/${row.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}

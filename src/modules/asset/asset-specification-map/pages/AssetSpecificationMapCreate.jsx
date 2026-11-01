@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FormPage from '../../../../components/shared/FormPage'
 import { getNextSortOrder } from '../../../../utils/sortOrder'
+import useAssetLookupValues from '../../asset-lookup-value/data/useAssetLookupValues'
 import AssetSpecificationMapForm from '../components/AssetSpecificationMapForm'
 import { getAssetSpecificationMapReferences } from '../data/assetSpecificationMapOptions'
 import {
@@ -25,7 +26,8 @@ function AssetSpecificationMapCreate() {
     SORT_ORDER: getNextSortOrder(listAssetSpecificationMaps()),
   }))
   const [errors, setErrors] = useState({})
-  const references = getAssetSpecificationMapReferences()
+  const lookupValues = useAssetLookupValues()
+  const references = getAssetSpecificationMapReferences(lookupValues)
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target

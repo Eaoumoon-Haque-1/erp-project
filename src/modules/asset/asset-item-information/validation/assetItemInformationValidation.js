@@ -4,6 +4,8 @@
 export const ASSET_ITEM_TABLE = 'ASSET_ITEM'
 
 export const initialAssetItemInformationValues = {
+  BG_ID: '',
+  BU_ID: '',
   ITEM_NAME: '',
   ITEM_GROUP: '',
   ITEM_GROUP_NAME: '',

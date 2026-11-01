@@ -1,13 +1,15 @@
-/** @file List controller for temporary Asset Lookup Type records. */
-import { useState } from 'react'
+/** @file API-backed list controller for Asset Lookup Type records. */
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { assetLookupTypesApi } from '../api/assetLookupTypeApi'
 import {
-  listAssetLookupTypes,
-  removeAssetLookupType,
-  updateAssetLookupType,
-} from '../data/assetLookupTypeStore'
+  mapAssetLookupTypeFromApi,
+  mapAssetLookupTypeToApi,
+} from '../data/assetLookupTypeApiMapper'
 
 const filters = [
   {
@@ -52,19 +54,51 @@ const columns = [
 
 function AssetLookupTypeList() {
   const navigate = useNavigate()
-  const [rows, setRows] = useState(() => listAssetLookupTypes())
+  const { session } = useAuth()
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
 
-  const handleDelete = (row) => {
-    removeAssetLookupType(row.ID)
-    setRows(listAssetLookupTypes())
+  useEffect(() => {
+    let active = true
+    assetLookupTypesApi.list(sessionBusinessUnitId)
+      .then((records) => {
+        if (active) setRows(records.map(mapAssetLookupTypeFromApi))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Lookup Types.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
+  }, [sessionBusinessUnitId])
+
+  const handleDelete = async (row) => {
+    try {
+      await assetLookupTypesApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to delete Asset Lookup Type.'))
+    }
   }
 
-  const handleStatusChange = (row) => {
-    updateAssetLookupType(row.ID, {
-      ...row,
-      STATUS: row.STATUS === '1' ? '0' : '1',
-    })
-    setRows(listAssetLookupTypes())
+  const handleStatusChange = async (row) => {
+    try {
+      const updated = await assetLookupTypesApi.update(
+        row.ID,
+        mapAssetLookupTypeToApi({
+          ...row,
+          STATUS: row.STATUS === '1' ? '0' : '1',
+        }),
+      )
+      setRows((current) => current.map((item) => (
+        item.ID === row.ID ? mapAssetLookupTypeFromApi(updated) : item
+      )))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to update Asset Lookup Type status.'))
+    }
   }
 
   return (
@@ -75,9 +109,12 @@ function AssetLookupTypeList() {
       filters={filters}
       columns={columns}
       rows={rows}
+      loading={loading}
+      message={message}
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={() => navigate(`/asset/asset-lookup-type/${row.ID}/view`)}
           onEdit={() => navigate(`/asset/asset-lookup-type/${row.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}

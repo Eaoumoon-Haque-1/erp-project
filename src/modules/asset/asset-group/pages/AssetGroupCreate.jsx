@@ -1,10 +1,13 @@
-/** @file Create controller for Asset Group. */
-import { useRef, useState } from 'react'
+/** @file API-backed create controller for Asset Group. */
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import { departmentOptions } from '../../../hris/employee-information/data/employeeOptions'
+import { departmentsApi } from '../../../hris/department/api/departmentApi'
+import { assetGroupsApi } from '../api/assetGroupApi'
 import AssetGroupForm from '../components/AssetGroupForm'
-import { createAssetGroup, listAssetGroups } from '../data/assetGroupStore'
+import { mapAssetGroupFromApi, mapAssetGroupToApi } from '../data/assetGroupApiMapper'
 import {
   ASSET_GROUP_TABLE,
   initialAssetGroupValues,
@@ -12,12 +15,41 @@ import {
 } from '../validation/assetGroupValidation'
 
 const listPath = '/asset/asset-group'
+const fieldMap = { assetGroup: 'ASSET_GROUP', assetOwnerId: 'ASSET_OWNER_ID', status: 'STATUS' }
 
 function AssetGroupCreate() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const assetGroupRef = useRef(null)
   const [values, setValues] = useState(initialAssetGroupValues)
   const [errors, setErrors] = useState({})
+  const [departmentOptions, setDepartmentOptions] = useState([])
+  const [existingRecords, setExistingRecords] = useState([])
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      departmentsApi.listByGroup(sessionGroupId),
+      assetGroupsApi.list(sessionBusinessUnitId),
+    ])
+      .then(([departments, records]) => {
+        if (!active) return
+        const options = departments
+          .filter((department) => Number(department.status) === 1)
+          .map((department) => ({ value: String(department.id), label: department.departmentName }))
+        const departmentNames = new Map(options.map((option) => [option.value, option.label]))
+        setDepartmentOptions(options)
+        setExistingRecords(records.map((record) => mapAssetGroupFromApi(record, departmentNames)))
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Group references.'))
+      })
+    return () => { active = false }
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -31,31 +63,51 @@ function AssetGroupCreate() {
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAssetGroup(values, listAssetGroups())
-    setValues(result.values)
+    const result = validateAssetGroup(values, existingRecords)
+    setValues({ ...values, ...result.values })
     setErrors(result.errors)
     if (!result.isValid) {
       requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.focus())
       return
     }
-    createAssetGroup(result.values)
-    navigate(listPath)
+
+    setSubmitting(true)
+    setMessage('')
+    try {
+      await assetGroupsApi.create(mapAssetGroupToApi(result.values, {
+        bgId: sessionGroupId,
+        buId: sessionBusinessUnitId,
+      }))
+      navigate(listPath)
+    } catch (error) {
+      setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Asset Group.', fieldMap))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReset = () => {
     setValues(initialAssetGroupValues)
     setErrors({})
+    setMessage('')
     requestAnimationFrame(() => assetGroupRef.current?.focus())
   }
 
   return (
-    <FormPage title={'Asset Group Create'} listTo={listPath} tableName={ASSET_GROUP_TABLE} onSubmit={handleSubmit} onReset={handleReset}>
+    <FormPage
+      title={'Asset Group Create'}
+      listTo={listPath}
+      tableName={ASSET_GROUP_TABLE}
+      onSubmit={handleSubmit}
+      onReset={handleReset}
+      message={message}
+      submitting={submitting}
+    >
       <AssetGroupForm values={values} errors={errors} departmentOptions={departmentOptions} assetGroupRef={assetGroupRef} onChange={handleChange} />
     </FormPage>
   )
 }
 
 export default AssetGroupCreate
-

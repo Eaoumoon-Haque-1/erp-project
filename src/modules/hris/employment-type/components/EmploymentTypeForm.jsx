@@ -15,6 +15,13 @@ function fieldClass(error) {
   ].filter(Boolean).join(' ')
 }
 
+const categoryOptions = [
+  { value: 'ET', label: 'Employment Type - ET' },
+  { value: 'WS', label: 'Work Schedule - WS' },
+  { value: 'PS', label: 'Probation Status - PS' },
+  { value: 'ES', label: 'Employment Status - ES' },
+]
+
 function EmploymentTypeForm({ values, errors, onChange, typeNameRef }) {
   return (
     <div className={'erp-form-grid'}>
@@ -56,6 +63,82 @@ function EmploymentTypeForm({ values, errors, onChange, typeNameRef }) {
           onChange={onChange}
         />
         <FieldError id={'EMPLOYMENT_SHORT_NAME-error'} message={errors.SHORT_NAME} />
+      </div>
+
+      <div>
+        <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
+        <label className={'erp-switch-field'}>
+          <input
+            className={'erp-switch-control'}
+            type={'checkbox'}
+            role={'switch'}
+            name={'IS_DATE_FIELD_REQUIRED'}
+            checked={values.IS_DATE_FIELD_REQUIRED === '1'}
+            onChange={onChange}
+          />
+          <span>Is Date Field Required?</span>
+        </label>
+      </div>
+
+      {values.IS_DATE_FIELD_REQUIRED === '1' && (
+        <div>
+          <label className={'erp-field-label'} htmlFor={'DATE_FIELD_LABEL'}>
+            Date Field Label
+            <span className={'erp-required'} aria-hidden={'true'}>*</span>
+          </label>
+          <input
+            id={'DATE_FIELD_LABEL'}
+            name={'DATE_FIELD_LABEL'}
+            type={'text'}
+            className={fieldClass(errors.DATE_FIELD_LABEL)}
+            placeholder={'Enter date field label'}
+            value={values.DATE_FIELD_LABEL}
+            maxLength={100}
+            required
+            aria-invalid={Boolean(errors.DATE_FIELD_LABEL)}
+            aria-describedby={errors.DATE_FIELD_LABEL ? 'DATE_FIELD_LABEL-error' : undefined}
+            onChange={onChange}
+          />
+          <FieldError id={'DATE_FIELD_LABEL-error'} message={errors.DATE_FIELD_LABEL} />
+        </div>
+      )}
+
+      <div>
+        <label className={'erp-field-label'} htmlFor={'EMPLOYMENT_CATEGORY'}>
+          Category
+          <span className={'erp-required'} aria-hidden={'true'}>*</span>
+        </label>
+        <select
+          id={'EMPLOYMENT_CATEGORY'}
+          name={'CATEGORY'}
+          className={fieldClass(errors.CATEGORY)}
+          value={values.CATEGORY}
+          required
+          aria-invalid={Boolean(errors.CATEGORY)}
+          aria-describedby={errors.CATEGORY ? 'EMPLOYMENT_CATEGORY-error' : undefined}
+          onChange={onChange}
+        >
+          <option value={''}>--Select Category--</option>
+          {categoryOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <FieldError id={'EMPLOYMENT_CATEGORY-error'} message={errors.CATEGORY} />
+      </div>
+
+      <div>
+        <span className={'erp-field-label'} aria-hidden={'true'}>&nbsp;</span>
+        <label className={'erp-switch-field'}>
+          <input
+            className={'erp-switch-control'}
+            type={'checkbox'}
+            role={'switch'}
+            name={'IS_DEFAULT'}
+            checked={values.IS_DEFAULT === '1'}
+            onChange={onChange}
+          />
+          <span>Is Default?</span>
+        </label>
       </div>
 
       <div>

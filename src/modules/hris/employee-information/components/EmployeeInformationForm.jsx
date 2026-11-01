@@ -41,12 +41,42 @@ const yesNoOptions = [
   { value: "YES", label: "Yes" },
 ];
 
+const workScheduleOptions = [
+  { value: "FULL_TIME", label: "Full Time" },
+  { value: "PART_TIME", label: "Part Time" },
+  { value: "SHIFT", label: "Shift" },
+  { value: "FLEXIBLE", label: "Flexible" },
+];
+
+const probationStatusOptions = [
+  { value: "IN_PROGRESS", label: "In-Progress" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "EXTENDED", label: "Extended" },
+  { value: "NOT_APPLICABLE", label: "Not Applicable" },
+];
+
 function Grid({ children, className = "" }) {
   return (
     <div
       className={["erp-form-grid", "erp-employee-form-grid", className]
         .filter(Boolean)
         .join(" ")}
+    >
+      {children}
+    </div>
+  );
+}
+
+function CompoundFieldGroup({ children, columns, ariaLabel, compactLabels = false }) {
+  return (
+    <div
+      className={[
+        "erp-employee-compound-field",
+        compactLabels ? "erp-employee-compound-field-compact-labels" : "",
+      ].filter(Boolean).join(" ")}
+      style={{ "--erp-compound-columns": columns }}
+      role={"group"}
+      aria-label={ariaLabel}
     >
       {children}
     </div>
@@ -87,6 +117,9 @@ function EmployeeInformationForm({
   onRemoveRow,
   onReorderRows,
   referenceOptions = {},
+  showBusinessUnitField = true,
+  businessUnitReadOnly = false,
+  businessUnitDisplayName = '',
   readOnly = false,
 }) {
   const fieldErrors = errors.fields || {};
@@ -337,18 +370,24 @@ function EmployeeInformationForm({
       >
         <div className={"erp-employee-information-layout"}>
           <Grid className={"erp-employee-information-fields"}>
-            {field("EMPLOYEE_NAME", "Employee Name", {
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1.4fr)"} ariaLabel={"Employee code and name"} compactLabels>
+              {field("EMPLOYEE_ID", "ID", {
+                required: true,
+                readOnly: true,
+              })}
+              {field("EMPLOYEE_NAME", "Employee Name", {
+                required: true,
+                maxLength: 150,
+                placeholder: "Enter employee name",
+              })}
+            </CompoundFieldGroup>
+            {showBusinessUnitField && field("BUSINESS_UNIT_ID", "Business Unit", {
               required: true,
-              maxLength: 150,
-              placeholder: "Enter employee name",
-            })}
-            {field("EMPLOYEE_ID", "Employee Code", {
-              required: true,
-              readOnly: true,
-            })}
-            {field("BUSINESS_UNIT_ID", "Business Unit", {
-              required: true,
-              options: businessUnitOptions,
+              options: businessUnitReadOnly ? undefined : businessUnitOptions,
+              displayValue: businessUnitReadOnly
+                ? businessUnitDisplayName || selectedUnit?.label || values.BUSINESS_UNIT_ID
+                : undefined,
+              readOnly: businessUnitReadOnly,
             })}
             {/* {field('GENDER_ID', 'Gender', { required: true, options: toSelectOptions(genderOptions) })} */}
             {field("DEPARTMENT_ID", "Department", {
@@ -361,32 +400,95 @@ function EmployeeInformationForm({
               options: designations,
               disabled: !values.BUSINESS_UNIT_ID || !values.DEPARTMENT_ID,
             })}
-            {field("JOINING_DATE", "Joining Date", {
-              type: "date",
+            {field("HIGHEST_EDUCATION_ID", "Highest Education", {
+              options: toSelectOptions(educationLevelOptions),
             })}
-            {field("EMPLOYMENT_TYPE_ID", "Employment Type", {
-              options: employmentTypeOptions,
+            {field("REPORTING_OFFICER_DISPLAY", "Reporting Officer", {
+              displayValue: officer?.name || "",
+              placeholder: "Select a reporting officer below",
+              readOnly: true,
             })}
-            {field("EMPLOYMENT_STATUS", "Employment Status", {
-              options: employmentStatusOptions,
-            })}
-            {field("CONFIRMATION_DATE", "Confirmation Date", { type: "date" })}
-            {field("PROBATIONARY_PERIOD", "Probationary Period", {
-              type: "number",
-              min: "1",
-              step: "1",
-              placeholder: "Enter days",
-            })}
-            {field("NOTICE_PERIOD", "Notice Period", {
-              type: "number",
-              min: "0",
-              step: "1",
-              placeholder: "Enter days",
-            })}
-            {field("SEPARATION_DATE", "Separation Date", {
-              type: "date",
-              disabled: !isSeparated,
-            })}
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1fr)"} ariaLabel={"Joining and notice details"} compactLabels>
+              {field("JOINING_DATE", "Joining Date", {
+                type: "date",
+              })}
+              {field("NOTICE_PERIOD", "Notice Period (Months)", {
+                type: "number",
+                min: "0",
+                step: "1",
+                placeholder: "Enter months",
+              })}
+            </CompoundFieldGroup>
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1fr)"} ariaLabel={"Employment details"}>
+              {field("EMPLOYMENT_TYPE_ID", "Employment Type", {
+                options: employmentTypeOptions,
+                placeholder: "Select...",
+              })}
+              {field("WORK_SCHEDULE", "Work Schedule", {
+                options: workScheduleOptions,
+                placeholder: "Select...",
+              })}
+            </CompoundFieldGroup>
+            <CompoundFieldGroup columns={"minmax(0, 1.35fr) minmax(78px, .45fr) minmax(0, 1.3fr)"} ariaLabel={"Probation details"}>
+              {field("PROBATION_STATUS", "Probation Status", {
+                options: probationStatusOptions,
+                placeholder: "Select...",
+              })}
+              {field("PROBATIONARY_PERIOD", "Months", {
+                type: "number",
+                min: "1",
+                step: "1",
+                placeholder: "Enter months",
+              })}
+              {field("CONFIRMATION_DATE", "Completion Date", { type: "date" })}
+            </CompoundFieldGroup>
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1fr)"} ariaLabel={"Employee status details"}>
+              {field("EMPLOYMENT_STATUS", "Employee Status", {
+                options: employmentStatusOptions,
+                placeholder: "Select...",
+              })}
+              {field("SEPARATION_DATE", "Resigned Date", {
+                type: "date",
+                disabled: !isSeparated,
+              })}
+            </CompoundFieldGroup>
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1fr)"} ariaLabel={"Contact mobile details"}>
+              {field("OFFICE_MOBILE_NO", "Contact Mobile No", {
+                type: "tel",
+                inputMode: "numeric",
+                digitsOnly: true,
+                maxLength: 11,
+                placeholder: "01XXXXXXXXX",
+              })}
+              {field("SIM_OWNER", "SIM Owner", {
+                maxLength: 100,
+                placeholder: "Enter SIM owner",
+              })}
+            </CompoundFieldGroup>
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1fr)"} ariaLabel={"Contact email details"}>
+              {field("OFFICE_EMAIL", "Contact Email", {
+                type: "email",
+                maxLength: 150,
+              })}
+              {field("EMAIL_OWNER", "Email Owner", {
+                maxLength: 100,
+                placeholder: "Enter email owner",
+              })}
+            </CompoundFieldGroup>
+            <CompoundFieldGroup columns={"minmax(0, 1.25fr) repeat(2, minmax(0, 1fr))"} ariaLabel={"Religion, gender, and blood group"} compactLabels>
+              {field("RELIGION_ID", "Religion", {
+                options: toSelectOptions(religionOptions),
+                placeholder: "Select...",
+              })}
+              {field("GENDER_ID", "Gender", {
+                options: toSelectOptions(genderOptions),
+                placeholder: "Select...",
+              })}
+              {field("BLOOD_GROUP", "Blood Group", {
+                options: toSelectOptions(bloodGroupOptions),
+                placeholder: "Select...",
+              })}
+            </CompoundFieldGroup>
           </Grid>
           <EmployeePhotoField
             previewUrl={previewUrl}
@@ -492,14 +594,6 @@ function EmployeeInformationForm({
                   type: "date",
                 })}
                 {/* {field('BIRTH_PLACE', 'Birth Place', { required: true, maxLength: 150 })} */}
-                {field("GENDER_ID", "Gender", {
-                  // required: true,
-                  options: toSelectOptions(genderOptions),
-                })}
-                {field("RELIGION_ID", "Religion", {
-                  // required: true,
-                  options: toSelectOptions(religionOptions),
-                })}
                 {field("NATIONALITY_ID", "Nationality", {
                   // required: true,
                   options: toSelectOptions(groupLookupOptions(nationalityOptions)),
@@ -510,14 +604,6 @@ function EmployeeInformationForm({
                 })}
                 {field("WEIGHT_ID", "Weight (Kg)", {
                   // required: true,
-                })}
-                {field("BLOOD_GROUP", "Blood Group", {
-                  // required: true,
-                  options: toSelectOptions(bloodGroupOptions),
-                })}
-                {field("HIGHEST_EDUCATION_ID", "Highest Education", {
-                  // required: true,
-                  options: toSelectOptions(educationLevelOptions),
                 })}
                 {field("NID", "NID", {
                   // required: true,
@@ -633,14 +719,6 @@ function EmployeeInformationForm({
 
       <EmployeeSectionCard title={'Contact Number'}>
         <Grid> */}
-                {field("OFFICE_MOBILE_NO", "Office Mobile No", {
-                  // required: true,
-                  type: "tel",
-                  inputMode: "numeric",
-                  digitsOnly: true,
-                  maxLength: 11,
-                  placeholder: "01XXXXXXXXX",
-                })}
                 {field("PERSONAL_MOBILE_NO", "Personal Mobile No", {
                   // required: true,
                   type: "tel",
@@ -665,11 +743,6 @@ function EmployeeInformationForm({
                   placeholder: "01XXXXXXXXX",
                 })}
                 {field("EMAIL", "Personal Email", {
-                  // required: true,
-                  type: "email",
-                  maxLength: 150,
-                })}
-                {field("OFFICE_EMAIL", "Office Email", {
                   // required: true,
                   type: "email",
                   maxLength: 150,

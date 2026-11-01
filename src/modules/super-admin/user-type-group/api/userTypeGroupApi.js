@@ -7,4 +7,6 @@ export const userTypeGroupsApi = {
     unwrapApiResponse(apiClient.get(`/user-types/${userTypeId}/business-units`)),
   save: (userTypeId, payload) =>
     unwrapApiResponse(apiClient.put(`/user-types/${userTypeId}/business-units`, payload)),
+  removeMapping: (mappingId) =>
+    unwrapApiResponse(apiClient.delete(`/user-type-groups/${mappingId}`)),
 }

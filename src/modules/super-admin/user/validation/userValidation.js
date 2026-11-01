@@ -97,7 +97,6 @@ export function validateUser(
     ['BG_ID', 'Group Name'],
     ['BU_ID', 'Business Unit'],
     ['ROLE_ID', 'User Role'],
-    ['USER_TYPE_ID', 'User Type'],
   ].forEach(([key, label]) => {
     if (!normalizedValues[key]) errors[key] = `${label} is required.`
   })
