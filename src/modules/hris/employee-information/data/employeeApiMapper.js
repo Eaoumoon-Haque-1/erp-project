@@ -137,7 +137,7 @@ export async function mapEmployeeToApi(values, businessUnits = []) {
     motherName: nullableText(values.MOTHER_NAME),
     spouseName: nullableText(values.SPOUSE_NAME),
     dateOfBirth: dateOrNull(values.DATE_OF_BIRTH),
-    birthPlace: nullableText(values.BIRTH_PLACE),
+    birthPlace: String(values.BIRTH_PLACE ?? '').trim(),
     gender: nullableText(values.GENDER_ID),
     maritalStatus: nullableText(values.MARITAL_STATUS),
     dateOfMarriage: dateOrNull(values.DATE_OF_MARRIAGE),
