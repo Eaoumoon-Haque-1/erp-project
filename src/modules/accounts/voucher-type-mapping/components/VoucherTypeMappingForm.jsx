@@ -2,7 +2,6 @@
  * @file Controlled Voucher and Payment Type Mapping entry form.
  * Arranged vertically, matching Payment Type Mapping layout and ERP design system.
  */
-import { isRequired } from '../../../../config/devFlags'
 
 function FieldError({ id, message }) {
   if (!message) return null
@@ -43,11 +42,6 @@ function formatAuditDateTime(value) {
 function VoucherTypeMappingForm({
   values,
   errors = {},
-  groupOptions = [],
-  groupsLoading = false,
-  businessUnitOptions = [],
-  unitsLoading = false,
-  businessUnitLocked = false,
   voucherTypeOptions = [],
   paymentTypeOptions = [],
   lookupsLoading = false,
@@ -60,193 +54,123 @@ function VoucherTypeMappingForm({
   return (
     <div className={'space-y-4 text-xs sm:text-sm'}>
       <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>
-      <div className={'flex flex-col gap-3.5 max-w-lg'}>
-        {/* 1. Group Name */}
-        <div>
-          <label
-            className={'block text-xs font-medium text-gray-700 mb-1'}
-            htmlFor={'VMAP_BG_ID'}
-          >
-            Group Name{isRequired() && <span className={'text-rose-500 ml-0.5'}>*</span>}
-          </label>
-          <select
-            id={'VMAP_BG_ID'}
-            name={'BG_ID'}
-            className={inputClass(errors.BG_ID, businessUnitLocked)}
-            value={values.BG_ID || ''}
-            required
-            disabled={groupsLoading || businessUnitLocked}
-            aria-invalid={Boolean(errors.BG_ID)}
-            aria-describedby={errors.BG_ID ? 'VMAP_BG_ID-error' : undefined}
-            onChange={onChange}
-          >
-            <option value={''}>
-              {groupsLoading ? 'Loading Groups...' : '--Select Group--'}
-            </option>
-            {groupOptions.map((g) => (
-              <option key={g.value} value={g.value}>
-                {g.label}
-              </option>
-            ))}
-          </select>
-          <FieldError id={'VMAP_BG_ID-error'} message={errors.BG_ID} />
-        </div>
-
-        {/* 2. Business Unit */}
-        <div>
-          <label
-            className={'block text-xs font-medium text-gray-700 mb-1'}
-            htmlFor={'VMAP_BU_ID'}
-          >
-            Business Unit{isRequired() && <span className={'text-rose-500 ml-0.5'}>*</span>}
-          </label>
-          <select
-            id={'VMAP_BU_ID'}
-            name={'BU_ID'}
-            className={inputClass(errors.BU_ID, businessUnitLocked || !values.BG_ID)}
-            value={values.BU_ID || ''}
-            required
-            disabled={unitsLoading || businessUnitLocked || !values.BG_ID}
-            aria-invalid={Boolean(errors.BU_ID)}
-            aria-describedby={errors.BU_ID ? 'VMAP_BU_ID-error' : undefined}
-            onChange={onChange}
-          >
-            <option value={''}>
-              {!values.BG_ID
-                ? '--Select Group First--'
-                : unitsLoading
-                ? 'Loading Business Units...'
-                : '--Select Business Unit--'}
-            </option>
-            {businessUnitOptions.map((unit) => (
-              <option key={unit.value} value={unit.value}>
-                {unit.label}
-              </option>
-            ))}
-          </select>
-          <FieldError id={'VMAP_BU_ID-error'} message={errors.BU_ID} />
-        </div>
-
-        {/* 3. Voucher Type (Drop Down) */}
-        <div>
-          <label
-            className={'block text-xs font-medium text-gray-700 mb-1'}
-            htmlFor={'VOUCHER_TYPE_ID'}
-          >
-            Voucher Type<span className={'text-rose-500 ml-0.5'}>*</span>
-          </label>
-          <select
-            ref={voucherTypeRef}
-            id={'VOUCHER_TYPE_ID'}
-            name={'VOUCHER_TYPE_ID'}
-            className={inputClass(errors.VOUCHER_TYPE_ID, !values.BU_ID)}
-            value={values.VOUCHER_TYPE_ID || ''}
-            required
-            disabled={!values.BU_ID || lookupsLoading}
-            aria-invalid={Boolean(errors.VOUCHER_TYPE_ID)}
-            aria-describedby={errors.VOUCHER_TYPE_ID ? 'VOUCHER_TYPE_ID-error' : undefined}
-            onChange={onChange}
-          >
-            <option value={''}>
-              {!values.BU_ID
-                ? '--Select Business Unit First--'
-                : lookupsLoading
-                ? 'Loading Voucher Types...'
-                : voucherTypeOptions.length === 0
-                ? '--No Lookup Values Available--'
-                : '--Select Voucher Type--'}
-            </option>
-            {voucherTypeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-                {opt.code ? ` (${opt.code})` : ''}
-              </option>
-            ))}
-          </select>
-          <FieldError id={'VOUCHER_TYPE_ID-error'} message={errors.VOUCHER_TYPE_ID} />
-        </div>
-
-        {/* 4. Payment Type (Drop Down) */}
-        <div>
-          <label
-            className={'block text-xs font-medium text-gray-700 mb-1'}
-            htmlFor={'VMAP_PAYMENT_TYPE_ID'}
-          >
-            Payment Type<span className={'text-rose-500 ml-0.5'}>*</span>
-          </label>
-          <select
-            id={'VMAP_PAYMENT_TYPE_ID'}
-            name={'PAYMENT_TYPE_ID'}
-            className={inputClass(errors.PAYMENT_TYPE_ID, !values.BU_ID)}
-            value={values.PAYMENT_TYPE_ID || ''}
-            required
-            disabled={!values.BU_ID || lookupsLoading}
-            aria-invalid={Boolean(errors.PAYMENT_TYPE_ID)}
-            aria-describedby={errors.PAYMENT_TYPE_ID ? 'VMAP_PAYMENT_TYPE_ID-error' : undefined}
-            onChange={onChange}
-          >
-            <option value={''}>
-              {!values.BU_ID
-                ? '--Select Business Unit First--'
-                : lookupsLoading
-                ? 'Loading Payment Types...'
-                : paymentTypeOptions.length === 0
-                ? '--No Lookup Values Available--'
-                : '--Select Payment Type--'}
-            </option>
-            {paymentTypeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-                {opt.code ? ` (${opt.code})` : ''}
-              </option>
-            ))}
-          </select>
-          <FieldError id={'VMAP_PAYMENT_TYPE_ID-error'} message={errors.PAYMENT_TYPE_ID} />
-        </div>
-
-        {/* 5. is active ? (Active / Inactive) */}
-        <div>
-          <span className={'block text-xs font-medium text-gray-700 mb-1'}>
-            is active ?<span className={'text-rose-500 ml-0.5'}>*</span>
-          </span>
-          <div className={'flex items-center h-8'}>
-            <label className={'erp-switch-field cursor-pointer !h-8 !w-auto !text-xs gap-2'}>
-              <input
-                id={'VMAP_STATUS'}
-                className={'erp-switch-control'}
-                type={'checkbox'}
-                role={'switch'}
-                name={'STATUS'}
-                checked={values.STATUS === '1'}
-                onChange={onChange}
-              />
-              <span className={'text-xs font-medium text-gray-700 select-none'}>
-                {values.STATUS === '1' ? 'Active' : 'Inactive'}
-              </span>
+        <div className={'flex flex-col gap-3.5 max-w-lg'}>
+          {/* 1. Voucher Type (Drop Down) */}
+          <div>
+            <label
+              className={'block text-xs font-medium text-gray-700 mb-1'}
+              htmlFor={'VOUCHER_TYPE_ID'}
+            >
+              Voucher Type<span className={'text-rose-500 ml-0.5'}>*</span>
             </label>
+            <select
+              ref={voucherTypeRef}
+              id={'VOUCHER_TYPE_ID'}
+              name={'VOUCHER_TYPE_ID'}
+              className={inputClass(errors.VOUCHER_TYPE_ID, !values.BU_ID)}
+              value={values.VOUCHER_TYPE_ID || ''}
+              required
+              disabled={!values.BU_ID || lookupsLoading}
+              aria-invalid={Boolean(errors.VOUCHER_TYPE_ID)}
+              aria-describedby={errors.VOUCHER_TYPE_ID ? 'VOUCHER_TYPE_ID-error' : undefined}
+              onChange={onChange}
+            >
+              <option value={''}>
+                {lookupsLoading
+                  ? 'Loading Voucher Types...'
+                  : voucherTypeOptions.length === 0
+                  ? '--No Lookup Values Available--'
+                  : '--Select Voucher Type--'}
+              </option>
+              {voucherTypeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                  {opt.code ? ` (${opt.code})` : ''}
+                </option>
+              ))}
+            </select>
+            <FieldError id={'VOUCHER_TYPE_ID-error'} message={errors.VOUCHER_TYPE_ID} />
           </div>
-        </div>
 
-        {/* 6. Reset and Submit/Update buttons directly under is active ? */}
-        {submitLabel && (
-          <div className={'flex items-center gap-2 pt-1'}>
-            <button
-              type={'reset'}
-              className={'secondary-button'}
-              disabled={submitting}
+          {/* 2. Payment Type (Drop Down) */}
+          <div>
+            <label
+              className={'block text-xs font-medium text-gray-700 mb-1'}
+              htmlFor={'VMAP_PAYMENT_TYPE_ID'}
             >
-              Reset
-            </button>
-            <button
-              type={'submit'}
-              className={'primary-button'}
-              disabled={submitting}
+              Payment Type<span className={'text-rose-500 ml-0.5'}>*</span>
+            </label>
+            <select
+              id={'VMAP_PAYMENT_TYPE_ID'}
+              name={'PAYMENT_TYPE_ID'}
+              className={inputClass(errors.PAYMENT_TYPE_ID, !values.BU_ID)}
+              value={values.PAYMENT_TYPE_ID || ''}
+              required
+              disabled={!values.BU_ID || lookupsLoading}
+              aria-invalid={Boolean(errors.PAYMENT_TYPE_ID)}
+              aria-describedby={errors.PAYMENT_TYPE_ID ? 'VMAP_PAYMENT_TYPE_ID-error' : undefined}
+              onChange={onChange}
             >
-              {submitting ? 'Saving...' : submitLabel}
-            </button>
+              <option value={''}>
+                {lookupsLoading
+                  ? 'Loading Payment Types...'
+                  : paymentTypeOptions.length === 0
+                  ? '--No Lookup Values Available--'
+                  : '--Select Payment Type--'}
+              </option>
+              {paymentTypeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                  {opt.code ? ` (${opt.code})` : ''}
+                </option>
+              ))}
+            </select>
+            <FieldError id={'VMAP_PAYMENT_TYPE_ID-error'} message={errors.PAYMENT_TYPE_ID} />
           </div>
-        )}
-      </div>
+
+          {/* 3. is active ? (Active / Inactive) */}
+          <div>
+            <span className={'block text-xs font-medium text-gray-700 mb-1'}>
+              is active ?<span className={'text-rose-500 ml-0.5'}>*</span>
+            </span>
+            <div className={'flex items-center h-8'}>
+              <label className={'erp-switch-field cursor-pointer !h-8 !w-auto !text-xs gap-2'}>
+                <input
+                  id={'VMAP_STATUS'}
+                  className={'erp-switch-control'}
+                  type={'checkbox'}
+                  role={'switch'}
+                  name={'STATUS'}
+                  checked={values.STATUS === '1'}
+                  onChange={onChange}
+                />
+                <span className={'text-xs font-medium text-gray-700 select-none'}>
+                  {values.STATUS === '1' ? 'Active' : 'Inactive'}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* 4. Reset and Submit/Update buttons directly under is active ? */}
+          {submitLabel && (
+            <div className={'flex items-center gap-2 pt-1'}>
+              <button
+                type={'reset'}
+                className={'secondary-button'}
+                disabled={submitting}
+              >
+                Reset
+              </button>
+              <button
+                type={'submit'}
+                className={'primary-button'}
+                disabled={submitting}
+              >
+                {submitting ? 'Saving...' : submitLabel}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* =========================================================================

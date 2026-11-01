@@ -4,8 +4,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 import { usersApi } from '../../../super-admin/user/api/userApi'
 import { paymentTypeMappingApi } from '../api/paymentTypeMappingApi'
@@ -22,19 +22,20 @@ const listPath = '/accounts/voucher-setup/payment-type-mapping'
 function PaymentTypeMappingEdit() {
   const { mappingId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const paymentTypeRef = useRef(null)
   const [submitting, setSubmitting] = useState(false)
   const [original, setOriginal] = useState(null)
   const [auditLog, setAuditLog] = useState(null)
   const [existingMappings, setExistingMappings] = useState([])
-  const form = usePaymentTypeMappingForm(initialMappingValues)
+  const form = usePaymentTypeMappingForm({
+    ...initialMappingValues,
+    BG_ID: sessionGroupId,
+    BU_ID: sessionBusinessUnitId,
+  })
   const { reset } = form
-
-  const { groupOptions, businessUnitOptions, groupsLoading, unitsLoading } =
-    useBusinessOptions(form.values.BG_ID, {
-      preserveUnitId: form.values.BU_ID,
-      loadUnits: true,
-    })
 
   // Load record to edit
   useEffect(() => {
@@ -78,8 +79,8 @@ function PaymentTypeMappingEdit() {
         )
         const loaded = {
           ID: mapped.ID,
-          BG_ID: mapped.BG_ID,
-          BU_ID: mapped.BU_ID,
+          BG_ID: sessionGroupId || mapped.BG_ID,
+          BU_ID: sessionBusinessUnitId || mapped.BU_ID,
           PAYMENT_TYPE_ID: mapped.PAYMENT_TYPE_ID,
           PAYMENT_THROUGH_ID: mapped.PAYMENT_THROUGH_ID,
           STATUS: mapped.STATUS,
@@ -111,7 +112,7 @@ function PaymentTypeMappingEdit() {
     return () => {
       active = false
     }
-  }, [mappingId, navigate, reset])
+  }, [mappingId, navigate, reset, sessionBusinessUnitId, sessionGroupId])
 
   // Load existing mappings for duplicate check
   useEffect(() => {
@@ -134,7 +135,10 @@ function PaymentTypeMappingEdit() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = form.validate(existingMappings, mappingId)
+    const result = form.validate(existingMappings, mappingId, {
+      BG_ID: sessionGroupId || form.values.BG_ID,
+      BU_ID: sessionBusinessUnitId || form.values.BU_ID,
+    })
     if (!result.isValid) return
 
     setSubmitting(true)
@@ -149,7 +153,13 @@ function PaymentTypeMappingEdit() {
   }
 
   const handleReset = () => {
-    if (original) form.reset(original)
+    if (original) {
+      form.reset({
+        ...original,
+        BG_ID: sessionGroupId || original.BG_ID,
+        BU_ID: sessionBusinessUnitId || original.BU_ID,
+      })
+    }
     requestAnimationFrame(() => paymentTypeRef.current?.focus())
   }
 
@@ -161,17 +171,18 @@ function PaymentTypeMappingEdit() {
       submitLabel={'Update'}
       hideActions
       onSubmit={handleSubmit}
-      onValidate={() => form.validate(existingMappings, mappingId).isValid}
+      onValidate={() =>
+        form.validate(existingMappings, mappingId, {
+          BG_ID: sessionGroupId || form.values.BG_ID,
+          BU_ID: sessionBusinessUnitId || form.values.BU_ID,
+        }).isValid
+      }
       onReset={handleReset}
       submitting={submitting}
     >
       <PaymentTypeMappingForm
         values={form.values}
         errors={form.errors}
-        groupOptions={groupOptions}
-        groupsLoading={groupsLoading}
-        businessUnitOptions={businessUnitOptions}
-        unitsLoading={unitsLoading}
         paymentTypeOptions={form.paymentTypeOptions}
         paymentThroughOptions={form.paymentThroughOptions}
         lookupsLoading={form.lookupsLoading}

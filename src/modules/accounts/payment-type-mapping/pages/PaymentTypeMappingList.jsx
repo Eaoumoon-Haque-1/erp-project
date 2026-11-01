@@ -1,10 +1,11 @@
 /**
  * @file Payment Type and Payment Through Mapping List page.
- * Displays all mappings with search filters and row actions.
+ * Displays all mappings for the logged-in user's Business Unit with search filters and row actions.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
@@ -69,42 +70,110 @@ const columns = [
 
 function PaymentTypeMappingList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
   const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [businessUnits, setBusinessUnits] = useState([])
+  const [loading, setLoading] = useState(Boolean(sessionBusinessUnitId))
   const [paymentTypes, setPaymentTypes] = useState([])
   const [paymentThroughs, setPaymentThroughs] = useState([])
 
   useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
+
     let active = true
 
     Promise.all([
-      paymentTypeMappingApi.list(),
+      paymentTypeMappingApi.list({ buId: sessionBusinessUnitId }),
       businessGroupsApi.list().catch(() => []),
       businessUnitsApi.list().catch(() => []),
+      afmLookupApi.list({ buId: sessionBusinessUnitId }).catch(() => null),
       afmLookupApi
-        .getValuesByTypeCode(PAYMENT_TYPE_LOOKUP_CODE, undefined, 1)
+        .getValuesByTypeCode(PAYMENT_TYPE_LOOKUP_CODE, sessionBusinessUnitId, 1)
         .catch(() => []),
       afmLookupApi
-        .getValuesByTypeCode(PAYMENT_THROUGH_LOOKUP_CODE, undefined, 1)
+        .getValuesByTypeCode(PAYMENT_THROUGH_LOOKUP_CODE, sessionBusinessUnitId, 1)
         .catch(() => []),
     ])
-      .then(async ([mappings, groups, units, pTypes, pThroughs]) => {
+      .then(async ([mappings, groups, units, lookupTypes, pTypes, pThroughs]) => {
         if (!active) return
-        let finalPTypes = pTypes || []
+
+        const hasLookupTypesList = Array.isArray(lookupTypes)
+        const buLookupTypes = hasLookupTypesList
+          ? lookupTypes.filter(
+              (t) =>
+                String(t.buId ?? t.BU_ID ?? '') === sessionBusinessUnitId &&
+                String(t.status ?? t.STATUS ?? 1) === '1',
+            )
+          : []
+
+        const allowedTypeIds = new Set(
+          buLookupTypes.map((t) => String(t.id ?? t.ID ?? '')).filter(Boolean),
+        )
+        const allowedValueIds = new Set()
+        buLookupTypes.forEach((t) => {
+          ;(t.lookupValues || []).forEach((v) => {
+            if (v?.id != null) allowedValueIds.add(String(v.id))
+          })
+        })
+
+        const filterLookupValuesByBu = (items = []) =>
+          (items || []).filter((item) => {
+            const itemBuId = item?.buId ?? item?.BU_ID ?? item?.bu_id
+            if (itemBuId != null && String(itemBuId) !== '') {
+              return String(itemBuId) === sessionBusinessUnitId
+            }
+            if (hasLookupTypesList) {
+              const itemTypeId =
+                item?.typeNameId ??
+                item?.TYPE_NAME_ID ??
+                item?.typeId ??
+                item?.TYPE_ID
+              if (itemTypeId != null && String(itemTypeId) !== '') {
+                return allowedTypeIds.has(String(itemTypeId))
+              }
+              if (item?.id != null) {
+                return allowedValueIds.has(String(item.id))
+              }
+              return false
+            }
+            return true
+          })
+
+        let finalPTypes = filterLookupValuesByBu(pTypes)
+        let finalPThroughs = filterLookupValuesByBu(pThroughs)
+
         if (finalPTypes.length === 0) {
           const fallbackPTypes = await afmLookupApi
-            .getValuesByTypeCode(PAYMENT_TYPE_FALLBACK_CODE, undefined, 1)
+            .getValuesByTypeCode(
+              PAYMENT_TYPE_FALLBACK_CODE,
+              sessionBusinessUnitId,
+              1,
+            )
             .catch(() => [])
-          if (active && fallbackPTypes?.length) finalPTypes = fallbackPTypes
+          if (active && fallbackPTypes?.length) {
+            finalPTypes = filterLookupValuesByBu(fallbackPTypes)
+          }
         }
         if (!active) return
-        setBusinessUnits(units)
+
         setPaymentTypes(finalPTypes)
-        setPaymentThroughs(pThroughs || [])
-        const groupMap = new Map(groups.map((g) => [String(g.id), g.groupName]))
-        const unitMap = new Map(units.map((u) => [String(u.id), u.businessUnit]))
-        setRows(mappings.map((m) => mapMappingFromApi(m, groupMap, unitMap)))
+        setPaymentThroughs(finalPThroughs)
+
+        const groupMap = new Map((groups || []).map((g) => [String(g.id), g.groupName]))
+        const unitMap = new Map((units || []).map((u) => [String(u.id), u.businessUnit]))
+
+        const filteredMappings = (mappings || []).filter((m) => {
+          const itemBuId = String(m.buId ?? m.BU_ID ?? '')
+          const itemBgId = String(m.bgId ?? m.BG_ID ?? '')
+          if (itemBuId !== sessionBusinessUnitId) return false
+          if (sessionGroupId && itemBgId && itemBgId !== sessionGroupId) return false
+          return true
+        })
+
+        setRows(
+          filteredMappings.map((m) => mapMappingFromApi(m, groupMap, unitMap)),
+        )
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Payment Type Mappings.')
@@ -116,16 +185,7 @@ function PaymentTypeMappingList() {
     return () => {
       active = false
     }
-  }, [])
-
-  const businessUnitOptions = useMemo(
-    () =>
-      businessUnits.map((u) => ({
-        value: String(u.id),
-        label: u.businessUnit,
-      })),
-    [businessUnits],
-  )
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const paymentTypeOptions = useMemo(() => {
     const map = new Map()
@@ -218,12 +278,6 @@ function PaymentTypeMappingList() {
         },
       },
       {
-        key: 'BU_ID',
-        label: 'Search by Business Unit',
-        placeholder: '--Search by Business Unit--',
-        options: businessUnitOptions,
-      },
-      {
         key: 'STATUS',
         label: 'Search by Status',
         placeholder: '--Search by Status--',
@@ -233,7 +287,7 @@ function PaymentTypeMappingList() {
         ],
       },
     ],
-    [businessUnitOptions, paymentTypeOptions, paymentThroughOptions],
+    [paymentTypeOptions, paymentThroughOptions],
   )
 
   const handleDelete = async (row) => {
