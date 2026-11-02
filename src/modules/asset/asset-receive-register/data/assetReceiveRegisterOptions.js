@@ -1,7 +1,7 @@
 /** @file Active reference data and dependent option helpers for Asset Receive Register. */
 import { reportingOfficerOptions } from '../../../hris/employee-information/data/employeeOptions'
 import { listAssetItems } from '../../asset-item-information/data/assetItemInformationStore'
-import { listAssetSpecificationMaps } from '../../asset-specification-map/data/assetSpecificationMapStore'
+import { assetSpecificationMapsApi } from '../../asset-specification-map/api/assetSpecificationMapApi'
 import { listCustodians } from '../../custodian/data/custodianStore'
 import { listLocationMasters } from '../../location-master/data/locationMasterStore'
 import { listVendorSuppliers } from '../../vendor-supplier-master/data/vendorSupplierMasterStore'
@@ -26,7 +26,8 @@ export const warrantyOptions = [
   { value: 'NA', label: 'N/A' },
 ]
 
-export function getAssetReceiveReferences() {
+export async function getAssetReceiveReferences(businessUnitId) {
+  const specificationRecords = await assetSpecificationMapsApi.list({ businessUnitId })
   const uomOptions = listAssetUnitsOfMeasure()
     .filter((record) => record.STATUS === '1')
     .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
@@ -38,7 +39,16 @@ export function getAssetReceiveReferences() {
     vendors: listVendorSuppliers().filter((record) => record.STATUS === '1'),
     custodians: listCustodians().filter((record) => record.STATUS === '1'),
     locations: listLocationMasters().filter((record) => record.STATUS === '1'),
-    specificationMaps: listAssetSpecificationMaps().filter((record) => record.STATUS === '1'),
+    specificationMaps: specificationRecords
+      .filter((record) => String(record.status ?? 1) === '1')
+      .map((record) => ({
+        ID: String(record.id),
+        ITEM_NAME: String(record.itemNameId),
+        SPECIFICATION: String(record.id),
+        SPECIFICATION_NAME: record.specName ?? '',
+        SORT_ORDER: String(record.sortOrder ?? ''),
+        STATUS: String(record.status ?? 1),
+      })),
     uomOptions,
     purchaseThroughOptions,
     currencyOptions,

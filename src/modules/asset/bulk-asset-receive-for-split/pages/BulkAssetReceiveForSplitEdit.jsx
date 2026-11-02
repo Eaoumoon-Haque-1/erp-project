@@ -1,6 +1,8 @@
 /** @file Edit controller reusing the Asset Receive Register form contract. */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import AssetReceiveRegisterForm from '../../asset-receive-register/components/AssetReceiveRegisterForm'
 import { updateAssetReceiveField } from '../../asset-receive-register/data/assetReceiveRegisterFormState'
@@ -13,18 +15,31 @@ const listPath = '/asset/bulk-asset-receive-for-split'
 function BulkAssetReceiveForSplitEdit() {
   const { bulkAssetReceiveId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const grnRef = useRef(null)
-  const references = getAssetReceiveReferences()
+  const [references, setReferences] = useState(null)
   const record = getBulkAssetReceive(bulkAssetReceiveId)
   const [values, setValues] = useState(record)
   const [errors, setErrors] = useState({})
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let active = true
+    getAssetReceiveReferences(sessionBusinessUnitId)
+      .then((loadedReferences) => { if (active) setReferences(loadedReferences) })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Receive references.'))
+      })
+    return () => { active = false }
+  }, [sessionBusinessUnitId])
 
   if (!record || !values) return <Navigate to={listPath} replace />
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
     const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
-    setValues((current) => updateAssetReceiveField(current, name, nextValue, references))
+    if (references) setValues((current) => updateAssetReceiveField(current, name, nextValue, references))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
@@ -43,6 +58,7 @@ function BulkAssetReceiveForSplitEdit() {
 
   const handleSubmit = (event) => {
     event.preventDefault()
+    if (!references) return
     const otherRecords = listBulkAssetReceives().filter((item) => item.ID !== record.ID)
     const result = validateAssetReceive(values, otherRecords, references)
     setValues(result.values)
@@ -62,8 +78,10 @@ function BulkAssetReceiveForSplitEdit() {
   }
 
   return (
-    <FormPage title={'Bulk Asset Receive for Split Edit'} listTo={listPath} tableName={ASSET_RECEIVE_REGISTER_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset}>
-      <AssetReceiveRegisterForm values={values} errors={errors} references={references} grnRef={grnRef} onChange={handleChange} onSpecificationChange={handleSpecificationChange} />
+    <FormPage title={'Bulk Asset Receive for Split Edit'} listTo={listPath} tableName={ASSET_RECEIVE_REGISTER_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset} message={message}>
+      {references
+        ? <AssetReceiveRegisterForm values={values} errors={errors} references={references} grnRef={grnRef} onChange={handleChange} onSpecificationChange={handleSpecificationChange} />
+        : <p>Loading reference data...</p>}
     </FormPage>
   )
 }

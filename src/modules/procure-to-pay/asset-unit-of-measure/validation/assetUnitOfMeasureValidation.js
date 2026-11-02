@@ -1,10 +1,10 @@
 /** @file INV_UOM defaults and client-side validation rules. */
 export const ASSET_UNIT_OF_MEASURE_TABLE = 'INV_UOM'
 
-export function createInitialAssetUnitOfMeasureValues(businessGroup) {
+export function createInitialAssetUnitOfMeasureValues(scope = {}) {
   return {
-    BG_ID: String(businessGroup?.id ?? ''),
-    BU_ID: '',
+    BG_ID: String(scope.businessGroupId ?? ''),
+    BU_ID: String(scope.businessUnitId ?? ''),
     UNIT_NAME: '',
     SORT_ORDER: '1',
     STATUS: '1',

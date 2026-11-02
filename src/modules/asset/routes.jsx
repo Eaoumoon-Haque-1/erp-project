@@ -39,6 +39,7 @@ import AssetLookupValueView from './asset-lookup-value/pages/AssetLookupValueVie
 import AssetSpecificationMapCreate from './asset-specification-map/pages/AssetSpecificationMapCreate'
 import AssetSpecificationMapEdit from './asset-specification-map/pages/AssetSpecificationMapEdit'
 import AssetSpecificationMapList from './asset-specification-map/pages/AssetSpecificationMapList'
+import AssetSpecificationMapView from './asset-specification-map/pages/AssetSpecificationMapView'
 import BulkAssetReceiveForSplitCreate from './bulk-asset-receive-for-split/pages/BulkAssetReceiveForSplitCreate'
 import BulkAssetReceiveForSplitEdit from './bulk-asset-receive-for-split/pages/BulkAssetReceiveForSplitEdit'
 import BulkAssetReceiveForSplitList from './bulk-asset-receive-for-split/pages/BulkAssetReceiveForSplitList'
@@ -97,6 +98,7 @@ export const assetRoutes = [
   { path: 'asset/bulk-asset-receive-for-split/:bulkAssetReceiveId/edit', element: <BulkAssetReceiveForSplitEdit /> },
   { path: 'asset/asset-specification-map', element: <AssetSpecificationMapList /> },
   { path: 'asset/asset-specification-map/create', element: <AssetSpecificationMapCreate /> },
+  { path: 'asset/asset-specification-map/:assetSpecificationMapId/view', element: <AssetSpecificationMapView /> },
   { path: 'asset/asset-specification-map/:assetSpecificationMapId/edit', element: <AssetSpecificationMapEdit /> },
   { path: 'asset/custodian', element: <CustodianList /> },
   { path: 'asset/custodian/create', element: <CustodianCreate /> },

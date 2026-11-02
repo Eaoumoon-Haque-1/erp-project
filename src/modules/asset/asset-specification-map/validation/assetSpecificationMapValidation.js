@@ -4,6 +4,8 @@
 export const ASSET_ITEM_SPEC_TABLE = 'ASSET_ITEM_SPEC'
 
 export const initialAssetSpecificationMapValues = {
+  BG_ID: '',
+  BU_ID: '',
   ITEM_NAME: '',
   ITEM_NAME_LABEL: '',
   SPECIFICATION: '',
@@ -18,6 +20,8 @@ export function validateAssetSpecificationMap(
   references = {},
 ) {
   const normalized = {
+    BG_ID: String(values.BG_ID ?? ''),
+    BU_ID: String(values.BU_ID ?? ''),
     ITEM_NAME: String(values.ITEM_NAME ?? ''),
     ITEM_NAME_LABEL: String(values.ITEM_NAME_LABEL ?? '').trim(),
     SPECIFICATION: String(values.SPECIFICATION ?? ''),

@@ -1685,6 +1685,7 @@
   .erp-employee-compound-field > .erp-employee-field > .erp-field-label {
     min-height: 24px;
     align-content: end;
+    white-space: nowrap;
   }
 
   .erp-employee-compound-field > .erp-employee-field + .erp-employee-field > .erp-field-label {

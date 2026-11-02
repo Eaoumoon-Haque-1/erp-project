@@ -55,6 +55,11 @@ const probationStatusOptions = [
   { value: "NOT_APPLICABLE", label: "Not Applicable" },
 ];
 
+const contactOwnerOptions = [
+  { value: "Personal", label: "Personal" },
+  { value: "Office", label: "Office" },
+];
+
 function Grid({ children, className = "" }) {
   return (
     <div
@@ -461,18 +466,18 @@ function EmployeeInformationForm({
                 placeholder: "01XXXXXXXXX",
               })}
               {field("SIM_OWNER", "SIM Owner", {
-                maxLength: 100,
-                placeholder: "Enter SIM owner",
+                options: contactOwnerOptions,
+                placeholder: "Select...",
               })}
             </CompoundFieldGroup>
-            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(0, 1fr)"} ariaLabel={"Contact email details"}>
+            <CompoundFieldGroup columns={"minmax(0, 1fr) minmax(105px, .45fr)"} ariaLabel={"Contact email details"}>
               {field("OFFICE_EMAIL", "Contact Email", {
                 type: "email",
                 maxLength: 150,
               })}
               {field("EMAIL_OWNER", "Email Owner", {
-                maxLength: 100,
-                placeholder: "Enter email owner",
+                options: contactOwnerOptions,
+                placeholder: "Select...",
               })}
             </CompoundFieldGroup>
             <CompoundFieldGroup columns={"minmax(0, 1.25fr) repeat(2, minmax(0, 1fr))"} ariaLabel={"Religion, gender, and blood group"} compactLabels>

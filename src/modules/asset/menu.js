@@ -48,17 +48,17 @@ export const assetMenu = [
             key: 'location-master',
             path: '/asset/location-master',
           },
-          {
-            label: 'Asset Receive Register',
-            key: 'asset-receive-register',
-            path: '/asset/asset-receive-register',
-          },
         ],
       },
       {
         label: 'Asset Register',
         key: 'asset-register',
         children: [
+          {
+            label: 'Asset Receive Register',
+            key: 'asset-receive-register',
+            path: '/asset/asset-receive-register',
+          },
           {
             label: 'Bulk Asset Receive for Split',
             key: 'bulk-asset-receive-for-split',

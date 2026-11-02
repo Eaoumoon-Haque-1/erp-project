@@ -9,6 +9,7 @@ import VendorSupplierMasterList from '../asset/vendor-supplier-master/pages/Vend
 import AssetUnitOfMeasureCreate from './asset-unit-of-measure/pages/AssetUnitOfMeasureCreate'
 import AssetUnitOfMeasureEdit from './asset-unit-of-measure/pages/AssetUnitOfMeasureEdit'
 import AssetUnitOfMeasureList from './asset-unit-of-measure/pages/AssetUnitOfMeasureList'
+import AssetUnitOfMeasureView from './asset-unit-of-measure/pages/AssetUnitOfMeasureView'
 
 export const procureToPayRoutes = [
   {
@@ -30,6 +31,10 @@ export const procureToPayRoutes = [
   {
     path: 'procure-to-pay/procurement-settings/asset-unit-of-measure/create',
     element: <AssetUnitOfMeasureCreate />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/asset-unit-of-measure/:assetUnitOfMeasureId/view',
+    element: <AssetUnitOfMeasureView />,
   },
   {
     path: 'procure-to-pay/procurement-settings/asset-unit-of-measure/:assetUnitOfMeasureId/edit',
