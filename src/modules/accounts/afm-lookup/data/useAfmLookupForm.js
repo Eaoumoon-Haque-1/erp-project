@@ -80,8 +80,8 @@ export default function useAfmLookupForm(
     })
   }
 
-  const validate = () => {
-    const result = validateAfmLookup(values, rows)
+  const validate = (overrides = {}) => {
+    const result = validateAfmLookup({ ...values, ...overrides }, rows)
     setValues(result.values)
     setRows(result.rows)
     setErrors(result.errors)

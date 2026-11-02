@@ -1,11 +1,11 @@
-﻿/** @file API-backed AFM Chart of Accounts edit page with Sub-Accounts table. */
+/** @file API-backed AFM Chart of Accounts edit page with Sub-Accounts table. */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ActionForm from '../../../../components/shared/ActionForm'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import PageHeader from '../../../../components/shared/PageHeader'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { afmChartOfAccountsApi } from '../api/afmChartOfAccountsApi'
 import AfmChartOfAccountsForm from '../components/AfmChartOfAccountsForm'
 import {
@@ -24,33 +24,43 @@ function AfmChartOfAccountsEdit() {
   const { accountId } = useParams()
   const navigate = useNavigate()
   const accountCodeRef = useRef(null)
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
 
   const [record, setRecord] = useState(null)
-  const [values, setValues] = useState(initialAfmChartOfAccountsValues)
+  const [values, setValues] = useState({
+    ...initialAfmChartOfAccountsValues,
+    BG_ID: sessionGroupId,
+    BU_ID: sessionBusinessUnitId,
+  })
   const [subAccounts, setSubAccounts] = useState([])
   const [existingAccounts, setExistingAccounts] = useState([])
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  const { groupOptions, businessUnitOptions, groupsLoading, unitsLoading } = useBusinessOptions(values.BG_ID, {
-    loadUnits: true,
-  })
-
   useEffect(() => {
     let active = true
 
     Promise.all([
       afmChartOfAccountsApi.get(accountId),
-      afmChartOfAccountsApi.list(),
+      sessionBusinessUnitId
+        ? afmChartOfAccountsApi.listByUnit(sessionBusinessUnitId)
+        : afmChartOfAccountsApi.list(),
       afmChartOfAccountsApi.listByParent(accountId).catch(() => []),
     ])
       .then(([accountData, allAccounts, children]) => {
         if (!active) return
         setRecord(accountData)
-        setExistingAccounts(allAccounts)
+        setExistingAccounts(allAccounts || [])
         setSubAccounts(children || [])
-        setValues(mapAfmChartOfAccountsFromApi(accountData))
+        const mapped = mapAfmChartOfAccountsFromApi(accountData)
+        setValues({
+          ...mapped,
+          BG_ID: sessionGroupId || mapped.BG_ID,
+          BU_ID: sessionBusinessUnitId || mapped.BU_ID,
+        })
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Chart of Accounts head.')
@@ -62,13 +72,12 @@ function AfmChartOfAccountsEdit() {
     return () => {
       active = false
     }
-  }, [accountId])
+  }, [accountId, sessionBusinessUnitId, sessionGroupId])
 
   // Exclude current account and its descendants from parent options
   const parentAccountOptions = existingAccounts
     .filter((acc) =>
       String(acc.id) !== String(accountId) &&
-      String(acc.buId) === String(values.BU_ID) &&
       acc.ledgerHead !== 'Active Account' &&
       String(acc.status ?? 1) === '1',
     )
@@ -83,19 +92,7 @@ function AfmChartOfAccountsEdit() {
     const { name, type, value, checked } = event.target
     const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
 
-    setValues((current) => {
-      const next = { ...current, [name]: nextValue }
-      if (name === 'BG_ID') {
-        next.BU_ID = ''
-        next.PARENT_ACCOUNT_HEAD = ''
-        next.PARENT_ACCOUNT_CODE = ''
-      }
-      if (name === 'BU_ID') {
-        next.PARENT_ACCOUNT_HEAD = ''
-        next.PARENT_ACCOUNT_CODE = ''
-      }
-      return next
-    })
+    setValues((current) => ({ ...current, [name]: nextValue }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
@@ -118,7 +115,12 @@ function AfmChartOfAccountsEdit() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAfmChartOfAccounts(values, existingAccounts, accountId)
+    const payloadValues = {
+      ...values,
+      BG_ID: sessionGroupId || values.BG_ID,
+      BU_ID: sessionBusinessUnitId || values.BU_ID,
+    }
+    const result = validateAfmChartOfAccounts(payloadValues, existingAccounts, accountId)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) return
@@ -183,10 +185,6 @@ function AfmChartOfAccountsEdit() {
           <AfmChartOfAccountsForm
             values={values}
             errors={errors}
-            groupOptions={groupOptions}
-            groupsLoading={groupsLoading}
-            businessUnitOptions={businessUnitOptions}
-            unitsLoading={unitsLoading}
             parentAccountOptions={parentAccountOptions}
             onChange={handleChange}
             onParentChange={handleParentChange}

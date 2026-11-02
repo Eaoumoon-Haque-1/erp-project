@@ -33,6 +33,21 @@ export const accountsMenu = [{
           key: 'afm-voucher-type-mapping',
           path: '/accounts/voucher-setup/voucher-type-mapping',
         },
+        {
+          label: 'Bank Cheque Mapping',
+          key: 'afm-bank-cheque-mapping',
+          path: '/accounts/voucher-setup/bank-cheque-mapping',
+        },
+        {
+          label: 'Accounting Calendar',
+          key: 'afm-calendar',
+          path: '/accounts/voucher-setup/calendar',
+        },
+        {
+          label: 'Accounting Period Open',
+          key: 'afm-period-open',
+          path: '/accounts/voucher-setup/period',
+        },
       ],
     },
   ],

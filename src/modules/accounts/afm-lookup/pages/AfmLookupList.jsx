@@ -1,10 +1,11 @@
 /**
  * @file AFM Lookup Type List page.
- * Displays all lookup types with search filters, lookup value counts, and row actions.
+ * Displays lookup types of the logged-in user's Business Unit with search filters, lookup value counts, and row actions.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import { failActiveAction } from '../../../../components/shared/actionAlerts'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
@@ -56,24 +57,33 @@ const columns = [
 
 function AfmLookupList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
   const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [businessUnits, setBusinessUnits] = useState([])
+  const [loading, setLoading] = useState(Boolean(sessionBusinessUnitId))
 
   useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
+
     let active = true
 
     Promise.all([
-      afmLookupApi.list(),
+      afmLookupApi.list({ buId: sessionBusinessUnitId }),
       businessGroupsApi.list().catch(() => []),
       businessUnitsApi.list().catch(() => []),
     ])
       .then(([types, groups, units]) => {
         if (!active) return
-        setBusinessUnits(units)
         const groupMap = new Map(groups.map((g) => [String(g.id), g.groupName]))
         const unitMap = new Map(units.map((u) => [String(u.id), u.businessUnit]))
-        setRows(types.map((type) => mapLookupTypeFromApi(type, groupMap, unitMap)))
+        const scopedTypes = (types || []).filter((type) => {
+          if (String(type.buId ?? type.BU_ID ?? '') !== sessionBusinessUnitId) return false
+          const typeBgId = String(type.bgId ?? type.BG_ID ?? '')
+          if (sessionGroupId && typeBgId && typeBgId !== sessionGroupId) return false
+          return true
+        })
+        setRows(scopedTypes.map((type) => mapLookupTypeFromApi(type, groupMap, unitMap)))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Lookup Type records.')
@@ -85,36 +95,43 @@ function AfmLookupList() {
     return () => {
       active = false
     }
-  }, [])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
-  const businessUnitOptions = useMemo(
-    () =>
-      businessUnits.map((u) => ({
-        value: String(u.id),
-        label: u.businessUnit,
-      })),
-    [businessUnits],
-  )
+  // Distinct Lookup Type names for the searchable (typeable) dropdown
+  const lookupTypeOptions = useMemo(() => {
+    const map = new Map()
+    rows.forEach((row) => {
+      const name = String(row.TYPE_NAME ?? '').trim()
+      if (name && !map.has(name.toLowerCase())) {
+        map.set(name.toLowerCase(), { value: name, label: name })
+      }
+    })
+    return Array.from(map.values())
+  }, [rows])
 
   const filters = useMemo(
     () => [
       {
         key: 'TYPE_NAME',
-        label: 'Search by Lookup Type / Code',
-        placeholder: '--Search by Type or Code--',
-        matches: (row, value) =>
-          String(row.TYPE_NAME ?? '')
-            .toLowerCase()
-            .includes(value.toLowerCase()) ||
-          String(row.TYPE_CODE ?? '')
-            .toLowerCase()
-            .includes(value.toLowerCase()),
+        label: 'Search by Lookup Type',
+        placeholder: '--Search by Lookup Type--',
+        options: lookupTypeOptions,
+        searchable: true,
+        matches: (row, value) => {
+          const query = String(value ?? '').trim().toLowerCase()
+          if (!query) return true
+          return String(row.TYPE_NAME ?? '').toLowerCase().includes(query)
+        },
       },
       {
-        key: 'BU_ID',
-        label: 'Search by Business Unit',
-        placeholder: '--Search by Business Unit--',
-        options: businessUnitOptions,
+        key: 'TYPE_CODE',
+        label: 'Search by Lookup Code',
+        placeholder: 'Search by Lookup Code',
+        matches: (row, value) => {
+          const query = String(value ?? '').trim().toLowerCase()
+          if (!query) return true
+          return String(row.TYPE_CODE ?? '').toLowerCase().includes(query)
+        },
       },
       {
         key: 'STATUS',
@@ -126,7 +143,7 @@ function AfmLookupList() {
         ],
       },
     ],
-    [businessUnitOptions],
+    [lookupTypeOptions],
   )
 
   const handleDelete = async (row) => {

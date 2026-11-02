@@ -2,8 +2,6 @@
  * @file Controlled AFM Lookup Type and Lookup Values master-detail entry form.
  * Matches Bank and Bank Details entry form architecture, compact field sizing, and ERP design system.
  */
-import { isRequired } from '../../../../config/devFlags'
-
 function FieldError({ id, message }) {
   if (!message) return null
   return (
@@ -64,11 +62,6 @@ function AfmLookupForm({
   values,
   errors = {},
   rows = [],
-  groupOptions = [],
-  groupsLoading = false,
-  businessUnitOptions = [],
-  unitsLoading = false,
-  businessUnitLocked = false,
   auditLog = null,
   submitLabel = '',
   submitting = false,
@@ -84,68 +77,8 @@ function AfmLookupForm({
           SECTION 1: LOOKUP TYPE (MASTER DATA)
           ========================================================================= */}
       <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
-        <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5'}>
-          {/* 1. Group Name */}
-          <div>
-            <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'LOOKUP_BG_ID'}>
-              Group Name{isRequired() && <span className={'text-rose-500 ml-0.5'}>*</span>}
-            </label>
-            <select
-              id={'LOOKUP_BG_ID'}
-              name={'BG_ID'}
-              className={inputClass(errors.BG_ID, businessUnitLocked)}
-              value={values.BG_ID || ''}
-              required
-              disabled={groupsLoading || businessUnitLocked}
-              aria-invalid={Boolean(errors.BG_ID)}
-              aria-describedby={errors.BG_ID ? 'LOOKUP_BG_ID-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>
-                {groupsLoading ? 'Loading Groups...' : '--Select Group--'}
-              </option>
-              {groupOptions.map((g) => (
-                <option key={g.value} value={g.value}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-            <FieldError id={'LOOKUP_BG_ID-error'} message={errors.BG_ID} />
-          </div>
-
-          {/* 2. Business Unit */}
-          <div>
-            <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'LOOKUP_BU_ID'}>
-              Business Unit{isRequired() && <span className={'text-rose-500 ml-0.5'}>*</span>}
-            </label>
-            <select
-              id={'LOOKUP_BU_ID'}
-              name={'BU_ID'}
-              className={inputClass(errors.BU_ID, businessUnitLocked || !values.BG_ID)}
-              value={values.BU_ID || ''}
-              required
-              disabled={unitsLoading || businessUnitLocked || !values.BG_ID}
-              aria-invalid={Boolean(errors.BU_ID)}
-              aria-describedby={errors.BU_ID ? 'LOOKUP_BU_ID-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>
-                {!values.BG_ID
-                  ? '--Select Group First--'
-                  : unitsLoading
-                  ? 'Loading Business Units...'
-                  : '--Select Business Unit--'}
-              </option>
-              {businessUnitOptions.map((unit) => (
-                <option key={unit.value} value={unit.value}>
-                  {unit.label}
-                </option>
-              ))}
-            </select>
-            <FieldError id={'LOOKUP_BU_ID-error'} message={errors.BU_ID} />
-          </div>
-
-          {/* 3. Lookup Type (TYPE_NAME) */}
+        <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5'}>
+          {/* 1. Lookup Type (TYPE_NAME) */}
           <div>
             <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'TYPE_NAME'}>
               Lookup Type<span className={'text-rose-500 ml-0.5'}>*</span>
@@ -168,7 +101,7 @@ function AfmLookupForm({
             <FieldError id={'TYPE_NAME-error'} message={errors.TYPE_NAME} />
           </div>
 
-          {/* 4. Lookup Code (TYPE_CODE) */}
+          {/* 2. Lookup Code (TYPE_CODE) */}
           <div>
             <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'TYPE_CODE'}>
               Lookup Code
@@ -188,7 +121,7 @@ function AfmLookupForm({
             <FieldError id={'TYPE_CODE-error'} message={errors.TYPE_CODE} />
           </div>
 
-          {/* 5. Is Active? */}
+          {/* 3. Is Active? */}
           <div>
             <span className={'block text-xs font-medium text-gray-700 mb-1'}>
               Is Active?<span className={'text-rose-500 ml-0.5'}>*</span>

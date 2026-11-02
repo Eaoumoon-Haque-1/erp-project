@@ -4,8 +4,8 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { bankApi } from '../api/bankApi'
 import BankForm from '../components/BankForm'
 import { mapBankToApi } from '../data/bankApiMapper'
@@ -22,32 +22,29 @@ function BankCreate() {
   const navigate = useNavigate()
   const bankNameRef = useRef(null)
   const [submitting, setSubmitting] = useState(false)
-  const form = useBankForm(initialBankValues, [createInitialBankDetailRow()])
-  const { groupOptions, businessUnitOptions, groupsLoading, unitsLoading } =
-    useBusinessOptions(form.values.BG_ID, { loadUnits: true })
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const sessionValues = { BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId }
+  const form = useBankForm(
+    { ...initialBankValues, ...sessionValues },
+    [createInitialBankDetailRow()],
+  )
+  const { setValues } = form
 
-  // Auto-select first Business Group and Business Unit when available if not already selected
+  // Group Name (BG_ID) and Business Unit (BU_ID) come from the logged-in session
   useEffect(() => {
-    if (!form.values.BG_ID && groupOptions.length > 0) {
-      form.setValues((current) => ({
-        ...current,
-        BG_ID: groupOptions[0].value,
-      }))
-    }
-  }, [form, groupOptions])
-
-  useEffect(() => {
-    if (form.values.BG_ID && !form.values.BU_ID && businessUnitOptions.length > 0) {
-      form.setValues((current) => ({
-        ...current,
-        BU_ID: businessUnitOptions[0].value,
-      }))
-    }
-  }, [form, businessUnitOptions])
+    setValues((current) => {
+      const nextBgId = sessionGroupId || current.BG_ID
+      const nextBuId = sessionBusinessUnitId || current.BU_ID
+      if (current.BG_ID === nextBgId && current.BU_ID === nextBuId) return current
+      return { ...current, BG_ID: nextBgId, BU_ID: nextBuId }
+    })
+  }, [sessionBusinessUnitId, sessionGroupId, setValues])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = form.validate()
+    const result = form.validate(sessionValues)
     if (!result.isValid) return
 
     setSubmitting(true)
@@ -65,8 +62,7 @@ function BankCreate() {
     form.reset(
       {
         ...initialBankValues,
-        BG_ID: groupOptions[0]?.value || '',
-        BU_ID: businessUnitOptions[0]?.value || '',
+        ...sessionValues,
       },
       [createInitialBankDetailRow()],
     )
@@ -80,7 +76,7 @@ function BankCreate() {
       tableName={AFM_BANK_TABLE}
       submitLabel={'Submit'}
       onSubmit={handleSubmit}
-      onValidate={() => form.validate().isValid}
+      onValidate={() => form.validate(sessionValues).isValid}
       onReset={handleReset}
       submitting={submitting}
     >
@@ -88,10 +84,6 @@ function BankCreate() {
         values={form.values}
         errors={form.errors}
         rows={form.rows}
-        groupOptions={groupOptions}
-        groupsLoading={groupsLoading}
-        businessUnitOptions={businessUnitOptions}
-        unitsLoading={unitsLoading}
         bankNameRef={bankNameRef}
         onChange={form.handleChange}
         onRowChange={form.handleRowChange}

@@ -16,15 +16,93 @@ function FieldError({ id, message }) {
   return <p id={id} className="text-xs text-rose-600 mt-1">{message}</p>
 }
 
+function formatAuditDateTime(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  const time = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  })
+  return `${day}/${month}/${year} ${time}`
+}
+
+function AuditItem({ column, label, children }) {
+  return (
+    <div data-column={column} className="p-2.5 rounded border border-gray-100 bg-gray-50/70">
+      <span className="block text-[11px] font-medium text-gray-500 mb-0.5">{label}</span>
+      <span className="font-semibold text-gray-800 break-words">{children}</span>
+    </div>
+  )
+}
+
+function AuditLogBlock({ auditLog, status }) {
+  const isActive = String(status ?? auditLog.STATUS ?? '1') === '1'
+  return (
+    <div className="mt-4 bg-white p-3.5 rounded border border-gray-200 shadow-xs">
+      <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-[#038b8d] rounded-full" />
+          <h3 className="text-sm font-semibold text-gray-800 tracking-tight">Audit Log :</h3>
+        </div>
+        <span
+          data-column="STATUS"
+          className={[
+            'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none text-white',
+            isActive ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
+          ].join(' ')}
+        >
+          {isActive ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+      <div className="space-y-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <AuditItem column="CREATED_USER_ID" label="Created By (User):">
+            {auditLog.CREATED_USER_NAME || auditLog.CREATED_USER_ID || '-'}
+          </AuditItem>
+          <AuditItem column="CREATED_EMP_ID" label="Created By (Employee):">
+            {auditLog.CREATED_EMP_NAME || auditLog.CREATED_EMP_ID || '-'}
+          </AuditItem>
+          <AuditItem column="CREATED_DATETIME" label="Created At:">
+            {formatAuditDateTime(auditLog.CREATED_DATETIME)}
+          </AuditItem>
+          <AuditItem column="CREATED_APP" label="Created From:">
+            {auditLog.CREATED_APP || '-'}
+          </AuditItem>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <AuditItem column="UPDATED_USER_ID" label="Updated By (User):">
+            {auditLog.UPDATED_USER_NAME || auditLog.UPDATED_USER_ID || '-'}
+          </AuditItem>
+          <AuditItem column="UPDATED_EMP_ID" label="Updated By (Employee):">
+            {auditLog.UPDATED_EMP_NAME || auditLog.UPDATED_EMP_ID || '-'}
+          </AuditItem>
+          <AuditItem column="UPDATED_DATETIME" label="Updated At:">
+            {formatAuditDateTime(auditLog.UPDATED_DATETIME)}
+          </AuditItem>
+          <AuditItem column="UPDATED_APP" label="Updated From:">
+            {auditLog.UPDATED_APP || '-'}
+          </AuditItem>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AfmChartOfAccountsForm({
   title = 'New Account Head',
   values,
   errors = {},
-  businessUnitName = '',
   parentAccountOptions = [],
   parentsLoading = false,
   submitting = false,
   isEdit = false,
+  auditLog = null,
   onChange,
   onParentChange,
   onSubmit,
@@ -33,22 +111,7 @@ function AfmChartOfAccountsForm({
 }) {
   const formBody = (
     <div className="space-y-3 text-xs sm:text-sm">
-      {/* 1. Business Unit */}
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="BUSINESS_UNIT_DISPLAY">
-          Business Unit<span className="text-rose-500 ml-0.5">*</span>
-        </label>
-        <input
-          id="BUSINESS_UNIT_DISPLAY"
-          type="text"
-          readOnly
-          value={businessUnitName || '--Select Business Unit First--'}
-          className="w-full h-8 px-3 py-1 border border-gray-300 rounded bg-gray-100 text-gray-700 text-xs sm:text-sm cursor-not-allowed focus:outline-none"
-        />
-        <FieldError id="BU_ID-error" message={errors.BU_ID} />
-      </div>
-
-      {/* 2. Account Code */}
+      {/* 1. Account Code */}
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="ACCOUNT_CODE">
           Account Code<span className="text-rose-500 ml-0.5">*</span>
@@ -144,12 +207,10 @@ function AfmChartOfAccountsForm({
           name="PARENT_ACCOUNT_HEAD"
           value={values.PARENT_ACCOUNT_HEAD || ''}
           options={parentAccountOptions}
-          disabled={parentsLoading || !values.BU_ID}
+          disabled={parentsLoading}
           placeholder={
             parentsLoading
               ? 'Loading Parent Accounts...'
-              : !values.BU_ID
-              ? '--Select Business Unit First--'
               : '--Select / Type Parent Account Head--'
           }
           emptyOptionLabel="--None (Root Account)--"
@@ -421,6 +482,8 @@ function AfmChartOfAccountsForm({
         <form onSubmit={onSubmit} noValidate>
           {formBody}
         </form>
+        {/* Audit Log block: only when editing an existing Account Head, below the Update button */}
+        {isEdit && auditLog && <AuditLogBlock auditLog={auditLog} status={values.STATUS} />}
       </div>
     )
   }
