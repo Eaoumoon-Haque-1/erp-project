@@ -23,6 +23,18 @@ import VoucherTypeMappingCreate from './voucher-type-mapping/pages/VoucherTypeMa
 import VoucherTypeMappingEdit from './voucher-type-mapping/pages/VoucherTypeMappingEdit'
 import VoucherTypeMappingList from './voucher-type-mapping/pages/VoucherTypeMappingList'
 import VoucherTypeMappingView from './voucher-type-mapping/pages/VoucherTypeMappingView'
+import BankChequeMapCreate from './bank-cheque-mapping/pages/BankChequeMapCreate'
+import BankChequeMapEdit from './bank-cheque-mapping/pages/BankChequeMapEdit'
+import BankChequeMapList from './bank-cheque-mapping/pages/BankChequeMapList'
+import BankChequeMapView from './bank-cheque-mapping/pages/BankChequeMapView'
+import CalendarCreate from './calendar/pages/CalendarCreate'
+import CalendarEdit from './calendar/pages/CalendarEdit'
+import CalendarList from './calendar/pages/CalendarList'
+import CalendarView from './calendar/pages/CalendarView'
+import PeriodCreate from './period/pages/PeriodCreate'
+import PeriodEdit from './period/pages/PeriodEdit'
+import PeriodList from './period/pages/PeriodList'
+import PeriodView from './period/pages/PeriodView'
 
 export const accountsRoutes = [
   // Fallbacks & shortcuts
@@ -69,6 +81,24 @@ export const accountsRoutes = [
   { path: 'accounts/voucher-setup/voucher-type-mapping/:mappingId/edit', element: <VoucherTypeMappingEdit /> },
   { path: 'accounts/voucher-setup/voucher-type-mapping/:mappingId/view', element: <VoucherTypeMappingView /> },
 
+  // Voucher Setup -> Bank Cheque Mapping
+  { path: 'accounts/voucher-setup/bank-cheque-mapping', element: <BankChequeMapList /> },
+  { path: 'accounts/voucher-setup/bank-cheque-mapping/create', element: <BankChequeMapCreate /> },
+  { path: 'accounts/voucher-setup/bank-cheque-mapping/:mappingId/edit', element: <BankChequeMapEdit /> },
+  { path: 'accounts/voucher-setup/bank-cheque-mapping/:mappingId/view', element: <BankChequeMapView /> },
+
+  // Voucher Setup -> Accounting Calendar
+  { path: 'accounts/voucher-setup/calendar', element: <CalendarList /> },
+  { path: 'accounts/voucher-setup/calendar/create', element: <CalendarCreate /> },
+  { path: 'accounts/voucher-setup/calendar/:calendarId/edit', element: <CalendarEdit /> },
+  { path: 'accounts/voucher-setup/calendar/:calendarId/view', element: <CalendarView /> },
+
+  // Voucher Setup -> Accounting Period Open
+  { path: 'accounts/voucher-setup/period', element: <PeriodList /> },
+  { path: 'accounts/voucher-setup/period/create', element: <PeriodCreate /> },
+  { path: 'accounts/voucher-setup/period/:periodId/edit', element: <PeriodEdit /> },
+  { path: 'accounts/voucher-setup/period/:periodId/view', element: <PeriodView /> },
+
   // Direct alias routes for AFM Chart of Accounts
   { path: 'accounts/afm-chart-of-accounts', element: <AfmChartOfAccountsList /> },
   { path: 'accounts/afm-chart-of-accounts/create', element: <AfmChartOfAccountsCreate /> },
@@ -112,6 +142,28 @@ export const accountsRoutes = [
   { path: 'accounts/voucher-type-mapping/create', element: <VoucherTypeMappingCreate /> },
   { path: 'accounts/voucher-type-mapping/:mappingId/edit', element: <VoucherTypeMappingEdit /> },
   { path: 'accounts/voucher-type-mapping/:mappingId/view', element: <VoucherTypeMappingView /> },
+
+  // Direct alias routes for Bank Cheque Mapping
+  { path: 'accounts/bank-cheque-mapping', element: <BankChequeMapList /> },
+  { path: 'accounts/bank-cheque-mapping/create', element: <BankChequeMapCreate /> },
+  { path: 'accounts/bank-cheque-mapping/:mappingId/edit', element: <BankChequeMapEdit /> },
+  { path: 'accounts/bank-cheque-mapping/:mappingId/view', element: <BankChequeMapView /> },
+
+  // Direct alias routes for Accounting Calendar
+  { path: 'accounts/calendar', element: <CalendarList /> },
+  { path: 'accounts/calendar/create', element: <CalendarCreate /> },
+  { path: 'accounts/calendar/:calendarId/edit', element: <CalendarEdit /> },
+  { path: 'accounts/calendar/:calendarId/view', element: <CalendarView /> },
+  { path: 'accounts/accounting-calendar', element: <CalendarList /> },
+  { path: 'accounts/accounting-calendar/create', element: <CalendarCreate /> },
+
+  // Direct alias routes for Accounting Period Open
+  { path: 'accounts/period', element: <PeriodList /> },
+  { path: 'accounts/period/create', element: <PeriodCreate /> },
+  { path: 'accounts/period/:periodId/edit', element: <PeriodEdit /> },
+  { path: 'accounts/period/:periodId/view', element: <PeriodView /> },
+  { path: 'accounts/period-open', element: <PeriodList /> },
+  { path: 'accounts/period-open/create', element: <PeriodCreate /> },
+  { path: 'accounts/accounting-period-open', element: <PeriodList /> },
+  { path: 'accounts/accounting-period-open/create', element: <PeriodCreate /> },
 ]
-
-

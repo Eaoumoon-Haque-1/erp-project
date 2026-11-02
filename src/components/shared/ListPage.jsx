@@ -29,10 +29,11 @@ function SearchableFilterSelect({ filter, value = '', disabled = false, onChange
   )
 
   const displayValue = useMemo(() => {
+    if (disabled || !value) return ''
     if (isTyping) return value
     if (selectedOption) return selectedOption.label
     return value
-  }, [isTyping, selectedOption, value])
+  }, [disabled, isTyping, selectedOption, value])
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -310,11 +311,16 @@ function ListPage({
             const disabled = typeof filter.disabled === 'function'
               ? filter.disabled(filterValues)
               : filter.disabled || (filter.dependsOn && !filterValues[filter.dependsOn])
+            const placeholder = typeof filter.placeholder === 'function'
+              ? filter.placeholder(filterValues, disabled)
+              : (disabled && filter.dependsOn && !filterValues[filter.dependsOn]
+                ? (filter.disabledPlaceholder || '--Select Bank Name First--')
+                : filter.placeholder)
 
             return filter.searchable && filter.options && filter.matches && Array.isArray(options) ? (
               <SearchableFilterSelect
                 key={filter.key}
-                filter={{ ...filter, options }}
+                filter={{ ...filter, options, placeholder }}
                 value={filterValues[filter.key] ?? ''}
                 disabled={disabled}
                 onChange={(val) => updateFilter(filter.key, val)}
@@ -323,7 +329,7 @@ function ListPage({
               <AutocompleteFilter
                 key={`${filter.key}:${filterValues[filter.key] ?? ''}`}
                 label={filter.label}
-                placeholder={filter.placeholder}
+                placeholder={placeholder}
                 options={options}
                 value={filterValues[filter.key] ?? ''}
                 disabled={disabled}
@@ -338,7 +344,7 @@ function ListPage({
                 disabled={disabled}
                 onChange={(event) => updateFilter(filter.key, event.target.value)}
               >
-                <option value={''}>{filter.placeholder}</option>
+                <option value={''}>{placeholder}</option>
                 {options.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -350,7 +356,7 @@ function ListPage({
                 key={filter.key}
                 type={'search'}
                 className={'erp-list-control'}
-                placeholder={filter.placeholder}
+                placeholder={placeholder}
                 aria-label={filter.label}
                 value={filterValues[filter.key] ?? ''}
                 disabled={disabled}

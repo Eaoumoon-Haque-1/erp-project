@@ -5,8 +5,11 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import { confirmAction, showSuccess, showError } from '../../../../components/shared/actionAlerts'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { usersApi } from '../../../super-admin/user/api/userApi'
 import { afmChartOfAccountsApi } from '../api/afmChartOfAccountsApi'
 import AfmChartOfAccountsForm from '../components/AfmChartOfAccountsForm'
 import AfmChartOfAccountsTree from '../components/AfmChartOfAccountsTree'
@@ -22,76 +25,122 @@ import {
 } from '../validation/afmChartOfAccountsValidation'
 
 function AfmChartOfAccountsList() {
-  const [businessUnits, setBusinessUnits] = useState([])
-  const [selectedBuId, setSelectedBuId] = useState('')
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
+
+  const [currentBuName, setCurrentBuName] = useState('')
   const [accounts, setAccounts] = useState([])
-  const [loadingAccounts, setLoadingAccounts] = useState(false)
+  const [loadingAccounts, setLoadingAccounts] = useState(Boolean(sessionBusinessUnitId))
   const [selectedAccountId, setSelectedAccountId] = useState(null)
-  const [formValues, setFormValues] = useState(initialAfmChartOfAccountsValues)
+  const [formValues, setFormValues] = useState({
+    ...initialAfmChartOfAccountsValues,
+    BU_ID: sessionBusinessUnitId,
+    BG_ID: sessionGroupId,
+  })
   const [formErrors, setFormErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [userNames, setUserNames] = useState(() => new Map())
+  const [employeeNames, setEmployeeNames] = useState(() => new Map())
 
-  // 1. Load Business Units on mount
+  // Load Business Unit name for header display
+  useEffect(() => {
+    if (!sessionBusinessUnitId) return
+    let active = true
+    businessUnitsApi.get(sessionBusinessUnitId)
+      .then((unit) => {
+        if (!active) return
+        setCurrentBuName(unit?.businessUnit || '')
+      })
+      .catch(() => {
+        // Fallback gracefully
+      })
+    return () => {
+      active = false
+    }
+  }, [sessionBusinessUnitId])
+
+  // Audit name lookups: admin_users.user_name and hr_employee "employee_code: employee_name"
   useEffect(() => {
     let active = true
-    businessUnitsApi.list()
-      .then((units) => {
+    Promise.all([usersApi.list().catch(() => []), employeesApi.list().catch(() => [])]).then(
+      ([users, employees]) => {
         if (!active) return
-        setBusinessUnits(units)
-        if (units && units.length > 0) {
-          setSelectedBuId(String(units[0].id))
-        }
-      })
-      .catch((error) => {
-        if (active) showError(getApiErrorMessage(error, 'Unable to load business units.'))
-      })
+        setUserNames(
+          new Map(
+            (users || []).map((u) => {
+              const id = String(u.id ?? u.ID ?? '')
+              return [id, u.userName ?? u.user_name ?? u.USER_NAME ?? id]
+            }),
+          ),
+        )
+        setEmployeeNames(
+          new Map(
+            (employees || []).map((e) => {
+              const id = String(e.id ?? e.ID ?? '')
+              const code = String(e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '').trim()
+              const name = String(e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '').trim()
+              return [id, code && name ? `${code}: ${name}` : code || name || id]
+            }),
+          ),
+        )
+      },
+    )
     return () => {
       active = false
     }
   }, [])
 
-  // Currently selected Business Unit object
-  const currentBu = useMemo(
-    () => businessUnits.find((u) => String(u.id) === String(selectedBuId)),
-    [businessUnits, selectedBuId]
-  )
+  // Load accounts on mount / when session BU changes
+  useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
+    let active = true
 
-  const currentBuName = currentBu ? currentBu.businessUnit : ''
-  const currentBgId = currentBu ? String(currentBu.bgId || '') : ''
+    afmChartOfAccountsApi.listByUnit(sessionBusinessUnitId)
+      .then((records) => {
+        if (!active) return
+        const scoped = (records || []).filter((acc) => {
+          const itemBuId = String(acc.buId ?? acc.BU_ID ?? '').trim()
+          if (itemBuId && itemBuId !== sessionBusinessUnitId) return false
+          const itemBgId = String(acc.bgId ?? acc.BG_ID ?? '').trim()
+          if (sessionGroupId && itemBgId && itemBgId !== sessionGroupId) return false
+          return true
+        })
+        setAccounts(scoped)
+      })
+      .catch((error) => {
+        if (active) showError(getApiErrorMessage(error, 'Unable to load Chart of Accounts.'))
+      })
+      .finally(() => {
+        if (active) setLoadingAccounts(false)
+      })
 
-  // 2. Load accounts whenever selected BU changes
-  const loadAccountsForBu = async (buId) => {
-    if (!buId) {
-      setAccounts([])
-      return
+    return () => {
+      active = false
     }
+  }, [sessionBusinessUnitId, sessionGroupId])
+
+  // Reload accounts helper for after submit / delete
+  const reloadAccounts = async () => {
+    if (!sessionBusinessUnitId) return
     setLoadingAccounts(true)
     try {
-      const records = await afmChartOfAccountsApi.listByUnit(buId)
-      setAccounts(records)
+      const records = await afmChartOfAccountsApi.listByUnit(sessionBusinessUnitId)
+      const scoped = (records || []).filter((acc) => {
+        const itemBuId = String(acc.buId ?? acc.BU_ID ?? '').trim()
+        if (itemBuId && itemBuId !== sessionBusinessUnitId) return false
+        const itemBgId = String(acc.bgId ?? acc.BG_ID ?? '').trim()
+        if (sessionGroupId && itemBgId && itemBgId !== sessionGroupId) return false
+        return true
+      })
+      setAccounts(scoped)
     } catch (error) {
       showError(getApiErrorMessage(error, 'Unable to load Chart of Accounts.'))
     } finally {
       setLoadingAccounts(false)
     }
   }
-
-  useEffect(() => {
-    if (selectedBuId) {
-      loadAccountsForBu(selectedBuId)
-      // Reset form to new entry for this BU
-      setFormValues({
-        ...initialAfmChartOfAccountsValues,
-        BU_ID: String(selectedBuId),
-        BG_ID: currentBgId,
-      })
-      setSelectedAccountId(null)
-      setFormErrors({})
-    } else {
-      setAccounts([])
-    }
-  }, [selectedBuId, currentBgId])
 
   // Build parent options for dropdown (only Title/Control accounts in this BU, excluding current node)
   const parentAccountOptions = useMemo(() => {
@@ -120,22 +169,13 @@ function AfmChartOfAccountsList() {
     }))
   }, [accounts])
 
-  // Top header select account handler
-  const handleTopAccountSelect = (e) => {
-    const accId = e.target.value
-    if (!accId) {
-      handleResetForm()
-      return
-    }
-    const targetNode = accounts.find((a) => String(a.id ?? a.ID) === String(accId))
-    if (targetNode) handleSelectNode(targetNode)
-  }
-
   // Node selection from Tree
   const handleSelectNode = (node) => {
     const accId = String(node.id ?? node.ID)
     setSelectedAccountId(accId)
-    setFormValues(mapAfmChartOfAccountsFromApi(node))
+    setFormValues(
+      mapAfmChartOfAccountsFromApi(node, new Map(), new Map(), new Map(), userNames, employeeNames),
+    )
     setFormErrors({})
   }
 
@@ -144,8 +184,8 @@ function AfmChartOfAccountsList() {
     setSelectedAccountId(null)
     setFormValues({
       ...initialAfmChartOfAccountsValues,
-      BU_ID: String(selectedBuId),
-      BG_ID: currentBgId,
+      BU_ID: sessionBusinessUnitId,
+      BG_ID: sessionGroupId,
     })
     setFormErrors({})
   }
@@ -183,11 +223,19 @@ function AfmChartOfAccountsList() {
   // Submit / Update handler
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const validation = validateAfmChartOfAccounts(formValues, accounts, selectedAccountId)
+    const payloadValues = {
+      ...formValues,
+      BU_ID: sessionBusinessUnitId || formValues.BU_ID,
+      BG_ID: sessionGroupId || formValues.BG_ID,
+    }
+    const validation = validateAfmChartOfAccounts(payloadValues, accounts, selectedAccountId)
     setFormValues(validation.values)
     setFormErrors(validation.errors)
 
     if (!validation.isValid) {
+      if (validation.errors.BU_ID || validation.errors.BG_ID) {
+        showError(validation.errors.BU_ID || validation.errors.BG_ID)
+      }
       return
     }
 
@@ -210,7 +258,7 @@ function AfmChartOfAccountsList() {
         await showSuccess('Account head created successfully.')
       }
 
-      await loadAccountsForBu(selectedBuId)
+      await reloadAccounts()
       handleResetForm()
     } catch (error) {
       showError(getApiErrorMessage(error, `Unable to ${isEdit ? 'update' : 'create'} account head.`))
@@ -234,7 +282,7 @@ function AfmChartOfAccountsList() {
     try {
       await afmChartOfAccountsApi.remove(selectedAccountId)
       await showSuccess('Account head deleted successfully.')
-      await loadAccountsForBu(selectedBuId)
+      await reloadAccounts()
       handleResetForm()
     } catch (error) {
       showError(getApiErrorMessage(error, 'Unable to delete account head.'))
@@ -248,21 +296,7 @@ function AfmChartOfAccountsList() {
       {/* Top Controls Bar */}
       <div className="bg-white border border-gray-200 rounded shadow-sm p-3 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          {/* 1. Business Unit Selector */}
-          <select
-            value={selectedBuId}
-            onChange={(e) => setSelectedBuId(e.target.value)}
-            className="h-8 px-2.5 py-1 border border-gray-300 rounded text-xs sm:text-sm text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-          >
-            <option value="">--Select Business Unit--</option>
-            {businessUnits.map((bu) => (
-              <option key={bu.id} value={String(bu.id)}>
-                {bu.businessUnit}
-              </option>
-            ))}
-          </select>
-
-          {/* 2. Search option by Account Head with write facility */}
+          {/* 1. Search option by Account Head with write facility */}
           <div className="w-56 sm:w-72">
             <SearchableSelect
               id="top-account-head-search"
@@ -282,11 +316,11 @@ function AfmChartOfAccountsList() {
             />
           </div>
 
-          {/* 3. View COA Report Button */}
+          {/* 2. View COA Report Button */}
           <button
             type="button"
             onClick={() => setReportModalOpen(true)}
-            disabled={!selectedBuId}
+            disabled={!sessionBusinessUnitId}
             className="h-8 px-3.5 py-1 text-xs font-semibold text-white bg-[#00a8b5] hover:bg-[#00929d] disabled:opacity-50 disabled:cursor-not-allowed rounded shadow-sm flex items-center gap-1.5 transition-colors"
           >
             <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
@@ -328,11 +362,11 @@ function AfmChartOfAccountsList() {
             title={selectedAccountId ? 'Edit Account Head' : 'New Account Head'}
             values={formValues}
             errors={formErrors}
-            businessUnitName={currentBuName}
             parentAccountOptions={parentAccountOptions}
             parentsLoading={loadingAccounts}
             submitting={submitting}
             isEdit={Boolean(selectedAccountId)}
+            auditLog={selectedAccountId ? formValues : null}
             onChange={handleChange}
             onParentChange={handleParentChange}
             onSubmit={handleSubmit}

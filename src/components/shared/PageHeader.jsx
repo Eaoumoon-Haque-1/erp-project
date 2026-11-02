@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Shared reusable UI/workflow component: PageHeader.
  * Sections: reusable helpers, component behavior, accessibility, and rendered UI.
  * Changing this file can affect many features; keep props backward-compatible when possible.
@@ -20,38 +20,41 @@ function PageHeader({ title, subtitle, actionLabel, actionTo, actions = [] }) {
           </Link>
         )}
 
-        {actions.map((action, index) => {
-          if (action.to) {
-            return (
-              <Link
-                key={`${action.label}-${index}`}
-                className={
-                  action.variant === "secondary"
-                    ? "secondary-button"
-                    : "primary-button"
-                }
-                to={action.to}
-              >
-                {action.label}
-              </Link>
-            );
-          }
-
-          return (
-            <button
-              key={`${action.label}-${index}`}
-              type={"button"}
-              className={
-                action.variant === "secondary"
-                  ? "secondary-button"
-                  : "primary-button"
+        {Array.isArray(actions)
+          ? actions.map((action, index) => {
+              if (!action) return null;
+              if (action.to) {
+                return (
+                  <Link
+                    key={`${action.label}-${index}`}
+                    className={
+                      action.variant === "secondary"
+                        ? "secondary-button"
+                        : "primary-button"
+                    }
+                    to={action.to}
+                  >
+                    {action.label}
+                  </Link>
+                );
               }
-              onClick={action.onClick}
-            >
-              {action.label}
-            </button>
-          );
-        })}
+
+              return (
+                <button
+                  key={`${action.label}-${index}`}
+                  type={"button"}
+                  className={
+                    action.variant === "secondary"
+                      ? "secondary-button"
+                      : "primary-button"
+                  }
+                  onClick={action.onClick}
+                >
+                  {action.label}
+                </button>
+              );
+            })
+          : actions}
       </div>
     </header>
   );

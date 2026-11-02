@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
@@ -15,7 +16,6 @@ import { mapBankFromApi, mapBankToApi } from '../data/bankApiMapper'
 const columns = [
   { key: 'BANK_NAME', label: 'Bank Name' },
   { key: 'SHORT_NAME', label: 'Short Name' },
-  { key: 'BUSINESS_UNIT', label: 'Business Unit' },
   {
     key: 'ACTIVE_ACCOUNT_COUNT',
     label: 'Accounts',
@@ -44,24 +44,33 @@ const columns = [
 
 function BankList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
   const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [businessUnits, setBusinessUnits] = useState([])
+  const [loading, setLoading] = useState(Boolean(sessionBusinessUnitId))
 
   useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
+
     let active = true
 
     Promise.all([
-      bankApi.list(),
+      bankApi.list({ buId: sessionBusinessUnitId }),
       businessGroupsApi.list().catch(() => []),
       businessUnitsApi.list().catch(() => []),
     ])
       .then(([banks, groups, units]) => {
         if (!active) return
-        setBusinessUnits(units)
         const groupMap = new Map(groups.map((g) => [String(g.id), g.groupName]))
         const unitMap = new Map(units.map((u) => [String(u.id), u.businessUnit]))
-        setRows(banks.map((bank) => mapBankFromApi(bank, groupMap, unitMap)))
+        const scopedBanks = (banks || []).filter((bank) => {
+          if (String(bank.buId ?? bank.BU_ID ?? '') !== sessionBusinessUnitId) return false
+          const bankBgId = String(bank.bgId ?? bank.BG_ID ?? '')
+          if (sessionGroupId && bankBgId && bankBgId !== sessionGroupId) return false
+          return true
+        })
+        setRows(scopedBanks.map((bank) => mapBankFromApi(bank, groupMap, unitMap)))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Bank records.')
@@ -73,16 +82,19 @@ function BankList() {
     return () => {
       active = false
     }
-  }, [])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
-  const businessUnitOptions = useMemo(
-    () =>
-      businessUnits.map((u) => ({
-        value: String(u.id),
-        label: u.businessUnit,
-      })),
-    [businessUnits],
-  )
+  // Distinct Bank names for the searchable (typeable) dropdown
+  const bankNameOptions = useMemo(() => {
+    const map = new Map()
+    rows.forEach((row) => {
+      const name = String(row.BANK_NAME ?? '').trim()
+      if (name && !map.has(name.toLowerCase())) {
+        map.set(name.toLowerCase(), { value: name, label: name })
+      }
+    })
+    return Array.from(map.values())
+  }, [rows])
 
   const filters = useMemo(
     () => [
@@ -90,19 +102,23 @@ function BankList() {
         key: 'BANK_NAME',
         label: 'Search by Bank Name',
         placeholder: '--Search by Bank Name--',
-        matches: (row, value) =>
-          String(row.BANK_NAME ?? '')
-            .toLowerCase()
-            .includes(value.toLowerCase()) ||
-          String(row.SHORT_NAME ?? '')
-            .toLowerCase()
-            .includes(value.toLowerCase()),
+        options: bankNameOptions,
+        searchable: true,
+        matches: (row, value) => {
+          const query = String(value ?? '').trim().toLowerCase()
+          if (!query) return true
+          return String(row.BANK_NAME ?? '').toLowerCase().includes(query)
+        },
       },
       {
-        key: 'BU_ID',
-        label: 'Search by Business Unit',
-        placeholder: '--Search by Business Unit--',
-        options: businessUnitOptions,
+        key: 'SHORT_NAME',
+        label: 'Search by Short Name',
+        placeholder: 'Search by Short Name',
+        matches: (row, value) => {
+          const query = String(value ?? '').trim().toLowerCase()
+          if (!query) return true
+          return String(row.SHORT_NAME ?? '').toLowerCase().includes(query)
+        },
       },
       {
         key: 'STATUS',
@@ -114,7 +130,7 @@ function BankList() {
         ],
       },
     ],
-    [businessUnitOptions],
+    [bankNameOptions],
   )
 
   const handleDelete = async (row) => {

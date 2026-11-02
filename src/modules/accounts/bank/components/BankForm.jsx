@@ -3,7 +3,6 @@
  * Compact, Chart of Accounts-aligned field sizing and typography.
  */
 import DateInput from '../../../../components/shared/DateInput'
-import { isRequired } from '../../../../config/devFlags'
 import { ACCOUNT_TYPE_OPTIONS } from '../validation/bankValidation'
 
 function FieldError({ id, message }) {
@@ -66,11 +65,6 @@ function BankForm({
   values,
   errors = {},
   rows = [],
-  groupOptions = [],
-  groupsLoading = false,
-  businessUnitOptions = [],
-  unitsLoading = false,
-  businessUnitLocked = false,
   auditLog = null,
   submitLabel = '',
   submitting = false,
@@ -86,68 +80,8 @@ function BankForm({
           SECTION 1: BANK INFORMATION (MASTER DATA)
           ========================================================================= */}
       <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
-        <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5'}>
-          {/* 1. Group Name */}
-          <div>
-            <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'BANK_BG_ID'}>
-              Group Name{isRequired() && <span className={'text-rose-500 ml-0.5'}>*</span>}
-            </label>
-            <select
-              id={'BANK_BG_ID'}
-              name={'BG_ID'}
-              className={inputClass(errors.BG_ID, businessUnitLocked)}
-              value={values.BG_ID || ''}
-              required
-              disabled={groupsLoading || businessUnitLocked}
-              aria-invalid={Boolean(errors.BG_ID)}
-              aria-describedby={errors.BG_ID ? 'BANK_BG_ID-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>
-                {groupsLoading ? 'Loading Groups...' : '--Select Group--'}
-              </option>
-              {groupOptions.map((g) => (
-                <option key={g.value} value={g.value}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-            <FieldError id={'BANK_BG_ID-error'} message={errors.BG_ID} />
-          </div>
-
-          {/* 2. Business Unit */}
-          <div>
-            <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'BANK_BU_ID'}>
-              Business Unit{isRequired() && <span className={'text-rose-500 ml-0.5'}>*</span>}
-            </label>
-            <select
-              id={'BANK_BU_ID'}
-              name={'BU_ID'}
-              className={inputClass(errors.BU_ID, businessUnitLocked || !values.BG_ID)}
-              value={values.BU_ID || ''}
-              required
-              disabled={unitsLoading || businessUnitLocked || !values.BG_ID}
-              aria-invalid={Boolean(errors.BU_ID)}
-              aria-describedby={errors.BU_ID ? 'BANK_BU_ID-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>
-                {!values.BG_ID
-                  ? '--Select Group First--'
-                  : unitsLoading
-                  ? 'Loading Business Units...'
-                  : '--Select Business Unit--'}
-              </option>
-              {businessUnitOptions.map((unit) => (
-                <option key={unit.value} value={unit.value}>
-                  {unit.label}
-                </option>
-              ))}
-            </select>
-            <FieldError id={'BANK_BU_ID-error'} message={errors.BU_ID} />
-          </div>
-
-          {/* 3. Bank Name */}
+        <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5'}>
+          {/* 1. Bank Name */}
           <div>
             <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'BANK_NAME'}>
               Bank Name<span className={'text-rose-500 ml-0.5'}>*</span>
@@ -170,7 +104,7 @@ function BankForm({
             <FieldError id={'BANK_NAME-error'} message={errors.BANK_NAME} />
           </div>
 
-          {/* 4. Short Name */}
+          {/* 2. Short Name */}
           <div>
             <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'SHORT_NAME'}>
               Short Name
@@ -190,7 +124,7 @@ function BankForm({
             <FieldError id={'SHORT_NAME-error'} message={errors.SHORT_NAME} />
           </div>
 
-          {/* 5. is active ? */}
+          {/* 3. is active ? */}
           <div>
             <span className={'block text-xs font-medium text-gray-700 mb-1'}>
               is active ?<span className={'text-rose-500 ml-0.5'}>*</span>

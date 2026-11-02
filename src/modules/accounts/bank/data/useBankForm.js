@@ -74,8 +74,8 @@ export default function useBankForm(
     })
   }
 
-  const validate = () => {
-    const result = validateBank(values, rows)
+  const validate = (overrides = {}) => {
+    const result = validateBank({ ...values, ...overrides }, rows)
     setValues(result.values)
     setRows(result.rows)
     setErrors(result.errors)

@@ -5,8 +5,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 import { usersApi } from '../../../super-admin/user/api/userApi'
 import { afmLookupApi } from '../api/afmLookupApi'
@@ -24,14 +24,14 @@ function AfmLookupEdit() {
   const [submitting, setSubmitting] = useState(false)
   const [original, setOriginal] = useState(null)
   const [auditLog, setAuditLog] = useState(null)
-  const form = useAfmLookupForm(initialLookupTypeValues, [])
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const form = useAfmLookupForm(
+    { ...initialLookupTypeValues, BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId },
+    [],
+  )
   const { reset } = form
-
-  const { groupOptions, businessUnitOptions, groupsLoading, unitsLoading } =
-    useBusinessOptions(form.values.BG_ID, {
-      preserveUnitId: form.values.BU_ID,
-      loadUnits: true,
-    })
 
   useEffect(() => {
     let active = true
@@ -75,8 +75,8 @@ function AfmLookupEdit() {
         const loaded = {
           values: {
             ID: mapped.ID,
-            BG_ID: mapped.BG_ID,
-            BU_ID: mapped.BU_ID,
+            BG_ID: sessionGroupId || mapped.BG_ID,
+            BU_ID: sessionBusinessUnitId || mapped.BU_ID,
             TYPE_NAME: mapped.TYPE_NAME,
             TYPE_CODE: mapped.TYPE_CODE,
             STATUS: mapped.STATUS,
@@ -110,11 +110,14 @@ function AfmLookupEdit() {
     return () => {
       active = false
     }
-  }, [lookupId, navigate, reset])
+  }, [lookupId, navigate, reset, sessionBusinessUnitId, sessionGroupId])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = form.validate()
+    const result = form.validate({
+      BG_ID: sessionGroupId || form.values.BG_ID,
+      BU_ID: sessionBusinessUnitId || form.values.BU_ID,
+    })
     if (!result.isValid) return
 
     setSubmitting(true)
@@ -141,7 +144,10 @@ function AfmLookupEdit() {
       submitLabel={'Update'}
       hideActions
       onSubmit={handleSubmit}
-      onValidate={() => form.validate().isValid}
+      onValidate={() => form.validate({
+        BG_ID: sessionGroupId || form.values.BG_ID,
+        BU_ID: sessionBusinessUnitId || form.values.BU_ID,
+      }).isValid}
       onReset={handleReset}
       submitting={submitting}
     >
@@ -149,10 +155,6 @@ function AfmLookupEdit() {
         values={form.values}
         errors={form.errors}
         rows={form.rows}
-        groupOptions={groupOptions}
-        groupsLoading={groupsLoading}
-        businessUnitOptions={businessUnitOptions}
-        unitsLoading={unitsLoading}
         auditLog={auditLog}
         submitLabel={'Update'}
         submitting={submitting}

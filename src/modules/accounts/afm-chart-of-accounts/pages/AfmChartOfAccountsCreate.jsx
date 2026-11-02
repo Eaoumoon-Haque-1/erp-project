@@ -1,9 +1,9 @@
-﻿/** @file API-backed AFM Chart of Accounts create page. */
+/** @file API-backed AFM Chart of Accounts create page. */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import { afmChartOfAccountsApi } from '../api/afmChartOfAccountsApi'
 import AfmChartOfAccountsForm from '../components/AfmChartOfAccountsForm'
 import { mapAfmChartOfAccountsToApi } from '../data/afmChartOfAccountsApiMapper'
@@ -18,20 +18,26 @@ const listPath = '/accounts/voucher-setup/chart-of-accounts'
 function AfmChartOfAccountsCreate() {
   const navigate = useNavigate()
   const accountCodeRef = useRef(null)
-  const [values, setValues] = useState(initialAfmChartOfAccountsValues)
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
+
+  const [values, setValues] = useState({
+    ...initialAfmChartOfAccountsValues,
+    BG_ID: sessionGroupId,
+    BU_ID: sessionBusinessUnitId,
+  })
   const [existingAccounts, setExistingAccounts] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
-  const { groupOptions, businessUnitOptions, groupsLoading, unitsLoading } = useBusinessOptions(values.BG_ID, {
-    loadUnits: true,
-  })
 
-  // Load existing accounts for validation and parent dropdown
+  // Load existing accounts for validation and parent dropdown scoped to session BU
   useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
     let active = true
-    afmChartOfAccountsApi.list()
+    afmChartOfAccountsApi.listByUnit(sessionBusinessUnitId)
       .then((records) => {
-        if (active) setExistingAccounts(records)
+        if (active) setExistingAccounts(records || [])
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Chart of Accounts.')
@@ -39,17 +45,16 @@ function AfmChartOfAccountsCreate() {
     return () => {
       active = false
     }
-  }, [])
+  }, [sessionBusinessUnitId])
 
-  // Filter available parents by selected BU and ensure they are Title or Control accounts
+  // Filter available parents and ensure they are Title or Control accounts
   const parentAccountOptions = existingAccounts
     .filter((acc) =>
-      String(acc.buId) === String(values.BU_ID) &&
       acc.ledgerHead !== 'Active Account' &&
       String(acc.status ?? 1) === '1',
     )
     .map((acc) => ({
-      value: String(acc.id),
+      value: String(acc.id ?? acc.ID),
       label: `[${acc.accountCode}] ${acc.accountHeadName} (${acc.ledgerHead})`,
       code: acc.accountCode,
       level: acc.level || 1,
@@ -59,19 +64,7 @@ function AfmChartOfAccountsCreate() {
     const { name, type, value, checked } = event.target
     const nextValue = type === 'checkbox' ? (checked ? '1' : '0') : value
 
-    setValues((current) => {
-      const next = { ...current, [name]: nextValue }
-      if (name === 'BG_ID') {
-        next.BU_ID = ''
-        next.PARENT_ACCOUNT_HEAD = ''
-        next.PARENT_ACCOUNT_CODE = ''
-      }
-      if (name === 'BU_ID') {
-        next.PARENT_ACCOUNT_HEAD = ''
-        next.PARENT_ACCOUNT_CODE = ''
-      }
-      return next
-    })
+    setValues((current) => ({ ...current, [name]: nextValue }))
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
@@ -94,7 +87,12 @@ function AfmChartOfAccountsCreate() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAfmChartOfAccounts(values, existingAccounts)
+    const payloadValues = {
+      ...values,
+      BG_ID: sessionGroupId || values.BG_ID,
+      BU_ID: sessionBusinessUnitId || values.BU_ID,
+    }
+    const result = validateAfmChartOfAccounts(payloadValues, existingAccounts)
     setValues(result.values)
     setErrors(result.errors)
     if (!result.isValid) return
@@ -121,7 +119,11 @@ function AfmChartOfAccountsCreate() {
   }
 
   const handleReset = () => {
-    setValues(initialAfmChartOfAccountsValues)
+    setValues({
+      ...initialAfmChartOfAccountsValues,
+      BG_ID: sessionGroupId,
+      BU_ID: sessionBusinessUnitId,
+    })
     setErrors({})
     requestAnimationFrame(() => accountCodeRef.current?.focus())
   }
@@ -138,10 +140,6 @@ function AfmChartOfAccountsCreate() {
       <AfmChartOfAccountsForm
         values={values}
         errors={errors}
-        groupOptions={groupOptions}
-        groupsLoading={groupsLoading}
-        businessUnitOptions={businessUnitOptions}
-        unitsLoading={unitsLoading}
         parentAccountOptions={parentAccountOptions}
         onChange={handleChange}
         onParentChange={handleParentChange}
