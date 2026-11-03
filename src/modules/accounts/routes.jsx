@@ -1,8 +1,4 @@
 import { Navigate } from 'react-router-dom'
-import ChartOfAccountsCreate from './chart-of-accounts/pages/ChartOfAccountsCreate'
-import ChartOfAccountsEdit from './chart-of-accounts/pages/ChartOfAccountsEdit'
-import ChartOfAccountsList from './chart-of-accounts/pages/ChartOfAccountsList'
-import ChartOfAccountView from './chart-of-accounts/pages/ChartOfAccountView'
 import AfmChartOfAccountsCreate from './afm-chart-of-accounts/pages/AfmChartOfAccountsCreate'
 import AfmChartOfAccountsEdit from './afm-chart-of-accounts/pages/AfmChartOfAccountsEdit'
 import AfmChartOfAccountsList from './afm-chart-of-accounts/pages/AfmChartOfAccountsList'
@@ -31,21 +27,23 @@ import CalendarCreate from './calendar/pages/CalendarCreate'
 import CalendarEdit from './calendar/pages/CalendarEdit'
 import CalendarList from './calendar/pages/CalendarList'
 import CalendarView from './calendar/pages/CalendarView'
-import PeriodCreate from './period/pages/PeriodCreate'
+import OpenPeriodCreate from './period/pages/OpenPeriodCreate'
+import ClosePeriodCreate from './period/pages/ClosePeriodCreate'
 import PeriodEdit from './period/pages/PeriodEdit'
 import PeriodList from './period/pages/PeriodList'
 import PeriodView from './period/pages/PeriodView'
+import VoucherList from './voucher/pages/VoucherList'
+import VoucherCreate from './voucher/pages/VoucherCreate'
+import VoucherEdit from './voucher/pages/VoucherEdit'
+import VoucherView from './voucher/pages/VoucherView'
 
 export const accountsRoutes = [
   // Fallbacks & shortcuts
   { path: 'accounts', element: <Navigate to="/accounts/voucher-setup/bank" replace /> },
   { path: 'accounts/voucher-setup', element: <Navigate to="/accounts/voucher-setup/bank" replace /> },
 
-  // Legacy / Backup Chart of Accounts
-  { path: 'accounts/chart-of-accounts', element: <ChartOfAccountsList /> },
-  { path: 'accounts/chart-of-accounts/create', element: <ChartOfAccountsCreate /> },
-  { path: 'accounts/chart-of-accounts/:accountId/edit', element: <ChartOfAccountsEdit /> },
-  { path: 'accounts/chart-of-accounts/:accountId/view', element: <ChartOfAccountView /> },
+  // AFM Chart of Accounts shortcut
+  { path: 'accounts/chart-of-accounts', element: <Navigate to="/accounts/voucher-setup/chart-of-accounts" replace /> },
 
   // Voucher Setup -> Chart of accounts (AFM Chart of Accounts)
   { path: 'accounts/voucher-setup/chart-of-accounts', element: <AfmChartOfAccountsList /> },
@@ -93,9 +91,13 @@ export const accountsRoutes = [
   { path: 'accounts/voucher-setup/calendar/:calendarId/edit', element: <CalendarEdit /> },
   { path: 'accounts/voucher-setup/calendar/:calendarId/view', element: <CalendarView /> },
 
-  // Voucher Setup -> Accounting Period Open
+  // Voucher Setup -> Accounting Period Open / Close
   { path: 'accounts/voucher-setup/period', element: <PeriodList /> },
-  { path: 'accounts/voucher-setup/period/create', element: <PeriodCreate /> },
+  { path: 'accounts/voucher-setup/period/create', element: <OpenPeriodCreate /> },
+  { path: 'accounts/voucher-setup/period/open', element: <OpenPeriodCreate /> },
+  { path: 'accounts/voucher-setup/period/open/create', element: <OpenPeriodCreate /> },
+  { path: 'accounts/voucher-setup/period/close', element: <ClosePeriodCreate /> },
+  { path: 'accounts/voucher-setup/period/close/create', element: <ClosePeriodCreate /> },
   { path: 'accounts/voucher-setup/period/:periodId/edit', element: <PeriodEdit /> },
   { path: 'accounts/voucher-setup/period/:periodId/view', element: <PeriodView /> },
 
@@ -157,13 +159,31 @@ export const accountsRoutes = [
   { path: 'accounts/accounting-calendar', element: <CalendarList /> },
   { path: 'accounts/accounting-calendar/create', element: <CalendarCreate /> },
 
-  // Direct alias routes for Accounting Period Open
+  // Direct alias routes for Accounting Period Open / Close
   { path: 'accounts/period', element: <PeriodList /> },
-  { path: 'accounts/period/create', element: <PeriodCreate /> },
+  { path: 'accounts/period/create', element: <OpenPeriodCreate /> },
+  { path: 'accounts/period/open', element: <OpenPeriodCreate /> },
+  { path: 'accounts/period/open/create', element: <OpenPeriodCreate /> },
+  { path: 'accounts/period/close', element: <ClosePeriodCreate /> },
+  { path: 'accounts/period/close/create', element: <ClosePeriodCreate /> },
   { path: 'accounts/period/:periodId/edit', element: <PeriodEdit /> },
   { path: 'accounts/period/:periodId/view', element: <PeriodView /> },
   { path: 'accounts/period-open', element: <PeriodList /> },
-  { path: 'accounts/period-open/create', element: <PeriodCreate /> },
+  { path: 'accounts/period-open/create', element: <OpenPeriodCreate /> },
   { path: 'accounts/accounting-period-open', element: <PeriodList /> },
-  { path: 'accounts/accounting-period-open/create', element: <PeriodCreate /> },
+  { path: 'accounts/accounting-period-open/create', element: <OpenPeriodCreate /> },
+
+  // Account Voucher (AFM_VOUCHER, AFM_VOUCHER_DETAIL, AFM_VOUCHER_ATTACH)
+  { path: 'accounts/voucher', element: <VoucherList /> },
+  { path: 'accounts/voucher/create', element: <VoucherCreate /> },
+  { path: 'accounts/voucher/:voucherId/edit', element: <VoucherEdit /> },
+  { path: 'accounts/voucher/:voucherId/view', element: <VoucherView /> },
+  { path: 'accounts/vouchers', element: <VoucherList /> },
+  { path: 'accounts/vouchers/create', element: <VoucherCreate /> },
+  { path: 'accounts/vouchers/:voucherId/edit', element: <VoucherEdit /> },
+  { path: 'accounts/vouchers/:voucherId/view', element: <VoucherView /> },
+  { path: 'accounts/voucher-setup/voucher', element: <VoucherList /> },
+  { path: 'accounts/voucher-setup/voucher/create', element: <VoucherCreate /> },
+  { path: 'accounts/voucher-setup/voucher/:voucherId/edit', element: <VoucherEdit /> },
+  { path: 'accounts/voucher-setup/voucher/:voucherId/view', element: <VoucherView /> },
 ]

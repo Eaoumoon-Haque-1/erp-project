@@ -220,6 +220,7 @@ function ListPage({
   title,
   createLabel,
   createTo,
+  actions,
   filters = [],
   columns,
   rows = [],
@@ -283,7 +284,7 @@ function ListPage({
   return (
     <ListActionContext.Provider value={getEntityNameFromTitle(title)}>
     <div className={'erp-list-page'}>
-      <PageHeader title={title} actionLabel={createLabel} actionTo={createTo} />
+      <PageHeader title={title} actionLabel={createLabel} actionTo={createTo} actions={actions} />
 
       <section className={'erp-form-card'}>
       {/* Filters render as searchable comboboxes, selects, or search inputs. */}
@@ -317,7 +318,16 @@ function ListPage({
                 ? (filter.disabledPlaceholder || '--Select Bank Name First--')
                 : filter.placeholder)
 
-            return filter.searchable && filter.options && filter.matches && Array.isArray(options) ? (
+            return filter.render ? (
+              filter.render({
+                key: filter.key,
+                value: filterValues[filter.key] ?? '',
+                onChange: (val) => updateFilter(filter.key, val),
+                disabled,
+                placeholder,
+                label: filter.label,
+              })
+            ) : filter.searchable && filter.options && filter.matches && Array.isArray(options) ? (
               <SearchableFilterSelect
                 key={filter.key}
                 filter={{ ...filter, options, placeholder }}
@@ -354,7 +364,7 @@ function ListPage({
             ) : (
               <input
                 key={filter.key}
-                type={'search'}
+                type={filter.type || 'search'}
                 className={'erp-list-control'}
                 placeholder={placeholder}
                 aria-label={filter.label}

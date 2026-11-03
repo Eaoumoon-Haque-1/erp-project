@@ -12,14 +12,15 @@ export const PERIOD_STATUS_OPTIONS = [
 export const initialPeriodValues = {
   BG_ID: '',
   BU_ID: '',
-  PERIOD_YEAR: String(new Date().getFullYear()),
+  PERIOD_YEAR: '',
   PERIOD_NAME: '',
   PERIOD_STATUS: 'Open',
+  AFM_CALENDAR_MONTH_ID: '',
   STATUS: '1',
 }
 
 /**
- * Validates Accounting Period Open form values.
+ * Validates Accounting Period form values.
  * @param {object} values Form values
  * @param {object} sessionValues Session bgId and buId
  * @returns {{ errors: object, isValid: boolean }}
@@ -51,4 +52,3 @@ export function validatePeriod(values, sessionValues = {}) {
     isValid: Object.keys(errors).length === 0,
   }
 }
-

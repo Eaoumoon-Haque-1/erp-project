@@ -13,7 +13,7 @@ function PageHeader({ title, subtitle, actionLabel, actionTo, actions = [] }) {
         {subtitle && <p className={"erp-page-subtitle"}>{subtitle}</p>}
       </div>
 
-      <div className={"erp-header-actions"}>
+      <div className={"erp-header-actions flex items-center gap-3"}>
         {actionLabel && actionTo && (
           <Link className={"primary-button"} to={actionTo}>
             {actionLabel}

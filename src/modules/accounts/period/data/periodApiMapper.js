@@ -63,6 +63,12 @@ export function mapPeriodFromApi(
     PERIOD_YEAR: item.periodYear ?? item.PERIOD_YEAR ?? '',
     PERIOD_NAME: item.periodName ?? item.PERIOD_NAME ?? '',
     PERIOD_STATUS: item.periodStatus ?? item.PERIOD_STATUS ?? 'Open',
+    AFM_CALENDAR_MONTH_ID:
+      item.afmCalendarMonthId != null
+        ? String(item.afmCalendarMonthId)
+        : item.AFM_CALENDAR_MONTH_ID != null
+        ? String(item.AFM_CALENDAR_MONTH_ID)
+        : '',
     STATUS:
       item.status !== undefined && item.status !== null ? String(item.status) : '1',
     CREATED_USER_ID: createdUserId !== '' ? String(createdUserId) : '',
@@ -115,10 +121,13 @@ export function mapPeriodToApi(values = {}) {
     periodYear: String(values.PERIOD_YEAR ?? '').trim(),
     periodName: String(values.PERIOD_NAME ?? '').trim(),
     periodStatus: String(values.PERIOD_STATUS ?? 'Open').trim(),
+    afmCalendarMonthId:
+      values.AFM_CALENDAR_MONTH_ID != null && values.AFM_CALENDAR_MONTH_ID !== ''
+        ? Number(values.AFM_CALENDAR_MONTH_ID)
+        : null,
     status:
       values.STATUS !== undefined && values.STATUS !== null
         ? Number(values.STATUS)
         : 1,
   }
 }
-
