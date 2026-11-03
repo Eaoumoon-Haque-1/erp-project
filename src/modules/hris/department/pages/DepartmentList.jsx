@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { departmentGroupsApi } from '../../department-group/api/departmentGroupApi'
 import { departmentsApi } from '../api/departmentApi'
 import { mapDepartmentFromApi, mapDepartmentToApi } from '../data/departmentApiMapper'
 
@@ -40,24 +41,43 @@ function DepartmentList() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const hasSessionScope = Boolean(sessionGroupId && sessionBusinessUnitId)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!sessionGroupId) return undefined
+    if (!hasSessionScope) return undefined
 
     let active = true
-    departmentsApi.list(sessionGroupId)
-      .then((departments) => {
+    Promise.all([
+      departmentsApi.list(sessionGroupId),
+      departmentGroupsApi.list(),
+    ])
+      .then(([departments, assignments]) => {
         if (!active) return
-        setRows(departments.map((department) => mapDepartmentFromApi(department)).sort(bySortOrder))
+
+        const assignedDepartmentIds = new Set(
+          assignments
+            .filter((assignment) =>
+              String(assignment.buId ?? '') === sessionBusinessUnitId
+              && Number(assignment.status ?? 1) === 1)
+            .map((assignment) => String(assignment.deptId ?? '')),
+        )
+
+        setRows(
+          departments
+            .filter((department) => assignedDepartmentIds.has(String(department.id ?? '')))
+            .map((department) => mapDepartmentFromApi(department))
+            .sort(bySortOrder),
+        )
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Departments.')
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [sessionGroupId])
+  }, [hasSessionScope, sessionBusinessUnitId, sessionGroupId])
 
   const handleDelete = async (row) => {
     try {
@@ -80,7 +100,7 @@ function DepartmentList() {
   }
 
   return (
-    <ListPage title={'Department List'} createLabel={'New'} createTo={`${basePath}/create`} filters={filters} columns={columns} rows={rows} loading={loading} renderActions={(row) => (
+    <ListPage title={'Department List'} createLabel={'New'} createTo={`${basePath}/create`} filters={filters} columns={columns} rows={hasSessionScope ? rows : []} loading={hasSessionScope && loading} renderActions={(row) => (
       <ListRowActions row={row} onView={() => navigate(`${basePath}/${row.ID}/view`)} onEdit={() => navigate(`${basePath}/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />
     )} />
   )

@@ -2728,19 +2728,71 @@
     color: #dc2626;
   }
 
-  .erp-record-view-audit {
+  .erp-audit-log {
     margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #d8dee5;
+    padding: 14px 16px 16px;
+    border: 1px solid #dce2e8;
+    border-radius: 5px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
   }
 
-  .erp-record-view-audit h2 {
-    margin: 0 0 16px;
-    padding: 8px;
-    background: #ccfbf1;
+  .erp-audit-log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edf0f3;
+  }
+
+  .erp-audit-log-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
     color: var(--color-app-text);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .erp-audit-log-header h2 > span {
+    width: 8px;
+    height: 22px;
+    border-radius: 4px;
+    background: #009688;
+  }
+
+  .erp-audit-log-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0;
+  }
+
+  .erp-audit-log-grid > div {
+    min-width: 0;
+    min-height: 68px;
+    padding: 11px 12px;
+    border: 1px solid #e5e9ee;
+    border-radius: 5px;
+    background: #fbfcfd;
+  }
+
+  .erp-audit-log-grid dt {
+    margin-bottom: 3px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .erp-audit-log-grid dd {
+    margin: 0;
+    color: #111827;
     font-size: 14px;
     font-weight: 600;
+    overflow-wrap: anywhere;
   }
 
   .erp-view-status-active,
@@ -2765,10 +2817,18 @@
     .erp-record-view-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    .erp-audit-log-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 767px) {
     .erp-record-view-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .erp-audit-log-grid {
       grid-template-columns: 1fr;
     }
   }

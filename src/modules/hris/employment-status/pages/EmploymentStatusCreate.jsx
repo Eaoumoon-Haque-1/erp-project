@@ -32,18 +32,21 @@ function EmploymentStatusCreate() {
 
   useEffect(() => {
     let active = true
-    employmentStatusesApi.list()
+    employmentStatusesApi.list(sessionBusinessUnitId)
       .then((records) => {
         if (!active) return
-        setExistingRecords(records)
+        const scopedRecords = records.filter((record) =>
+          String(record.bgId ?? '') === sessionGroupId
+          && String(record.buId ?? '') === sessionBusinessUnitId)
+        setExistingRecords(scopedRecords)
         setValues((current) => ({
           ...current,
-          SORT_ORDER: getNextSortOrder(records),
+          SORT_ORDER: getNextSortOrder(scopedRecords),
         }))
       })
       .catch((error) => getApiErrorMessage(error, 'Unable to load existing Employment Statuses.'))
     return () => { active = false }
-  }, [])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target

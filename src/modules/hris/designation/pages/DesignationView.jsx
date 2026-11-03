@@ -12,7 +12,7 @@ async function loadDesignation(id) {
     businessGroupsApi.list(),
   ])
   const groupNames = new Map(groups.map((group) => [String(group.id), group.groupName]))
-  return mapDesignationFromApi(designation, groupNames)
+  return { ...designation, ...mapDesignationFromApi(designation, groupNames) }
 }
 
 const viewConfig = {

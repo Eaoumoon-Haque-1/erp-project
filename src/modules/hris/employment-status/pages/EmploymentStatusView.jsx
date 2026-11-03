@@ -27,7 +27,10 @@ const auditFields = [
 function EmploymentStatusView() {
   return <ApiRecordViewPage title={'Employment Status View'} param={'employmentStatusId'}
     listTo={basePath} editTo={(id) => `${basePath}/${id}/edit`}
-    loader={async (id) => mapEmploymentStatusFromApi(await employmentStatusesApi.get(id))}
+    loader={async (id) => {
+      const record = await employmentStatusesApi.get(id)
+      return { ...record, ...mapEmploymentStatusFromApi(record) }
+    }}
     fields={fields} auditFields={auditFields} />
 }
 

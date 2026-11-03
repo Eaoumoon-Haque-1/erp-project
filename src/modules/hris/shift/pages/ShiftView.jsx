@@ -9,7 +9,7 @@ const basePath = '/hris/attendance-settings/shift'
 async function loadShift(id) {
   const [record, units] = await Promise.all([shiftsApi.get(id), businessUnitsApi.list()])
   const names = new Map(units.map((unit) => [String(unit.id), unit.businessUnit]))
-  return mapShiftFromApi(record, names)
+  return { ...record, ...mapShiftFromApi(record, names) }
 }
 
 const viewConfig = {

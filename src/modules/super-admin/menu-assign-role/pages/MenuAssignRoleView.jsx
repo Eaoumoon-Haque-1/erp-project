@@ -23,7 +23,7 @@ const viewConfig = {
       permissionsApi.list(),
     ])
     const lookups = buildRoleDetailLookups({ roles, modules, menus, permissions })
-    return mapRoleDetailFromApi(detail, lookups)
+    return { ...detail, ...mapRoleDetailFromApi(detail, lookups) }
   },
   fields: [
     { label: 'Role Name', key: 'ROLE_NAME' },

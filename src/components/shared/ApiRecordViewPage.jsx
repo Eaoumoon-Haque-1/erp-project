@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import PageHeader from './PageHeader'
+import AuditLogSection from './AuditLogSection'
 import { getApiErrorMessage } from '../../api/errors'
 import { getImageSource } from '../../utils/imageDataUrl'
 
@@ -37,7 +38,7 @@ function FieldValue({ field, record }) {
   return <span>{displayValue(value)}</span>
 }
 
-function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields, auditFields = [] }) {
+function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields }) {
   const params = useParams()
   const id = params[param]
   const loadRecord = useCallback(() => loader(id), [id, loader])
@@ -45,7 +46,6 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields, audit
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const editPath = editTo && record ? editTo(id, record) : ''
-  const visibleAuditFields = record ? auditFields : []
 
   useEffect(() => {
     let active = true
@@ -85,19 +85,7 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields, audit
             ))}
           </dl>
         )}
-        {!loading && !error && record && visibleAuditFields.length > 0 && (
-          <div className={'erp-record-view-audit'}>
-            <h2>Audit Information</h2>
-            <dl className={'erp-record-view-grid'}>
-              {visibleAuditFields.map((field) => (
-                <div key={field.label}>
-                  <dt>{field.label}</dt>
-                  <dd><FieldValue field={field} record={record} /></dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        )}
+        {!loading && !error && record && <AuditLogSection record={record} />}
       </section>
     </div>
   )

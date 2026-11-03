@@ -9,7 +9,7 @@ const basePath = '/asset/asset-item-information'
 async function loadAssetItem(id) {
   const record = await assetItemsApi.get(id)
   const references = await loadAssetItemReferences(record.buId, record.bgId)
-  return mapAssetItemFromApi(record, references)
+  return { ...record, ...mapAssetItemFromApi(record, references) }
 }
 
 function formatAuditDateTime(value) {

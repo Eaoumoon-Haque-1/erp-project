@@ -12,7 +12,7 @@ async function loadDepartment(id) {
     businessGroupsApi.list(),
   ])
   const groupNames = new Map(groups.map((group) => [String(group.id), group.groupName]))
-  return mapDepartmentFromApi(department, groupNames)
+  return { ...department, ...mapDepartmentFromApi(department, groupNames) }
 }
 
 const viewConfig = {

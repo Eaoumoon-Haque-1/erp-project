@@ -13,11 +13,14 @@ async function loadOfficeCalendar(id) {
     officeCalendarsApi.get(id),
     loadOfficeCalendarReferences(),
   ])
-  return mapOfficeCalendarFromApi(
-    record,
-    references.businessUnitNames,
-    references.eventTypeNames,
-  )
+  return {
+    ...record,
+    ...mapOfficeCalendarFromApi(
+      record,
+      references.businessUnitNames,
+      references.eventTypeNames,
+    ),
+  }
 }
 
 const viewConfig = {

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Degree &amp; Education Mapping - API Guide</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #1f2937;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    h1 { margin: 0 0 5px; color: #006b64; font-size: 22px; }
+    h2 { margin: 18px 0 7px; color: #006b64; font-size: 15px; }
+    p { margin: 5px 0; }
+    .subtitle { color: #64748b; }
+    .note {
+      margin: 14px 0;
+      padding: 10px 12px;
+      border-left: 4px solid #009688;
+      background: #eefaf8;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { padding: 7px 8px; border: 1px solid #cbd5e1; text-align: left; }
+    th { background: #e7f5f4; }
+    code {
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: #f1f5f9;
+      font-family: Consolas, monospace;
+    }
+    pre {
+      margin: 8px 0;
+      padding: 10px 12px;
+      overflow-wrap: anywhere;
+      border: 1px solid #dbe4ea;
+      border-radius: 4px;
+      background: #f8fafc;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+    }
+    ol { margin: 6px 0; padding-left: 20px; }
+    .footer { margin-top: 20px; color: #64748b; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Degree &amp; Education Mapping</h1>
+  <p class="subtitle">Simple API explanation for frontend and backend developers</p>
+
+  <div class="note">
+    There is no separate Degree–Education Mapping controller. A degree is connected to an education level by saving the education level's ID in the Degree record as <code>levelOfEduId</code>.
+  </div>
+
+  <h2>1. APIs used by the screen</h2>
+  <table>
+    <thead>
+      <tr><th>Purpose</th><th>API</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Load the Education Level dropdown</td><td><code>GET /api/v1/level-of-educations</code></td></tr>
+      <tr><td>Load all degrees</td><td><code>GET /api/v1/degrees</code></td></tr>
+      <tr><td>Load degrees for one Education Level</td><td><code>GET /api/v1/degrees?levelOfEduId={levelId}</code></td></tr>
+      <tr><td>Create a degree mapping</td><td><code>POST /api/v1/degrees</code></td></tr>
+      <tr><td>View one degree</td><td><code>GET /api/v1/degrees/{id}</code></td></tr>
+      <tr><td>Update one degree</td><td><code>PUT /api/v1/degrees/{id}</code></td></tr>
+      <tr><td>Delete one degree</td><td><code>DELETE /api/v1/degrees/{id}</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. How the mapping works</h2>
+  <ol>
+    <li>The frontend loads the available Education Levels.</li>
+    <li>The user selects an Education Level, such as “Bachelor”.</li>
+    <li>The frontend sends that level's ID as <code>levelOfEduId</code> when saving the degree.</li>
+    <li>The backend stores the Degree and its relationship to the selected Education Level in the same Degree record.</li>
+  </ol>
+
+  <h2>3. Example create request</h2>
+  <pre>POST /api/v1/degrees
+Content-Type: application/json
+
+{
+  "levelOfEduId": 1,
+  "degreeName": "Bachelor of Science",
+  "shortName": "BSc",
+  "sortOrder": 1,
+  "status": 1
+}</pre>
+
+  <h2>4. Important scope limitation</h2>
+  <p>The current Swagger contracts for Education Level and Degree do not contain <code>bgId</code> or <code>buId</code>. Therefore, these records are currently global and cannot be filtered by the logged-in user's Business Unit.</p>
+
+  <p class="footer">Prepared from the current Swagger contract on 3 November 2026.</p>
+</body>
+</html>

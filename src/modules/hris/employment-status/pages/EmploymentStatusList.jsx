@@ -28,29 +28,43 @@ const columns = [
   ) },
 ]
 
+function bySortOrder(left, right) {
+  const leftOrder = Number(left.SORT_ORDER)
+  const rightOrder = Number(right.SORT_ORDER)
+  const safeLeftOrder = Number.isFinite(leftOrder) ? leftOrder : Number.POSITIVE_INFINITY
+  const safeRightOrder = Number.isFinite(rightOrder) ? rightOrder : Number.POSITIVE_INFINITY
+
+  return safeLeftOrder - safeRightOrder
+    || left.STATUS_NAME.localeCompare(right.STATUS_NAME)
+}
+
 function EmploymentStatusList() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
   const sessionBusinessUnitId = String(session?.buId ?? '')
+  const hasSessionScope = Boolean(sessionGroupId && sessionBusinessUnitId)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!hasSessionScope) return undefined
+
     let active = true
-    employmentStatusesApi.list()
+    employmentStatusesApi.list(sessionBusinessUnitId)
       .then((records) => {
         if (!active) return
-        setRows(records.map((record) => ({
-          ...mapEmploymentStatusFromApi(record),
-          BG_ID: String(record.bgId ?? sessionGroupId),
-          BU_ID: String(record.buId ?? sessionBusinessUnitId),
-        })))
+        setRows(records
+          .filter((record) =>
+            String(record.bgId ?? '') === sessionGroupId
+            && String(record.buId ?? '') === sessionBusinessUnitId)
+          .map((record) => mapEmploymentStatusFromApi(record))
+          .sort(bySortOrder))
       })
       .catch((error) => getApiErrorMessage(error, 'Unable to load Employment Statuses.'))
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [sessionBusinessUnitId, sessionGroupId])
+  }, [hasSessionScope, sessionBusinessUnitId, sessionGroupId])
 
   const handleDelete = async (row) => {
     try {
@@ -86,7 +100,7 @@ function EmploymentStatusList() {
 
   return (
     <ListPage title={'Employment Status List'} createLabel={'New'} createTo={`${basePath}/create`}
-      filters={filters} columns={columns} rows={rows} rowKey={'ID'} loading={loading}
+      filters={filters} columns={columns} rows={hasSessionScope ? rows : []} rowKey={'ID'} loading={hasSessionScope && loading}
       renderActions={(row) => <ListRowActions row={row} entityName={'Employment Status'}
         onView={() => navigate(`${basePath}/${row.ID}/view`)}
         onEdit={() => navigate(`${basePath}/${row.ID}/edit`)}

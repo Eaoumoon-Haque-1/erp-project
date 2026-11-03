@@ -17,10 +17,13 @@ async function loadOfficeNotice(id) {
     officeNoticesApi.get(id),
     businessUnitsApi.list(),
   ])
-  return mapOfficeNoticeFromApi(
-    record,
-    new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
-  )
+  return {
+    ...record,
+    ...mapOfficeNoticeFromApi(
+      record,
+      new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
+    ),
+  }
 }
 
 const fields = [

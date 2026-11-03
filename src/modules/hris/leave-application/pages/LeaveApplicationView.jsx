@@ -18,7 +18,7 @@ async function loadLeaveApplication(id) {
     leaveApplicationsApi.get(id),
     loadLeaveApplicationReferences(),
   ])
-  return mapLeaveApplicationFromApi(record, references)
+  return { ...record, ...mapLeaveApplicationFromApi(record, references) }
 }
 
 const fields = [

@@ -15,11 +15,14 @@ async function loadLeaveAllocation(id) {
     employmentTypesApi.list(),
     leaveTypesApi.list(),
   ])
-  return mapLeaveAllocationFromApi(record, {
-    businessUnitNames: new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
-    employmentTypeNames: new Map(employmentTypes.map((type) => [String(type.id), type.typeName])),
-    leaveCategoryNames: new Map(leaveTypes.map((type) => [String(type.id), type.typeName])),
-  })
+  return {
+    ...record,
+    ...mapLeaveAllocationFromApi(record, {
+      businessUnitNames: new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
+      employmentTypeNames: new Map(employmentTypes.map((type) => [String(type.id), type.typeName])),
+      leaveCategoryNames: new Map(leaveTypes.map((type) => [String(type.id), type.typeName])),
+    }),
+  }
 }
 
 const viewConfig = {

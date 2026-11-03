@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { designationGroupsApi } from '../../designation-group/api/designationGroupApi'
 import { designationsApi } from '../api/designationApi'
 import { mapDesignationFromApi, mapDesignationToApi } from '../data/designationApiMapper'
 
@@ -40,24 +41,43 @@ function DesignationList() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const hasSessionScope = Boolean(sessionGroupId && sessionBusinessUnitId)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!sessionGroupId) return undefined
+    if (!hasSessionScope) return undefined
 
     let active = true
-    designationsApi.list(sessionGroupId)
-      .then((designations) => {
+    Promise.all([
+      designationsApi.list(sessionGroupId),
+      designationGroupsApi.list(),
+    ])
+      .then(([designations, assignments]) => {
         if (!active) return
-        setRows(designations.map((designation) => mapDesignationFromApi(designation)).sort(bySortOrder))
+
+        const assignedDesignationIds = new Set(
+          assignments
+            .filter((assignment) =>
+              String(assignment.buId ?? '') === sessionBusinessUnitId
+              && Number(assignment.status ?? 1) === 1)
+            .map((assignment) => String(assignment.desigId ?? '')),
+        )
+
+        setRows(
+          designations
+            .filter((designation) => assignedDesignationIds.has(String(designation.id ?? '')))
+            .map((designation) => mapDesignationFromApi(designation))
+            .sort(bySortOrder),
+        )
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Designations.')
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [sessionGroupId])
+  }, [hasSessionScope, sessionBusinessUnitId, sessionGroupId])
 
   const handleDelete = async (row) => {
     try {
@@ -80,7 +100,7 @@ function DesignationList() {
   }
 
   return (
-    <ListPage title={'Designation List'} createLabel={'New'} createTo={`${basePath}/create`} filters={filters} columns={columns} rows={rows} loading={loading} renderActions={(row) => (
+    <ListPage title={'Designation List'} createLabel={'New'} createTo={`${basePath}/create`} filters={filters} columns={columns} rows={hasSessionScope ? rows : []} loading={hasSessionScope && loading} renderActions={(row) => (
       <ListRowActions row={row} onView={() => navigate(`${basePath}/${row.ID}/view`)} onEdit={() => navigate(`${basePath}/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />
     )} />
   )

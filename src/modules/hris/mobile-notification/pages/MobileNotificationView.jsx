@@ -15,7 +15,7 @@ async function loadRecord(id) {
   const [record, references] = await Promise.all([
     mobileNotificationsApi.get(id), loadMobileNotificationReferences(),
   ])
-  return mapMobileNotificationFromApi(record, references)
+  return { ...record, ...mapMobileNotificationFromApi(record, references) }
 }
 
 const fields = [

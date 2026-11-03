@@ -19,7 +19,7 @@ function formatAuditDateTime(value) {
 async function loadDepreciationCategory(id) {
   const record = await depreciationCategoriesApi.get(id)
   const references = await loadDepreciationCategoryReferences(record.buId, record.bgId)
-  return mapDepreciationCategoryFromApi(record, references)
+  return { ...record, ...mapDepreciationCategoryFromApi(record, references) }
 }
 
 const viewConfig = {

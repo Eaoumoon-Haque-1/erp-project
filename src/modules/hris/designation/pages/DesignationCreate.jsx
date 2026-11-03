@@ -5,6 +5,7 @@ import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { getNextSortOrder } from '../../../../utils/sortOrder'
+import { designationGroupsApi } from '../../designation-group/api/designationGroupApi'
 import { designationsApi } from '../api/designationApi'
 import DesignationForm from '../components/DesignationForm'
 import { mapDesignationToApi } from '../data/designationApiMapper'
@@ -16,31 +17,49 @@ function DesignationCreate() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const designationNameRef = useRef(null)
   const [values, setValues] = useState(() => ({
     ...initialDesignationValues,
     BG_ID: sessionGroupId,
   }))
   const [existingDesignations, setExistingDesignations] = useState([])
+  const [businessUnitDesignations, setBusinessUnitDesignations] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     let active = true
-    designationsApi.list(sessionGroupId)
-      .then((records) => {
+    Promise.all([
+      designationsApi.list(sessionGroupId),
+      designationGroupsApi.list(),
+    ])
+      .then(([records, assignments]) => {
         if (!active) return
+
+        const assignedDesignationIds = new Set(
+          assignments
+            .filter((assignment) =>
+              String(assignment.buId ?? '') === sessionBusinessUnitId
+              && Number(assignment.status ?? 1) === 1)
+            .map((assignment) => String(assignment.desigId ?? '')),
+        )
+        const scopedRecords = records.filter((record) =>
+          assignedDesignationIds.has(String(record.id ?? '')),
+        )
+
         setExistingDesignations(records)
+        setBusinessUnitDesignations(scopedRecords)
         setValues((current) => ({
           ...current,
-          SORT_ORDER: getNextSortOrder(records),
+          SORT_ORDER: getNextSortOrder(scopedRecords),
         }))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load existing Designations.')
       })
     return () => { active = false }
-  }, [sessionGroupId])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -78,7 +97,7 @@ function DesignationCreate() {
     setValues({
       ...initialDesignationValues,
       BG_ID: sessionGroupId,
-      SORT_ORDER: getNextSortOrder(existingDesignations),
+      SORT_ORDER: getNextSortOrder(businessUnitDesignations),
     })
     setErrors({})
     requestAnimationFrame(() => designationNameRef.current?.focus())

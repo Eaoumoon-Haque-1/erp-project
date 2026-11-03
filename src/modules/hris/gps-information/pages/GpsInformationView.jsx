@@ -11,10 +11,13 @@ async function loadGpsInformation(id) {
     gpsInformationsApi.get(id),
     businessUnitsApi.list(),
   ])
-  return mapGpsInformationFromApi(
-    record,
-    new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
-  )
+  return {
+    ...record,
+    ...mapGpsInformationFromApi(
+      record,
+      new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
+    ),
+  }
 }
 
 const viewConfig = {

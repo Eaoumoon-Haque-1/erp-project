@@ -8,7 +8,10 @@ const basePath = '/hris/leave-settings/leave-type'
 
 async function loadLeaveType(id) {
   const [record, groups] = await Promise.all([leaveTypesApi.get(id), businessGroupsApi.list()])
-  return mapLeaveTypeFromApi(record, new Map(groups.map((group) => [String(group.id), group.groupName])))
+  return {
+    ...record,
+    ...mapLeaveTypeFromApi(record, new Map(groups.map((group) => [String(group.id), group.groupName]))),
+  }
 }
 
 const viewConfig = {

@@ -11,10 +11,13 @@ async function loadWifiInformation(id) {
     wifiInformationsApi.get(id),
     businessUnitsApi.list(),
   ])
-  return mapWifiInformationFromApi(
-    record,
-    new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
-  )
+  return {
+    ...record,
+    ...mapWifiInformationFromApi(
+      record,
+      new Map(businessUnits.map((unit) => [String(unit.id), unit.businessUnit])),
+    ),
+  }
 }
 
 const viewConfig = {

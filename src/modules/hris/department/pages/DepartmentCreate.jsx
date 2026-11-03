@@ -5,6 +5,7 @@ import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { getNextSortOrder } from '../../../../utils/sortOrder'
+import { departmentGroupsApi } from '../../department-group/api/departmentGroupApi'
 import { departmentsApi } from '../api/departmentApi'
 import DepartmentForm from '../components/DepartmentForm'
 import { mapDepartmentToApi } from '../data/departmentApiMapper'
@@ -16,31 +17,49 @@ function DepartmentCreate() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? '')
   const departmentNameRef = useRef(null)
   const [values, setValues] = useState(() => ({
     ...initialDepartmentValues,
     BG_ID: sessionGroupId,
   }))
   const [existingDepartments, setExistingDepartments] = useState([])
+  const [businessUnitDepartments, setBusinessUnitDepartments] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     let active = true
-    departmentsApi.list(sessionGroupId)
-      .then((records) => {
+    Promise.all([
+      departmentsApi.list(sessionGroupId),
+      departmentGroupsApi.list(),
+    ])
+      .then(([records, assignments]) => {
         if (!active) return
+
+        const assignedDepartmentIds = new Set(
+          assignments
+            .filter((assignment) =>
+              String(assignment.buId ?? '') === sessionBusinessUnitId
+              && Number(assignment.status ?? 1) === 1)
+            .map((assignment) => String(assignment.deptId ?? '')),
+        )
+        const scopedRecords = records.filter((record) =>
+          assignedDepartmentIds.has(String(record.id ?? '')),
+        )
+
         setExistingDepartments(records)
+        setBusinessUnitDepartments(scopedRecords)
         setValues((current) => ({
           ...current,
-          SORT_ORDER: getNextSortOrder(records),
+          SORT_ORDER: getNextSortOrder(scopedRecords),
         }))
       })
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load existing Departments.')
       })
     return () => { active = false }
-  }, [sessionGroupId])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target
@@ -75,7 +94,7 @@ function DepartmentCreate() {
     setValues({
       ...initialDepartmentValues,
       BG_ID: sessionGroupId,
-      SORT_ORDER: getNextSortOrder(existingDepartments),
+      SORT_ORDER: getNextSortOrder(businessUnitDepartments),
     })
     setErrors({})
     requestAnimationFrame(() => departmentNameRef.current?.focus())

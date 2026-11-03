@@ -17,7 +17,7 @@ async function loadRecord(id) {
   const [record, references] = await Promise.all([
     manualAttendanceUpdatesApi.get(id), loadManualAttendanceUpdateReferences(),
   ])
-  return mapManualAttendanceUpdateFromApi(record, references)
+  return { ...record, ...mapManualAttendanceUpdateFromApi(record, references) }
 }
 
 const fields = [
