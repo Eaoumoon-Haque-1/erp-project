@@ -1,9 +1,18 @@
 /**
- * @file Controlled form for Accounting Period Open.
+ * @file Controlled form for Accounting Period (Open / Close Create & Edit).
  * Specifications:
- * - Year: Dropdown showing distinct CALENDAR_YEAR from AFM_CALENDAR_MONTH
- * - Period Name: Dropdown showing period names as per selected CALENDAR_YEAR
- * - Period Status: Dropdown with Open / Close
+ * - OpenPeriodCreate:
+ *     - Year: Dropdown showing distinct CALENDAR_YEAR from AFM_CALENDAR_MONTH
+ *     - Period Name: Dropdown showing periods where PERIOD_STATUS is close and not in AFM_PERIOD
+ *     - Period Status: Readonly textfield with default "Open"
+ * - ClosePeriodCreate:
+ *     - Year: Dropdown showing distinct CALENDAR_YEAR from AFM_CALENDAR_MONTH
+ *     - Period Name: Dropdown showing periods where PERIOD_STATUS is open and not in AFM_PERIOD
+ *     - Period Status: Readonly textfield with default "Close"
+ * - PeriodEdit:
+ *     - Year: Textfield in readonly format
+ *     - Period Name: Textfield in readonly format
+ *     - Period Status: Dropdown (Open / Close) showing database inserted data, changeable and saveable
  * - Group Name, Business Unit, and "is active ?" are excluded from the form.
  */
 import { PERIOD_STATUS_OPTIONS } from '../validation/periodValidation'
@@ -50,6 +59,7 @@ function PeriodForm({
   availableYears = [],
   periodNameOptions = [],
   periodsLoading = false,
+  mode = 'open-create', // 'open-create' | 'close-create' | 'edit'
   isEdit = false,
   auditLog = null,
   submitLabel = 'Submit',
@@ -58,11 +68,15 @@ function PeriodForm({
   onChange,
   onReset,
 }) {
+  const isEditMode = isEdit || mode === 'edit'
+  const isOpenCreate = mode === 'open-create'
+  const isCloseCreate = mode === 'close-create'
+
   return (
     <div className={'space-y-4 text-xs sm:text-sm'}>
       <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>
         <div className={'flex flex-col gap-3.5 max-w-lg'}>
-          {/* 1. Year (Dropdown: distinct CALENDAR_YEAR from AFM_CALENDAR_MONTH) */}
+          {/* 1. Year: Dropdown in Create, Readonly textfield in Edit */}
           <div>
             <label
               className={'block text-xs font-medium text-gray-700 mb-1'}
@@ -70,31 +84,43 @@ function PeriodForm({
             >
               Year<span className={'text-rose-500 ml-0.5'}>*</span>
             </label>
-            <select
-              ref={yearRef}
-              id={'PERIOD_YEAR'}
-              name={'PERIOD_YEAR'}
-              className={inputClass(errors.PERIOD_YEAR)}
-              value={values.PERIOD_YEAR || ''}
-              required
-              aria-invalid={Boolean(errors.PERIOD_YEAR)}
-              aria-describedby={errors.PERIOD_YEAR ? 'PERIOD_YEAR-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>--Select Year--</option>
-              {availableYears.map((yr) => (
-                <option key={yr} value={yr}>
-                  {yr}
-                </option>
-              ))}
-              {values.PERIOD_YEAR && !availableYears.includes(values.PERIOD_YEAR) && (
-                <option value={values.PERIOD_YEAR}>{values.PERIOD_YEAR}</option>
-              )}
-            </select>
+            {isEditMode ? (
+              <input
+                ref={yearRef}
+                id={'PERIOD_YEAR'}
+                name={'PERIOD_YEAR'}
+                type={'text'}
+                readOnly
+                className={inputClass(errors.PERIOD_YEAR, true)}
+                value={values.PERIOD_YEAR || ''}
+              />
+            ) : (
+              <select
+                ref={yearRef}
+                id={'PERIOD_YEAR'}
+                name={'PERIOD_YEAR'}
+                className={inputClass(errors.PERIOD_YEAR)}
+                value={values.PERIOD_YEAR || ''}
+                required
+                aria-invalid={Boolean(errors.PERIOD_YEAR)}
+                aria-describedby={errors.PERIOD_YEAR ? 'PERIOD_YEAR-error' : undefined}
+                onChange={onChange}
+              >
+                <option value={''}>--Select Year--</option>
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+                {values.PERIOD_YEAR && !availableYears.includes(values.PERIOD_YEAR) && (
+                  <option value={values.PERIOD_YEAR}>{values.PERIOD_YEAR}</option>
+                )}
+              </select>
+            )}
             <FieldError id={'PERIOD_YEAR-error'} message={errors.PERIOD_YEAR} />
           </div>
 
-          {/* 2. Period Name (Dropdown: as per selected CALENDAR_YEAR) */}
+          {/* 2. Period Name: Dropdown in Create, Readonly textfield in Edit */}
           <div>
             <label
               className={'block text-xs font-medium text-gray-700 mb-1'}
@@ -102,39 +128,63 @@ function PeriodForm({
             >
               Period Name<span className={'text-rose-500 ml-0.5'}>*</span>
             </label>
-            <select
-              id={'PERIOD_NAME'}
-              name={'PERIOD_NAME'}
-              className={inputClass(errors.PERIOD_NAME, !values.PERIOD_YEAR)}
-              value={values.PERIOD_NAME || ''}
-              required
-              disabled={!values.PERIOD_YEAR || periodsLoading}
-              aria-invalid={Boolean(errors.PERIOD_NAME)}
-              aria-describedby={errors.PERIOD_NAME ? 'PERIOD_NAME-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>
-                {!values.PERIOD_YEAR
-                  ? '--Select Year First--'
-                  : periodsLoading
-                  ? 'Loading Period Names...'
-                  : periodNameOptions.length === 0
-                  ? '--No Periods Available for this Year--'
-                  : '--Select Period Name--'}
-              </option>
-              {periodNameOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
+            {isEditMode ? (
+              <input
+                id={'PERIOD_NAME'}
+                name={'PERIOD_NAME'}
+                type={'text'}
+                readOnly
+                className={inputClass(errors.PERIOD_NAME, true)}
+                value={values.PERIOD_NAME || ''}
+              />
+            ) : (
+              <select
+                id={'PERIOD_NAME'}
+                name={'PERIOD_NAME'}
+                className={inputClass(errors.PERIOD_NAME, !values.PERIOD_YEAR)}
+                value={values.PERIOD_NAME || ''}
+                required
+                disabled={!values.PERIOD_YEAR || periodsLoading}
+                aria-invalid={Boolean(errors.PERIOD_NAME)}
+                aria-describedby={errors.PERIOD_NAME ? 'PERIOD_NAME-error' : undefined}
+                onChange={onChange}
+              >
+                <option value={''}>
+                  {!values.PERIOD_YEAR
+                    ? '--Select Year First--'
+                    : periodsLoading
+                    ? 'Loading Period Names...'
+                    : periodNameOptions.length === 0
+                    ? '--No Periods Available for this Year--'
+                    : '--Select Period Name--'}
                 </option>
-              ))}
-              {values.PERIOD_NAME && !periodNameOptions.includes(values.PERIOD_NAME) && (
-                <option value={values.PERIOD_NAME}>{values.PERIOD_NAME}</option>
-              )}
-            </select>
+                {periodNameOptions.map((opt) => {
+                  const name =
+                    typeof opt === 'object' && opt !== null
+                      ? opt.periodName || opt.value || opt.label
+                      : opt
+                  return (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  )
+                })}
+                {values.PERIOD_NAME &&
+                  !periodNameOptions.some((opt) => {
+                    const name =
+                      typeof opt === 'object' && opt !== null
+                        ? opt.periodName || opt.value || opt.label
+                        : opt
+                    return name === values.PERIOD_NAME
+                  }) && (
+                    <option value={values.PERIOD_NAME}>{values.PERIOD_NAME}</option>
+                  )}
+              </select>
+            )}
             <FieldError id={'PERIOD_NAME-error'} message={errors.PERIOD_NAME} />
           </div>
 
-          {/* 3. Period Status (Dropdown: Open / Close) */}
+          {/* 3. Period Status: Readonly textfield in Create, Dropdown in Edit */}
           <div>
             <label
               className={'block text-xs font-medium text-gray-700 mb-1'}
@@ -142,29 +192,66 @@ function PeriodForm({
             >
               Period Status<span className={'text-rose-500 ml-0.5'}>*</span>
             </label>
-            <select
-              id={'PERIOD_STATUS'}
-              name={'PERIOD_STATUS'}
-              className={inputClass(errors.PERIOD_STATUS)}
-              value={values.PERIOD_STATUS || 'Open'}
-              required
-              aria-invalid={Boolean(errors.PERIOD_STATUS)}
-              aria-describedby={errors.PERIOD_STATUS ? 'PERIOD_STATUS-error' : undefined}
-              onChange={onChange}
-            >
-              {PERIOD_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            {isEditMode ? (
+              <select
+                id={'PERIOD_STATUS'}
+                name={'PERIOD_STATUS'}
+                className={inputClass(errors.PERIOD_STATUS)}
+                value={values.PERIOD_STATUS || 'Open'}
+                required
+                aria-invalid={Boolean(errors.PERIOD_STATUS)}
+                aria-describedby={errors.PERIOD_STATUS ? 'PERIOD_STATUS-error' : undefined}
+                onChange={onChange}
+              >
+                {PERIOD_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            ) : isOpenCreate ? (
+              <input
+                id={'PERIOD_STATUS'}
+                name={'PERIOD_STATUS'}
+                type={'text'}
+                readOnly
+                className={inputClass(errors.PERIOD_STATUS, true)}
+                value={values.PERIOD_STATUS || 'Open'}
+              />
+            ) : isCloseCreate ? (
+              <input
+                id={'PERIOD_STATUS'}
+                name={'PERIOD_STATUS'}
+                type={'text'}
+                readOnly
+                className={inputClass(errors.PERIOD_STATUS, true)}
+                value={values.PERIOD_STATUS || 'Close'}
+              />
+            ) : (
+              <select
+                id={'PERIOD_STATUS'}
+                name={'PERIOD_STATUS'}
+                className={inputClass(errors.PERIOD_STATUS)}
+                value={values.PERIOD_STATUS || 'Open'}
+                required
+                aria-invalid={Boolean(errors.PERIOD_STATUS)}
+                aria-describedby={errors.PERIOD_STATUS ? 'PERIOD_STATUS-error' : undefined}
+                onChange={onChange}
+              >
+                {PERIOD_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
             <FieldError id={'PERIOD_STATUS-error'} message={errors.PERIOD_STATUS} />
           </div>
 
           {/* 4. Action Buttons */}
           {submitLabel && (
             <div className={'flex items-center gap-2 pt-2'}>
-              {!isEdit && onReset && (
+              {!isEditMode && onReset && (
                 <button
                   type={'button'}
                   onClick={onReset}

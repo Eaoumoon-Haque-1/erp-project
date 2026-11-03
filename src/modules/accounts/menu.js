@@ -3,7 +3,7 @@ export const accountsMenu = [{
   label: 'Accounts',
   key: 'accounts',
   children: [
-    { label: 'Chart of Accounts Bk', key: 'chart-of-accounts', path: '/accounts/chart-of-accounts' },
+    { label: 'Account Voucher', key: 'afm-voucher', path: '/accounts/voucher' },
     {
       label: 'Voucher Setup',
       key: 'voucher-setup',
@@ -44,7 +44,7 @@ export const accountsMenu = [{
           path: '/accounts/voucher-setup/calendar',
         },
         {
-          label: 'Accounting Period Open',
+          label: 'Acc. Period Open/Close',
           key: 'afm-period-open',
           path: '/accounts/voucher-setup/period',
         },

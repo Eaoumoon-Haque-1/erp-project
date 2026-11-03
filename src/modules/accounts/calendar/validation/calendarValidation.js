@@ -96,7 +96,7 @@ export function createInitialCalendarDetailRow(overrides = {}) {
     TO_DATE: '',
     PERIOD_NAME: 'Jan',
     IS_ADJUSTMENT_PERIOD: 'No',
-    PERIOD_STATUS: 'Open',
+    PERIOD_STATUS: 'Close',
     STATUS: '1',
     ...overrides,
   }
@@ -159,7 +159,7 @@ export function generateMonthlyCalendarRows(fromDateStr, toDateStr, accountYear,
         FROM_DATE: formatDateISO(rowFrom),
         TO_DATE: formatDateISO(rowTo),
         PERIOD_NAME: periodName,
-        PERIOD_STATUS: 'Open',
+        PERIOD_STATUS: 'Close',
         IS_ADJUSTMENT_PERIOD: 'No',
         STATUS: '1',
       })
@@ -261,4 +261,3 @@ export function validateCalendar(values, rows = [], existingCalendars = [], curr
     rows,
   }
 }
-

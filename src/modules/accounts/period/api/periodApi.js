@@ -40,6 +40,20 @@ export const periodApi = {
     ),
 
   /**
+   * Retrieves candidate months from AFM_CALENDAR_MONTH for a given BU, Year, and Month Period Status,
+   * excluding periods already inserted in AFM_PERIOD.
+   * @param {number|string} buId Business Unit ID
+   * @param {string} year Calendar Year
+   * @param {string} monthPeriodStatus 'Open' or 'Close'
+   */
+  getCandidateMonths: (buId, year, monthPeriodStatus) =>
+    unwrapApiResponse(
+      apiClient.get(`${RESOURCE_PATH}/candidate-months`, {
+        params: { buId, year, monthPeriodStatus },
+      }),
+    ),
+
+  /**
    * Retrieves distinct calendar years registered in AFM_CALENDAR for a BU.
    * @param {number|string} buId Business Unit ID
    */
@@ -52,4 +66,3 @@ export const periodApi = {
 }
 
 export default periodApi
-

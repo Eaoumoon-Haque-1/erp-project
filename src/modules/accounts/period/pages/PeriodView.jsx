@@ -112,7 +112,7 @@ function PeriodView() {
         breadcrumbs={[
           { label: 'Accounts', to: '/accounts' },
           { label: 'Voucher Setup', to: '/accounts/voucher-setup' },
-          { label: 'Accounting Period Open', to: listPath },
+          { label: 'Acc. Period Open/Close', to: listPath },
           { label: 'View' },
         ]}
         actions={

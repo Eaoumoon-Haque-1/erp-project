@@ -239,7 +239,7 @@ function PeriodEdit() {
 
   return (
     <FormPage
-      title={'Edit Accounting Period Open'}
+      title={'Edit Acc. Period Open/Close'}
       listTo={listPath}
       tableName={AFM_PERIOD_TABLE}
       submitLabel={'Update'}

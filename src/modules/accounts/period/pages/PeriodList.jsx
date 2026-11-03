@@ -2,6 +2,7 @@
  * @file Accounting Period Open List page.
  * Displays all opened accounting periods with filters, search, and row actions.
  * Note: Group Name and Business Unit are excluded from display as requested.
+ * Header buttons: "New Accounting Period Open", "New Accounting Period Close".
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -14,7 +15,8 @@ import { mapPeriodFromApi } from '../data/periodApiMapper'
 import { AFM_PERIOD_TABLE, PERIOD_STATUS_OPTIONS } from '../validation/periodValidation'
 
 const listPath = '/accounts/voucher-setup/period'
-const createPath = '/accounts/voucher-setup/period/create'
+const openCreatePath = '/accounts/voucher-setup/period/open/create'
+const closeCreatePath = '/accounts/voucher-setup/period/close/create'
 
 const columns = [
   {
@@ -77,34 +79,6 @@ function PeriodList() {
       active = false
     }
   }, [sessionBusinessUnitId])
-
-  const reloadData = () => {
-    if (!sessionBusinessUnitId) return
-    setLoading(true)
-    periodApi
-      .list({ buId: sessionBusinessUnitId })
-      .then((data) => {
-        setRows(Array.isArray(data) ? data.map(mapPeriodFromApi) : [])
-      })
-      .catch((err) => {
-        showError(err?.message || 'Unable to load Accounting Periods.')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }
-
-  const handleDelete = async (row) => {
-    try {
-      await periodApi.remove(row.ID)
-      reloadData()
-    } catch (err) {
-      const msg =
-        err?.response?.data?.message || err?.message || 'Unable to delete Accounting Period.'
-      await showError(msg)
-      throw new Error(msg, { cause: err })
-    }
-  }
 
   // Distinct Years inserted in AFM_PERIOD table
   const distinctYears = useMemo(() => {
@@ -182,10 +156,18 @@ function PeriodList() {
 
   return (
     <ListPage
-      title={'Accounting Period Open'}
+      title={'Acc. Period Open/Close'}
       tableName={AFM_PERIOD_TABLE}
-      createLabel={'Create New'}
-      createTo={createPath}
+      actions={[
+        {
+          label: 'New Accounting Period Open',
+          to: openCreatePath,
+        },
+        {
+          label: 'New Accounting Period Close',
+          to: closeCreatePath,
+        },
+      ]}
       filters={filters}
       columns={columns}
       rows={rows}
@@ -193,9 +175,9 @@ function PeriodList() {
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          showUnavailable={false}
           onView={() => navigate(`${listPath}/${row.ID}/view`)}
           onEdit={() => navigate(`${listPath}/${row.ID}/edit`)}
-          onDelete={() => handleDelete(row)}
         />
       )}
     />
