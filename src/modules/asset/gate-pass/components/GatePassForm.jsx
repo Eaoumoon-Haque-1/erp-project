@@ -14,11 +14,24 @@ function DeleteIcon() {
   return <svg viewBox={'0 0 24 24'} className={'size-4'} fill={'none'} stroke={'currentColor'} strokeWidth={'2'} strokeLinecap={'round'} strokeLinejoin={'round'} aria-hidden={'true'}><path d={'M4 7h16'} /><path d={'M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5'} /></svg>
 }
 
-function SelectField({ name, label, value, error, options, placeholder, onChange, inputRef }) {
-  return <div><label className={'erp-field-label'} htmlFor={name}>{label}<span className={'erp-required'} aria-hidden={'true'}>*</span></label><select ref={inputRef} id={name} name={name} className={fieldClass(error)} value={value} required aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} onChange={onChange}><option value={''}>{placeholder}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><FieldError id={`${name}-error`} message={error} /></div>
+function SelectField({ name, label, value, error, options = [], placeholder, onChange, inputRef }) {
+  return (
+    <div>
+      <label className={'erp-field-label'} htmlFor={name}>{label}<span className={'erp-required'} aria-hidden={'true'}>*</span></label>
+      <select ref={inputRef} id={name} name={name} className={fieldClass(error)} value={value} required aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} onChange={onChange}>
+        <option value={''}>{placeholder}</option>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      <FieldError id={`${name}-error`} message={error} />
+    </div>
+  )
 }
 
-function GatePassForm({ values, entryValues, rows, errors, references, gatePassNoRef, itemRef, onChange, onEntryChange, onAdd, onRemove }) {
+function GatePassForm({ values, entryValues, rows = [], errors = {}, references = {}, gatePassNoRef, itemRef, onChange, onEntryChange, onAdd, onRemove }) {
+  const vendors = references.vendors || []
+  const custodians = references.custodians || []
+  const assetItems = references.assetItems || []
+
   return (
     <div className={'erp-gate-pass-form'}>
       <div className={'erp-form-grid'}>
@@ -32,14 +45,56 @@ function GatePassForm({ values, entryValues, rows, errors, references, gatePassN
           <input ref={gatePassNoRef} id={'GATE_PASS_NO'} name={'GATE_PASS_NO'} className={fieldClass(errors.GATE_PASS_NO, true)} value={values.GATE_PASS_NO} readOnly required aria-invalid={Boolean(errors.GATE_PASS_NO)} aria-describedby={errors.GATE_PASS_NO ? 'GATE_PASS_NO-error' : undefined} />
           <FieldError id={'GATE_PASS_NO-error'} message={errors.GATE_PASS_NO} />
         </div>
-        <SelectField name={'SUPPLIER_ID'} label={'Supplier'} value={values.SUPPLIER_ID} error={errors.SUPPLIER_ID} options={references.vendors.map((record) => ({ value: record.ID, label: `${record.VENDOR_CODE} - ${record.VENDOR_NAME}` }))} placeholder={'--Select Supplier--'} onChange={onChange} />
-        <SelectField name={'CUSTODIAN'} label={'Custodian'} value={values.CUSTODIAN} error={errors.CUSTODIAN} options={references.custodians.map((record) => ({ value: record.ID, label: record.CUSTODIAN_NAME }))} placeholder={'--Select Custodian--'} onChange={onChange} />
+        <SelectField
+          name={'SUPPLIER_ID'}
+          label={'Supplier'}
+          value={values.SUPPLIER_ID}
+          error={errors.SUPPLIER_ID}
+          options={vendors.map((record) => {
+            const code = record.supplierCode || record.VENDOR_CODE || ''
+            const name = record.supplierName || record.VENDOR_NAME || ''
+            return {
+              value: String(record.id ?? record.ID),
+              label: code ? `${code} - ${name}` : name,
+            }
+          })}
+          placeholder={'--Select Supplier--'}
+          onChange={onChange}
+        />
+        <SelectField
+          name={'CUSTODIAN'}
+          label={'Custodian'}
+          value={values.CUSTODIAN}
+          error={errors.CUSTODIAN}
+          options={custodians.map((record) => ({
+            value: String(record.id ?? record.ID),
+            label: record.custodianName || record.CUSTODIAN_NAME,
+          }))}
+          placeholder={'--Select Custodian--'}
+          onChange={onChange}
+        />
       </div>
 
       <div className={'erp-role-divider'} />
       <h2 className={'erp-employee-section-title'}>Item Details</h2>
       <div className={'erp-gate-pass-entry-grid'}>
-        <SelectField name={'ITEM_NAME'} label={'Asset Item Name and ID'} value={entryValues.ITEM_NAME} error={errors.ITEM_NAME} options={references.assetItems.map((record) => ({ value: record.ID, label: `${record.ID} - ${record.ITEM_NAME}` }))} placeholder={'--Select Asset Item--'} onChange={onEntryChange} inputRef={itemRef} />
+        <SelectField
+          name={'ITEM_NAME'}
+          label={'Asset Item Name and ID'}
+          value={entryValues.ITEM_NAME}
+          error={errors.ITEM_NAME}
+          options={assetItems.map((record) => {
+            const id = record.id ?? record.ID
+            const name = record.itemName || record.ITEM_NAME
+            return {
+              value: String(id),
+              label: `${id} - ${name}`,
+            }
+          })}
+          placeholder={'--Select Asset Item--'}
+          onChange={onEntryChange}
+          inputRef={itemRef}
+        />
         <div>
           <label className={'erp-field-label'} htmlFor={'QUANTITY'}>Quantity<span className={'erp-required'} aria-hidden={'true'}>*</span></label>
           <input id={'QUANTITY'} name={'QUANTITY'} type={'number'} className={fieldClass(errors.QUANTITY)} value={entryValues.QUANTITY} min={'1'} step={'1'} required aria-invalid={Boolean(errors.QUANTITY)} aria-describedby={errors.QUANTITY ? 'QUANTITY-error' : undefined} onChange={onEntryChange} />

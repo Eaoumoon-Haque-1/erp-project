@@ -1,23 +1,43 @@
-/** @file List-page controller for temporary Asset assignments. */
-import { useMemo, useState } from 'react'
+/** @file API-backed list controller for Asset Assign to Employee records. */
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { formatDateForDisplay } from '../../../../utils/dateFormat'
-import { listAssetAssignments, removeAssetAssignment, updateAssetAssignment } from '../data/assetAssignEmployeeStore'
+import { assetAssignmentApi } from '../api/assetAssignmentApi'
+import { mapAssetAssignmentFromApi } from '../data/assetAssignEmployeeApiMapper'
+import { loadAssetAssignReferences } from '../data/assetAssignEmployeeOptions'
 
 const columns = [
   { key: 'ASSET_DATE', label: 'Assign Date', render: (value) => formatDateForDisplay(value) },
-  { key: 'ASSET_NO', label: 'Asset ID' },
-  { key: 'ITEM_NAME_LABEL', label: 'Asset Item Name' },
+  { key: 'ITEM_NAME_LABEL', label: 'Asset Item' },
   { key: 'EMPLOYEE_NAME', label: 'Assigned Employee' },
-  { key: 'CONDITION_ON_ISSUE', label: 'Condition', render: (value) => value.charAt(0) + value.slice(1).toLowerCase() },
+  {
+    key: 'CONDITION_ON_ISSUE',
+    label: 'Condition',
+    render: (value) => (value ? value.charAt(0) + value.slice(1).toLowerCase() : '—'),
+  },
+  {
+    key: 'EXPECTED_RETURN_DATE',
+    label: 'Expected Return',
+    render: (value) => formatDateForDisplay(value) || '—',
+  },
+  {
+    key: 'ACTUAL_RETURN_DATE',
+    label: 'Actual Return',
+    render: (value) => formatDateForDisplay(value) || '—',
+  },
   {
     key: 'STATUS',
     label: 'Status',
     render: (value) => (
-      <span className={['inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm', value === '1' ? 'bg-action-success' : 'bg-action-danger'].join(' ')}>
-        {value === '1' ? 'Active' : 'Inactive'}
+      <span className={[
+        'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
+        String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
+      ].join(' ')}>
+        {String(value) === '1' ? 'Active' : 'Inactive'}
       </span>
     ),
   },
@@ -25,21 +45,86 @@ const columns = [
 
 function AssetAssignEmployeeList() {
   const navigate = useNavigate()
-  const [rows, setRows] = useState(() => listAssetAssignments())
-  const filters = useMemo(() => [
-    { key: 'ASSET_NO', label: 'Search by Asset ID', placeholder: '--Search by Asset ID--', matches: (row, value) => row.ASSET_NO.toLowerCase().includes(value.toLowerCase()) },
-    { key: 'HR_EMPL_ID', label: 'Search by Employee', placeholder: '--Search by Employee--', options: [...new Map(rows.map((row) => [row.HR_EMPL_ID, { value: row.HR_EMPL_ID, label: row.EMPLOYEE_NAME }])).values()] },
-    { key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--', options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }] },
-  ], [rows])
+  const { session } = useAuth()
+  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
 
-  const refresh = () => setRows(listAssetAssignments())
-  const handleDelete = (row) => {
-    removeAssetAssignment(row.ID)
-    refresh()
+  useEffect(() => {
+    let active = true
+
+    Promise.all([
+      assetAssignmentApi.list(sessionBusinessUnitId),
+      loadAssetAssignReferences(sessionBusinessUnitId),
+    ])
+      .then(([records, refs]) => {
+        if (!active) return
+        const mapped = (records || []).map((r) => mapAssetAssignmentFromApi(r, refs))
+        setRows(mapped)
+      })
+      .catch((error) => {
+        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Assignments.'))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => { active = false }
+  }, [sessionBusinessUnitId])
+
+  const filters = useMemo(() => [
+    {
+      key: 'ITEM_NAME_LABEL',
+      label: 'Search by Asset Item',
+      placeholder: '--Search by Asset Item--',
+      matches: (row, value) => String(row.ITEM_NAME_LABEL ?? '').toLowerCase().includes(value.toLowerCase()),
+    },
+    {
+      key: 'EMPLOYEE_NAME',
+      label: 'Search by Employee',
+      placeholder: '--Search by Employee--',
+      matches: (row, value) => String(row.EMPLOYEE_NAME ?? '').toLowerCase().includes(value.toLowerCase()),
+    },
+    {
+      key: 'STATUS',
+      label: 'Search by Status',
+      placeholder: '--Search by Status--',
+      options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }],
+    },
+  ], [])
+
+  const handleDelete = async (row) => {
+    try {
+      await assetAssignmentApi.remove(row.ID)
+      setRows((current) => current.filter((item) => item.ID !== row.ID))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to delete Asset Assignment.'))
+    }
   }
-  const handleStatusChange = (row) => {
-    updateAssetAssignment(row.ID, { ...row, STATUS: row.STATUS === '1' ? '0' : '1' })
-    refresh()
+
+  const handleStatusChange = async (row) => {
+    const nextStatus = String(row.STATUS) === '1' ? '0' : '1'
+    try {
+      await assetAssignmentApi.update(row.ID, {
+        id: Number(row.ID),
+        bgId: row.BG_ID ? Number(row.BG_ID) : null,
+        buId: row.BU_ID ? Number(row.BU_ID) : null,
+        assetDate: row.ASSET_DATE || null,
+        itemId: row.ITEM_ID ? Number(row.ITEM_ID) : null,
+        emplId: row.HR_EMPL_ID ? Number(row.HR_EMPL_ID) : null,
+        conditionOnIssue: row.CONDITION_ON_ISSUE || null,
+        expectedReturnDate: row.EXPECTED_RETURN_DATE || null,
+        actualReturnDate: row.ACTUAL_RETURN_DATE || null,
+        remarks: row.REMARKS || '',
+        status: Number(nextStatus),
+      })
+      setRows((current) => current.map((item) => (
+        item.ID === row.ID ? { ...item, STATUS: nextStatus, status: Number(nextStatus) } : item
+      )))
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to update status.'))
+    }
   }
 
   return (
@@ -50,7 +135,17 @@ function AssetAssignEmployeeList() {
       filters={filters}
       columns={columns}
       rows={rows}
-      renderActions={(row) => <ListRowActions row={row} onEdit={() => navigate(`/asset/asset-assign-to-employee/${row.ID}/edit`)} onDelete={handleDelete} onStatusChange={handleStatusChange} />}
+      loading={loading}
+      message={message}
+      renderActions={(row) => (
+        <ListRowActions
+          row={row}
+          onView={() => navigate(`/asset/asset-assign-to-employee/${row.ID}/view`)}
+          onEdit={() => navigate(`/asset/asset-assign-to-employee/${row.ID}/edit`)}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     />
   )
 }

@@ -6,21 +6,27 @@ import AssetGroupView from './asset-group/pages/AssetGroupView'
 import AssetAssignEmployeeCreate from './asset-assign-employee/pages/AssetAssignEmployeeCreate'
 import AssetAssignEmployeeEdit from './asset-assign-employee/pages/AssetAssignEmployeeEdit'
 import AssetAssignEmployeeList from './asset-assign-employee/pages/AssetAssignEmployeeList'
+import AssetAssignEmployeeView from './asset-assign-employee/pages/AssetAssignEmployeeView'
 import AssetAuditCreate from './asset-audit/pages/AssetAuditCreate'
 import AssetAuditEdit from './asset-audit/pages/AssetAuditEdit'
 import AssetAuditList from './asset-audit/pages/AssetAuditList'
+import AssetAuditView from './asset-audit/pages/AssetAuditView'
 import AssetDisposalCreate from './asset-disposal-retirement/pages/AssetDisposalCreate'
 import AssetDisposalEdit from './asset-disposal-retirement/pages/AssetDisposalEdit'
 import AssetDisposalList from './asset-disposal-retirement/pages/AssetDisposalList'
+import AssetDisposalView from './asset-disposal-retirement/pages/AssetDisposalView'
 import AssetReturnEmployeeCreate from './asset-return-employee/pages/AssetReturnEmployeeCreate'
 import AssetReturnEmployeeEdit from './asset-return-employee/pages/AssetReturnEmployeeEdit'
 import AssetReturnEmployeeList from './asset-return-employee/pages/AssetReturnEmployeeList'
+import AssetReturnEmployeeView from './asset-return-employee/pages/AssetReturnEmployeeView'
 import AssetRepairCreate from './asset-repair/pages/AssetRepairCreate'
 import AssetRepairEdit from './asset-repair/pages/AssetRepairEdit'
 import AssetRepairList from './asset-repair/pages/AssetRepairList'
+import AssetRepairView from './asset-repair/pages/AssetRepairView'
 import AssetTransferCreate from './asset-transfer/pages/AssetTransferCreate'
 import AssetTransferEdit from './asset-transfer/pages/AssetTransferEdit'
 import AssetTransferList from './asset-transfer/pages/AssetTransferList'
+import AssetTransferView from './asset-transfer/pages/AssetTransferView'
 import AssetItemInformationCreate from './asset-item-information/pages/AssetItemInformationCreate'
 import AssetItemInformationEdit from './asset-item-information/pages/AssetItemInformationEdit'
 import AssetItemInformationList from './asset-item-information/pages/AssetItemInformationList'
@@ -56,31 +62,40 @@ import LocationMasterList from './location-master/pages/LocationMasterList'
 import MaintenanceAmcCreate from './maintenance-amc/pages/MaintenanceAmcCreate'
 import MaintenanceAmcEdit from './maintenance-amc/pages/MaintenanceAmcEdit'
 import MaintenanceAmcList from './maintenance-amc/pages/MaintenanceAmcList'
+import MaintenanceAmcView from './maintenance-amc/pages/MaintenanceAmcView'
 import GatePassCreate from './gate-pass/pages/GatePassCreate'
 import GatePassEdit from './gate-pass/pages/GatePassEdit'
 import GatePassList from './gate-pass/pages/GatePassList'
+import GatePassView from './gate-pass/pages/GatePassView'
 
 export const assetRoutes = [
   { path: 'asset/asset-assign-to-employee', element: <AssetAssignEmployeeList /> },
   { path: 'asset/asset-assign-to-employee/create', element: <AssetAssignEmployeeCreate /> },
+  { path: 'asset/asset-assign-to-employee/:assetAssignmentId/view', element: <AssetAssignEmployeeView /> },
   { path: 'asset/asset-assign-to-employee/:assetAssignmentId/edit', element: <AssetAssignEmployeeEdit /> },
   { path: 'asset/asset-return-from-employee', element: <AssetReturnEmployeeList /> },
   { path: 'asset/asset-return-from-employee/create', element: <AssetReturnEmployeeCreate /> },
+  { path: 'asset/asset-return-from-employee/:assetReturnId/view', element: <AssetReturnEmployeeView /> },
   { path: 'asset/asset-return-from-employee/:assetReturnId/edit', element: <AssetReturnEmployeeEdit /> },
   { path: 'asset/asset-transfer', element: <AssetTransferList /> },
   { path: 'asset/asset-transfer/create', element: <AssetTransferCreate /> },
+  { path: 'asset/asset-transfer/:assetTransferId/view', element: <AssetTransferView /> },
   { path: 'asset/asset-transfer/:assetTransferId/edit', element: <AssetTransferEdit /> },
   { path: 'asset/maintenance-amc', element: <MaintenanceAmcList /> },
   { path: 'asset/maintenance-amc/create', element: <MaintenanceAmcCreate /> },
+  { path: 'asset/maintenance-amc/:maintenanceId/view', element: <MaintenanceAmcView /> },
   { path: 'asset/maintenance-amc/:maintenanceId/edit', element: <MaintenanceAmcEdit /> },
   { path: 'asset/asset-disposal-retirement', element: <AssetDisposalList /> },
   { path: 'asset/asset-disposal-retirement/create', element: <AssetDisposalCreate /> },
+  { path: 'asset/asset-disposal-retirement/:disposalId/view', element: <AssetDisposalView /> },
   { path: 'asset/asset-disposal-retirement/:disposalId/edit', element: <AssetDisposalEdit /> },
   { path: 'asset/asset-audit', element: <AssetAuditList /> },
   { path: 'asset/asset-audit/create', element: <AssetAuditCreate /> },
+  { path: 'asset/asset-audit/:assetAuditId/view', element: <AssetAuditView /> },
   { path: 'asset/asset-audit/:assetAuditId/edit', element: <AssetAuditEdit /> },
   { path: 'asset/asset-repair', element: <AssetRepairList /> },
   { path: 'asset/asset-repair/create', element: <AssetRepairCreate /> },
+  { path: 'asset/asset-repair/:repairId/view', element: <AssetRepairView /> },
   { path: 'asset/asset-repair/:repairId/edit', element: <AssetRepairEdit /> },
   { path: 'asset/asset-group', element: <AssetGroupList /> },
   { path: 'asset/asset-group/create', element: <AssetGroupCreate /> },
@@ -93,7 +108,7 @@ export const assetRoutes = [
   { path: 'asset/asset-receive-register', element: <AssetReceiveRegisterList /> },
   { path: 'asset/asset-receive-register/create', element: <AssetReceiveRegisterCreate /> },
   { path: 'asset/asset-receive-register/:assetReceiveId/edit', element: <AssetReceiveRegisterEdit /> },
-  { path: 'asset/bulk-asset-receive-for-split', element: <BulkAssetReceiveForSplitList /> },
+  { path: 'bulk-asset-receive-for-split', element: <BulkAssetReceiveForSplitList /> },
   { path: 'asset/bulk-asset-receive-for-split/create', element: <BulkAssetReceiveForSplitCreate /> },
   { path: 'asset/bulk-asset-receive-for-split/:bulkAssetReceiveId/edit', element: <BulkAssetReceiveForSplitEdit /> },
   { path: 'asset/asset-specification-map', element: <AssetSpecificationMapList /> },
@@ -120,6 +135,6 @@ export const assetRoutes = [
   { path: 'asset/depreciation-category/:depreciationCategoryId/edit', element: <DepreciationCategoryEdit /> },
   { path: 'asset/gate-pass', element: <GatePassList /> },
   { path: 'asset/gate-pass/create', element: <GatePassCreate /> },
+  { path: 'asset/gate-pass/:gatePassId/view', element: <GatePassView /> },
   { path: 'asset/gate-pass/:gatePassId/edit', element: <GatePassEdit /> },
 ]
-

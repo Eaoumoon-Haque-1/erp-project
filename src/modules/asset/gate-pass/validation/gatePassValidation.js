@@ -4,6 +4,18 @@ import { formatIsoDate, parseIsoDate } from '../../../../utils/dateFormat.js'
 export const ASSET_GATE_PASS_TABLE = 'ASSET_GATE_PASS'
 export const ASSET_GATE_PASS_DETAIL_TABLE = 'ASSET_GATE_PASS_DTLS'
 
+export function generateGatePassNo(existingRecords = []) {
+  const year = new Date().getFullYear()
+  const prefix = `GP-${year}-`
+  const nextSequence = existingRecords.reduce((highest, record) => {
+    const no = String(record.GATE_PASS_NO || record.gatePassNo || '')
+    if (!no.startsWith(prefix)) return highest
+    const sequence = Number(no.slice(prefix.length))
+    return Number.isInteger(sequence) ? Math.max(highest, sequence) : highest
+  }, 0) + 1
+  return `${prefix}${String(nextSequence).padStart(5, '0')}`
+}
+
 export function createInitialGatePassValues(gatePassNo = '') {
   return {
     GATE_PASS_DATE: formatIsoDate(new Date()),
@@ -34,16 +46,16 @@ export function validateGatePassItem(values, rows = [], references = {}) {
     QUANTITY: normalize(values.QUANTITY),
   }
   const errors = {}
-  const selectedItem = references.assetItems?.find((record) => record.ID === normalized.ITEM_NAME)
+  const selectedItem = references.assetItems?.find((record) => String(record.id ?? record.ID) === normalized.ITEM_NAME)
 
   if (!normalized.ITEM_NAME) errors.ITEM_NAME = 'Asset Item Name and ID is required.'
   else if (!selectedItem) errors.ITEM_NAME = 'Select a valid active Asset Item.'
-  else if (rows.some((row) => row.ITEM_NAME === normalized.ITEM_NAME)) errors.ITEM_NAME = 'This Asset Item has already been added.'
+  else if (rows.some((row) => String(row.ITEM_NAME) === normalized.ITEM_NAME)) errors.ITEM_NAME = 'This Asset Item has already been added.'
 
   if (!normalized.QUANTITY) errors.QUANTITY = 'Quantity is required.'
   else if (!/^\d+$/.test(normalized.QUANTITY) || Number(normalized.QUANTITY) < 1) errors.QUANTITY = 'Quantity must be a positive whole number.'
 
-  if (selectedItem) normalized.ITEM_NAME_LABEL = selectedItem.ITEM_NAME
+  if (selectedItem) normalized.ITEM_NAME_LABEL = selectedItem.itemName || selectedItem.ITEM_NAME
   return { values: normalized, errors, isValid: Object.keys(errors).length === 0 }
 }
 
@@ -57,17 +69,17 @@ export function validateGatePass(values, rows, existingRecords = [], references 
 
   if (!normalized.GATE_PASS_NO) errors.GATE_PASS_NO = 'Gate Pass No is required.'
   else if (normalized.GATE_PASS_NO.length > 30) errors.GATE_PASS_NO = 'Gate Pass No must not exceed 30 characters.'
-  else if (existingRecords.some((record) => normalize(record.GATE_PASS_NO).toLowerCase() === normalized.GATE_PASS_NO.toLowerCase())) errors.GATE_PASS_NO = 'This Gate Pass No already exists.'
+  else if (existingRecords.some((record) => normalize(record.GATE_PASS_NO || record.gatePassNo).toLowerCase() === normalized.GATE_PASS_NO.toLowerCase())) errors.GATE_PASS_NO = 'This Gate Pass No already exists.'
 
-  const supplier = references.vendors?.find((record) => record.ID === normalized.SUPPLIER_ID)
+  const supplier = references.vendors?.find((record) => String(record.id ?? record.ID) === normalized.SUPPLIER_ID)
   if (!normalized.SUPPLIER_ID) errors.SUPPLIER_ID = 'Supplier is required.'
   else if (!supplier) errors.SUPPLIER_ID = 'Select a valid active Supplier.'
-  else normalized.SUPPLIER_NAME = supplier.VENDOR_NAME
+  else normalized.SUPPLIER_NAME = supplier.supplierName || supplier.VENDOR_NAME
 
-  const custodian = references.custodians?.find((record) => record.ID === normalized.CUSTODIAN)
+  const custodian = references.custodians?.find((record) => String(record.id ?? record.ID) === normalized.CUSTODIAN)
   if (!normalized.CUSTODIAN) errors.CUSTODIAN = 'Custodian is required.'
   else if (!custodian) errors.CUSTODIAN = 'Select a valid active Custodian.'
-  else normalized.CUSTODIAN_NAME = custodian.CUSTODIAN_NAME
+  else normalized.CUSTODIAN_NAME = custodian.custodianName || custodian.CUSTODIAN_NAME
 
   if (!Array.isArray(rows) || rows.length === 0) errors.ITEMS = 'Add at least one Asset Item.'
   if (normalized.REMARK.length > 500) errors.REMARK = 'Remarks must not exceed 500 characters.'

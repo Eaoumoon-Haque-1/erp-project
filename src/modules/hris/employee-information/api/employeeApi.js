@@ -6,7 +6,9 @@ const employeePath = '/employees'
 const unwrap = unwrapApiResponse
 
 export const employeesApi = {
-  list: () => unwrap(apiClient.get(employeePath)),
+  list: (buId) => unwrap(apiClient.get(employeePath, {
+    params: buId ? { buId } : undefined,
+  })),
   get: (id) => unwrap(apiClient.get(`${employeePath}/${id}`)),
   create: (payload) => unwrap(apiClient.post(employeePath, payload)),
   update: (id, payload) => unwrap(apiClient.put(`${employeePath}/${id}`, payload)),
@@ -30,4 +32,3 @@ export const employeeProfilesApi = {
   getJobExperiences: (employeeId) => unwrap(apiClient.get(profileResource(employeeId, 'job-experiences'))),
   saveJobExperiences: (employeeId, rows) => unwrap(apiClient.put(profileResource(employeeId, 'job-experiences'), rows)),
 }
-

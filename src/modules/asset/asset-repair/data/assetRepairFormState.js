@@ -1,18 +1,23 @@
 /** @file Selection-driven label population for Asset Repair. */
-export function updateAssetRepairField(current, name, value, references) {
+export function updateAssetRepairField(current, name, value, references = {}) {
   const next = { ...current, [name]: value }
+
   if (name === 'ASSET_RECORD_ID') {
-    const option = references.eligibleAssets.find((record) => record.value === value)
-    next.ASSET_SOURCE = option?.source || ''
-    next.ASSET_RECEIVE_ID = option?.receiveId || ''
-    next.ASSET_NO = option?.record.ASSET_NO || ''
-    next.ITEM_NAME = option?.record.ITEM_NAME || ''
-    next.ITEM_NAME_LABEL = option?.record.ITEM_NAME_LABEL || ''
+    const option = references.assetItems?.find((record) => String(record.id) === String(value))
+    next.ITEM_NAME_LABEL = option?.label || ''
   }
-  if (name === 'RECEIVE_ID') next.RECEIVE_BY_NAME = references.vendors.find((record) => record.ID === value)?.VENDOR_NAME || ''
+
+  if (name === 'RECEIVE_ID') {
+    const vendor = references.vendors?.find((record) => String(record.id) === String(value))
+    next.RECEIVE_BY_NAME = vendor?.label || vendor?.supplierName || ''
+  }
+
   if (name === 'SUPPORT_ENGINEER') {
-    const engineer = references.engineers.find((record) => record.value === value)
-    next.SUPPORT_ENGINEER_NAME = engineer ? `${engineer.employeeId} - ${engineer.name}` : ''
+    const engineer = references.engineers?.find(
+      (record) => String(record.value) === String(value) || String(record.id) === String(value),
+    )
+    next.SUPPORT_ENGINEER_NAME = engineer?.label || value || ''
   }
+
   return next
 }

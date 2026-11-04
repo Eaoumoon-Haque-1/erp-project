@@ -1,6 +1,6 @@
 /**
- * @file Temporary in-memory ASSET_ASSIGN_TO_EMPL repository.
- * Replace this boundary when assignment endpoints are documented.
+ * @file Backwards-compatibility bridge for temporary in-memory callers.
+ * The primary Asset Assign to Employee pages now use assetAssignmentApi.
  */
 let records = []
 

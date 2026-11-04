@@ -1,24 +1,94 @@
-/** @file Eligible physical assets, service vendors, and support engineers. */
-import { reportingOfficerOptions } from '../../../hris/employee-information/data/employeeOptions'
-import { listAssetReceives } from '../../asset-receive-register/data/assetReceiveRegisterStore'
-import { listBulkAssetReceives } from '../../bulk-asset-receive-for-split/data/bulkAssetReceiveStore'
-import { listVendorSuppliers } from '../../vendor-supplier-master/data/vendorSupplierMasterStore'
+/** @file Reference options for Asset Repair (Asset Items, Vendors, Support Engineers). */
+import { assetItemsApi } from '../../asset-item-information/api/assetItemApi'
+import { suppliersApi } from '../../../../api/supplier'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 
-function toAssetOption(record, source) {
-  return { value: `${source}:${record.ID}`, label: `${record.ASSET_NO} - ${record.ITEM_NAME_LABEL}`, source, receiveId: record.ID, record }
+export function getInitialAssetRepairReferences() {
+  return {
+    assetItems: [],
+    vendors: [],
+    engineers: [],
+  }
 }
 
-export function getAssetRepairReferences(existingRecords = [], currentRecord = null) {
-  const openAssetKeys = new Set(existingRecords
-    .filter((record) => record.STATUS === '1' && !record.DELIVERY_DATE && record.ID !== currentRecord?.ID)
-    .map((record) => record.ASSET_RECORD_ID))
-  const assets = [
-    ...listAssetReceives().filter((record) => record.STATUS === '1' || (currentRecord?.ASSET_SOURCE === 'RECEIVE' && record.ID === currentRecord.ASSET_RECEIVE_ID)).map((record) => toAssetOption(record, 'RECEIVE')),
-    ...listBulkAssetReceives().filter((record) => record.STATUS === '1' || (currentRecord?.ASSET_SOURCE === 'BULK' && record.ID === currentRecord.ASSET_RECEIVE_ID)).map((record) => toAssetOption(record, 'BULK')),
-  ]
-  return {
-    eligibleAssets: assets.filter((option) => !openAssetKeys.has(option.value)),
-    vendors: listVendorSuppliers().filter((record) => record.STATUS === '1'),
-    engineers: reportingOfficerOptions,
+function extractList(response) {
+  if (Array.isArray(response)) return response
+  if (response && Array.isArray(response.data)) return response.data
+  return []
+}
+
+export async function loadAssetRepairReferences(buId) {
+  const buIdParam = buId ? Number(buId) : undefined
+
+  try {
+    const [rawItems, rawSuppliers, rawEmployees] = await Promise.all([
+      assetItemsApi.list(buIdParam).catch(() => []),
+      suppliersApi.list(buIdParam).catch(() => []),
+      employeesApi.list(buIdParam).catch(() => []),
+    ])
+
+    const assetItems = extractList(rawItems)
+      .filter((r) => String(r.status ?? 1) === '1')
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const itemCode = r.itemCode || ''
+        const itemName = r.itemName || ''
+        const label = itemCode ? `${itemCode} - ${itemName}` : itemName || `Item ${id}`
+        return {
+          id,
+          ID: id,
+          value: id,
+          itemCode,
+          itemName,
+          ITEM_NAME: itemName,
+          label,
+        }
+      })
+
+    const vendors = extractList(rawSuppliers)
+      .filter((r) => String(r.status ?? 1) === '1')
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const supplierCode = r.supplierCode || r.vendorCode || ''
+        const supplierName = r.supplierName || r.vendorName || ''
+        const label = supplierCode ? `${supplierCode} - ${supplierName}` : supplierName || `Vendor ${id}`
+        return {
+          id,
+          ID: id,
+          value: id,
+          supplierCode,
+          VENDOR_CODE: supplierCode,
+          supplierName,
+          VENDOR_NAME: supplierName,
+          label,
+        }
+      })
+
+    const engineers = extractList(rawEmployees)
+      .filter((r) => String(r.status ?? 1) === '1')
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const code = r.employeeCode || ''
+        const name = r.fullName || r.employeeName || ''
+        const label = code ? `${code} - ${name}` : name || `Employee ${id}`
+        const engineerName = name || label || (id ? `Employee ${id}` : '')
+        return {
+          id,
+          ID: id,
+          value: engineerName,
+          employeeCode: code,
+          employeeName: name,
+          name: engineerName,
+          label,
+        }
+      })
+
+    return {
+      assetItems,
+      vendors,
+      engineers,
+    }
+  } catch {
+    return getInitialAssetRepairReferences()
   }
 }

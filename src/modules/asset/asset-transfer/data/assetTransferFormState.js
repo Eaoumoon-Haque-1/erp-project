@@ -1,37 +1,85 @@
 /** @file Cross-field population and dependency resets for Asset Transfer. */
 export function updateAssetTransferField(current, name, value, references) {
-  let next = { ...current, [name]: value }
+  const next = { ...current, [name]: value }
 
-  if (name === 'ASSET_ASSIGNMENT_ID') {
-    const option = references.transferableAssets.find((record) => record.value === value)
-    const assignment = option?.assignment
-    const source = option?.current
-    next = {
-      ...next,
-      ASSET_ASSIGNMENT_ID: value,
-      ASSET_RECORD_ID: assignment?.ASSET_RECORD_ID || '', ASSET_NO: assignment?.ASSET_NO || '',
-      ITEM_NAME: assignment?.ITEM_NAME || '', ITEM_NAME_LABEL: assignment?.ITEM_NAME_LABEL || '',
-      FROM_CUSTODIAN_ID: source?.custodianId || '', FROM_CUSTODIAN_NAME: source?.custodianName || '',
-      FROM_SUB_CUSTODIAN_ID: source?.subCustodianId || '', FROM_SUB_CUSTODIAN_NAME: source?.subCustodianName || '',
-      FROM_DEPARTMENT_ID: source?.departmentId || '', FROM_DEPARTMENT_NAME: source?.departmentName || '',
-      FROM_LOCATION: source?.locationId || '', FROM_LOCATION_NAME: source?.locationName || '',
-      FROM_BUILDING: source?.building || '', FROM_FLOOR: source?.floor || '', FROM_ROOM: source?.room || '',
-      FROM_ASSIGN_DATE: source?.assignDate || '', FROM_CONDITION_ON_ISSUE: source?.condition || '', FROM_REMARKS: source?.remarks || '',
-      TO_CONDITION_ON_ISSUE: source?.condition || '',
-    }
+  if (name === 'ITEM_ID') {
+    const item = references.assetItems?.find((r) => String(r.id) === String(value))
+    next.ITEM_ID = value
+    next.ITEM_NAME_LABEL = item?.label || ''
   }
 
   if (name === 'TO_CUSTODIAN_ID') {
-    next = { ...next, TO_CUSTODIAN_NAME: references.custodians.find((record) => record.ID === value)?.CUSTODIAN_NAME || '', TO_SUB_CUSTODIAN_ID: '', TO_SUB_CUSTODIAN_NAME: '', TO_LOCATION: '', TO_LOCATION_NAME: '', TO_BUILDING: '', TO_FLOOR: '', TO_ROOM: '' }
+    const custodian = references.custodians?.find((r) => String(r.id) === String(value))
+    next.TO_CUSTODIAN_ID = value
+    next.TO_CUSTODIAN_NAME = custodian?.custodianName || custodian?.label || ''
+    next.TO_SUB_CUSTODIAN_ID = ''
+    next.TO_SUB_CUSTODIAN_NAME = ''
+    next.TO_LOCATION = ''
+    next.TO_LOCATION_NAME = ''
+    next.TO_BUILDING = ''
+    next.TO_FLOOR = ''
+    next.TO_ROOM = ''
   }
+
   if (name === 'TO_SUB_CUSTODIAN_ID') {
-    const custodian = references.custodians.find((record) => record.ID === current.TO_CUSTODIAN_ID)
-    next = { ...next, TO_SUB_CUSTODIAN_NAME: custodian?.SUB_CUSTODIANS.find((record) => record.ID === value)?.SUB_CUSTODIAN_NAME || '', TO_LOCATION: '', TO_LOCATION_NAME: '', TO_BUILDING: '', TO_FLOOR: '', TO_ROOM: '' }
+    const custodian = references.custodians?.find((r) => String(r.id) === String(current.TO_CUSTODIAN_ID))
+    const sub = (custodian?.subCustodians || []).find((s) => String(s.id) === String(value))
+    next.TO_SUB_CUSTODIAN_ID = value
+    next.TO_SUB_CUSTODIAN_NAME = sub?.subCustodianName || sub?.label || ''
+    next.TO_LOCATION = ''
+    next.TO_LOCATION_NAME = ''
+    next.TO_BUILDING = ''
+    next.TO_FLOOR = ''
+    next.TO_ROOM = ''
   }
-  if (name === 'TO_DEPARTMENT_ID') next.TO_DEPARTMENT_NAME = references.departments.find((option) => option.value === value)?.label || ''
+
+  if (name === 'TO_DEPARTMENT_ID') {
+    const dept = references.departments?.find((d) => String(d.id) === String(value))
+    next.TO_DEPARTMENT_ID = value
+    next.TO_DEPARTMENT_NAME = dept?.departmentName || dept?.label || ''
+  }
+
   if (name === 'TO_LOCATION') {
-    const location = references.locations.find((record) => record.ID === value)
-    next = { ...next, TO_LOCATION_NAME: location?.LOCATION_NAME || '', TO_BUILDING: location?.BUILDING || '', TO_FLOOR: location?.FLOOR || '', TO_ROOM: location?.ROOM || '' }
+    const loc = references.locations?.find((l) => String(l.id) === String(value))
+    next.TO_LOCATION = value
+    next.TO_LOCATION_NAME = loc?.locationName || loc?.label || ''
+    next.TO_BUILDING = loc?.building || ''
+    next.TO_FLOOR = loc?.floor || ''
+    next.TO_ROOM = loc?.room || ''
   }
+
   return next
+}
+
+export function applyCurrentAssetTransferState(current, sourceRecord, references) {
+  if (!sourceRecord) return current
+
+  const fromCustId = String(sourceRecord.toCustodianId || sourceRecord.fromCustodianId || '')
+  const fromSubCustId = String(sourceRecord.toSubCustodianId || sourceRecord.fromSubCustodianId || '')
+  const fromDeptId = String(sourceRecord.toDepartmentId || sourceRecord.fromDepartmentId || '')
+  const fromLocId = String(sourceRecord.toLocationId || sourceRecord.fromLocationId || '')
+
+  const cust = references.custodians?.find((c) => String(c.id) === fromCustId)
+  const sub = (cust?.subCustodians || []).find((s) => String(s.id) === fromSubCustId)
+  const dept = references.departments?.find((d) => String(d.id) === fromDeptId)
+  const loc = references.locations?.find((l) => String(l.id) === fromLocId)
+
+  return {
+    ...current,
+    FROM_CUSTODIAN_ID: fromCustId,
+    FROM_CUSTODIAN_NAME: cust?.custodianName || cust?.label || '',
+    FROM_SUB_CUSTODIAN_ID: fromSubCustId,
+    FROM_SUB_CUSTODIAN_NAME: sub?.subCustodianName || sub?.label || '',
+    FROM_DEPARTMENT_ID: fromDeptId,
+    FROM_DEPARTMENT_NAME: dept?.departmentName || dept?.label || '',
+    FROM_LOCATION: fromLocId,
+    FROM_LOCATION_NAME: loc?.locationName || loc?.label || '',
+    FROM_BUILDING: loc?.building || '',
+    FROM_FLOOR: loc?.floor || '',
+    FROM_ROOM: loc?.room || '',
+    FROM_ASSIGN_DATE: sourceRecord.toAssignDate || sourceRecord.fromAssignDate || '',
+    FROM_CONDITION_ON_ISSUE: sourceRecord.toConditionOnIssue || sourceRecord.fromConditionOnIssue || '',
+    FROM_REMARKS: sourceRecord.toRemarks || sourceRecord.fromRemarks || '',
+    TO_CONDITION_ON_ISSUE: sourceRecord.toConditionOnIssue || sourceRecord.fromConditionOnIssue || current.TO_CONDITION_ON_ISSUE || '',
+  }
 }

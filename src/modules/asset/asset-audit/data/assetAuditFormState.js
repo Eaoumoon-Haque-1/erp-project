@@ -1,6 +1,64 @@
-/** @file Selection population and live financial calculations for Asset Audit. */
-import { updateAssetDisposalField } from '../../asset-disposal-retirement/data/assetDisposalFormState'
+/** @file State update and financial calculations for Asset Audit. */
 
-export function updateAssetAuditField(current, name, value, references) {
-  return updateAssetDisposalField(current, name, value, references)
+export function calculateFinancials(disposalValueStr, writtenDownValueStr) {
+  const disposalValue = Number(disposalValueStr || 0)
+  const writtenDownValue = Number(writtenDownValueStr || 0)
+
+  if (Number.isNaN(disposalValue) || Number.isNaN(writtenDownValue)) {
+    return { GAIN_ON_DISPOSAL: '0.00', LOSS_ON_DISPOSAL: '0.00' }
+  }
+
+  const diff = disposalValue - writtenDownValue
+  if (diff > 0) {
+    return {
+      GAIN_ON_DISPOSAL: diff.toFixed(2),
+      LOSS_ON_DISPOSAL: '0.00',
+    }
+  }
+
+  if (diff < 0) {
+    return {
+      GAIN_ON_DISPOSAL: '0.00',
+      LOSS_ON_DISPOSAL: Math.abs(diff).toFixed(2),
+    }
+  }
+
+  return {
+    GAIN_ON_DISPOSAL: '0.00',
+    LOSS_ON_DISPOSAL: '0.00',
+  }
+}
+
+export function updateAssetAuditField(current, name, value, references = {}) {
+  const next = { ...current, [name]: value }
+
+  if (name === 'ASSET_RECORD_ID') {
+    const selected = references.assetItems?.find((item) => String(item.id) === String(value))
+    next.ITEM_NAME_LABEL = selected?.label || ''
+  }
+
+  if (name === 'DISPOSAL_TYPE') {
+    const selected = references.disposalTypes?.find((type) => type.value === value)
+    next.DISPOSAL_TYPE_NAME = selected?.label || value
+  }
+
+  if (name === 'REASON') {
+    const selected = references.reasons?.find((r) => r.value === value)
+    next.REASON_NAME = selected?.label || value
+  }
+
+  if (name === 'APPROVED_BY') {
+    const selected = references.approvers?.find((emp) => String(emp.id) === String(value))
+    next.APPROVED_BY_NAME = selected?.label || ''
+  }
+
+  if (name === 'DISPOSAL_VALUE' || name === 'WRITTEN_DOWN_VALUE') {
+    const financials = calculateFinancials(
+      name === 'DISPOSAL_VALUE' ? value : next.DISPOSAL_VALUE,
+      name === 'WRITTEN_DOWN_VALUE' ? value : next.WRITTEN_DOWN_VALUE,
+    )
+    Object.assign(next, financials)
+  }
+
+  return next
 }

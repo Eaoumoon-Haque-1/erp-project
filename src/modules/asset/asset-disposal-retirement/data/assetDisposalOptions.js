@@ -1,56 +1,126 @@
-/** @file Eligible physical assets and disposal workflow references. */
-import { reportingOfficerOptions } from '../../../hris/employee-information/data/employeeOptions'
-import { listAssetAssignments } from '../../asset-assign-employee/data/assetAssignEmployeeStore'
-import { listAssetReceives } from '../../asset-receive-register/data/assetReceiveRegisterStore'
-import { listBulkAssetReceives } from '../../bulk-asset-receive-for-split/data/bulkAssetReceiveStore'
+/** @file Reference options for Asset Disposal (Asset Items, Employees/Approvers, Disposal Types & Reasons). */
+import { assetItemsApi } from '../../asset-item-information/api/assetItemApi'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
+import { assetLookupValuesApi } from '../../asset-lookup-value/api/assetLookupValueApi'
 
-const fallbackDisposalTypes = ['Sale', 'Scrap', 'Donation', 'Write-off', 'Lost', 'Retirement']
-const fallbackReasons = ['Obsolete', 'Damaged', 'Beyond Repair', 'End of Useful Life', 'Lost', 'Replacement']
+export const fallbackDisposalTypes = [
+  { value: 'SALE', label: 'Sale' },
+  { value: 'SCRAP', label: 'Scrap' },
+  { value: 'DONATION', label: 'Donation' },
+  { value: 'WRITE_OFF', label: 'Write-off' },
+  { value: 'LOST', label: 'Lost' },
+  { value: 'RETIREMENT', label: 'Retirement' },
+]
 
-function configuredOptions(lookupValues, typeName, fallback) {
-  const configured = lookupValues
-    .filter((record) => record.STATUS === '1' && record.TYPE_NAME.trim().toLowerCase() === typeName.toLowerCase())
-    .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
-    .map((record) => ({ value: record.ID, label: record.VALUE }))
-  return configured.length > 0
-    ? configured
-    : fallback.map((label) => ({ value: label.toUpperCase().replace(/[\s-]+/g, '_'), label }))
-}
+export const fallbackReasons = [
+  { value: 'OBSOLETE', label: 'Obsolete' },
+  { value: 'DAMAGED', label: 'Damaged' },
+  { value: 'BEYOND_REPAIR', label: 'Beyond Repair' },
+  { value: 'END_OF_USEFUL_LIFE', label: 'End of Useful Life' },
+  { value: 'LOST', label: 'Lost' },
+  { value: 'REPLACEMENT', label: 'Replacement' },
+]
 
-function toAssetOption(record, source) {
+export const disposalStatusOptions = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'COMPLETED', label: 'Completed' },
+]
+
+export function getInitialAssetDisposalReferences() {
   return {
-    value: `${source}:${record.ID}`,
-    label: `${record.ASSET_NO} - ${record.ITEM_NAME_LABEL}`,
-    source,
-    receiveId: record.ID,
-    record,
+    eligibleAssets: [],
+    assetItems: [],
+    approvers: [],
+    disposalTypes: fallbackDisposalTypes,
+    reasons: fallbackReasons,
+    statuses: disposalStatusOptions,
   }
 }
 
-export const disposalStatusOptions = [
-  { value: 'DRAFT', label: 'Draft' }, { value: 'SUBMITTED', label: 'Submitted' },
-  { value: 'APPROVED', label: 'Approved' }, { value: 'REJECTED', label: 'Rejected' },
-  { value: 'CANCELLED', label: 'Cancelled' }, { value: 'COMPLETED', label: 'Completed' },
-]
+function extractList(response) {
+  if (Array.isArray(response)) return response
+  if (response && Array.isArray(response.data)) return response.data
+  return []
+}
 
-export function getAssetDisposalReferences(existingRecords = [], currentRecord = null, lookupValues = []) {
-  const blockedAssets = new Set(existingRecords
-    .filter((record) => record.STATUS === '1' && record.ID !== currentRecord?.ID)
-    .map((record) => record.ASSET_RECORD_ID))
-  const assignedAssets = new Set(listAssetAssignments()
-    .filter((record) => record.STATUS === '1' && !record.ACTUAL_RETURN_DATE)
-    .map((record) => record.ASSET_RECORD_ID))
+function configuredOptions(lookupValues, typeName, fallback) {
+  const configured = lookupValues
+    .filter((record) => String(record.status ?? record.STATUS ?? 1) === '1' && String(record.typeName || record.TYPE_NAME || '').trim().toLowerCase() === typeName.toLowerCase())
+    .sort((left, right) => Number(left.sortOrder || left.SORT_ORDER || 0) - Number(right.sortOrder || right.SORT_ORDER || 0))
+    .map((record) => {
+      const val = record.lookupValue || record.value || record.VALUE || ''
+      return {
+        value: record.lookupCode || record.code || val.toUpperCase().replace(/[\s-]+/g, '_'),
+        label: val,
+      }
+    })
 
-  const receives = [
-    ...listAssetReceives().filter((record) => record.STATUS === '1' || (currentRecord?.ASSET_SOURCE === 'RECEIVE' && record.ID === currentRecord.ASSET_RECEIVE_ID)).map((record) => toAssetOption(record, 'RECEIVE')),
-    ...listBulkAssetReceives().filter((record) => record.STATUS === '1' || (currentRecord?.ASSET_SOURCE === 'BULK' && record.ID === currentRecord.ASSET_RECEIVE_ID)).map((record) => toAssetOption(record, 'BULK')),
-  ]
+  return configured.length > 0 ? configured : fallback
+}
 
-  return {
-    eligibleAssets: receives.filter((option) => !blockedAssets.has(option.value) && !assignedAssets.has(option.value)),
-    disposalTypes: configuredOptions(lookupValues, 'Disposal Type', fallbackDisposalTypes),
-    reasons: configuredOptions(lookupValues, 'Disposal Reason', fallbackReasons),
-    approvers: reportingOfficerOptions,
-    statuses: disposalStatusOptions,
+export async function loadAssetDisposalReferences(buId) {
+  const buIdParam = buId ? Number(buId) : undefined
+
+  try {
+    const [rawItems, rawEmployees, rawLookupValues] = await Promise.all([
+      assetItemsApi.list(buIdParam).catch(() => []),
+      employeesApi.list(buIdParam).catch(() => []),
+      assetLookupValuesApi.list({ businessUnitId: buIdParam }).catch(() => []),
+    ])
+
+    const eligibleAssets = extractList(rawItems)
+      .filter((r) => String(r.status ?? 1) === '1')
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const itemCode = r.itemCode || ''
+        const itemName = r.itemName || ''
+        const label = itemCode ? `${itemCode} - ${itemName}` : itemName || `Item ${id}`
+        return {
+          id,
+          ID: id,
+          value: id,
+          itemCode,
+          itemName,
+          ITEM_NAME: itemName,
+          label,
+        }
+      })
+
+    const approvers = extractList(rawEmployees)
+      .filter((r) => String(r.status ?? 1) === '1')
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const code = r.employeeCode || ''
+        const name = r.fullName || r.employeeName || ''
+        const label = code ? `${code} - ${name}` : name || `Employee ${id}`
+        return {
+          id,
+          ID: id,
+          value: id,
+          employeeCode: code,
+          employeeName: name,
+          name,
+          label,
+        }
+      })
+
+    const lookups = extractList(rawLookupValues)
+    const disposalTypes = configuredOptions(lookups, 'Disposal Type', fallbackDisposalTypes)
+    const reasons = configuredOptions(lookups, 'Disposal Reason', fallbackReasons)
+
+    return {
+      eligibleAssets,
+      assetItems: eligibleAssets,
+      approvers,
+      disposalTypes,
+      reasons,
+      statuses: disposalStatusOptions,
+    }
+  } catch {
+    return getInitialAssetDisposalReferences()
   }
 }

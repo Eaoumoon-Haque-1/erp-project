@@ -1,8 +1,6 @@
-/** @file Available received assets, employees, and issue conditions. */
-import { reportingOfficerOptions } from '../../../hris/employee-information/data/employeeOptions'
-import { listAssetItems } from '../../asset-item-information/data/assetItemInformationStore'
-import { listAssetReceives } from '../../asset-receive-register/data/assetReceiveRegisterStore'
-import { listBulkAssetReceives } from '../../bulk-asset-receive-for-split/data/bulkAssetReceiveStore'
+/** @file Active Asset Item, Employee, and Issue Condition references used by Asset Assign to Employee. */
+import { assetItemsApi } from '../../asset-item-information/api/assetItemApi'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 
 export const assetConditionOptions = [
   { value: 'NEW', label: 'New' },
@@ -11,51 +9,80 @@ export const assetConditionOptions = [
   { value: 'DAMAGED', label: 'Damaged' },
 ]
 
-function toAssetOption(record, source) {
+export function getInitialAssetAssignReferences() {
   return {
-    value: `${source}:${record.ID}`,
-    receiveId: record.ID,
-    source,
-    assetItemId: record.ITEM_NAME,
-    assetItemName: record.ITEM_NAME_LABEL,
-    assetNo: record.ASSET_NO,
-    availableDate: record.GRN_DATE,
-    label: `${record.ASSET_NO} - ${record.ITEM_NAME_LABEL}`,
+    assetItems: [],
+    employees: [],
+    conditions: assetConditionOptions,
   }
 }
 
-export function getAssetAssignReferences(existingAssignments = [], currentAssignmentId = '') {
-  const assignedKeys = new Set(existingAssignments
-    .filter((record) => (
-      record.ID !== String(currentAssignmentId)
-      && record.STATUS === '1'
-      && !record.ACTUAL_RETURN_DATE
-    ))
-    .map((record) => record.ASSET_RECORD_ID))
+function extractList(response) {
+  if (Array.isArray(response)) return response
+  if (response && Array.isArray(response.data)) return response.data
+  return []
+}
 
-  const receivedAssets = [
-    ...listAssetReceives().filter((record) => record.STATUS === '1').map((record) => toAssetOption(record, 'RECEIVE')),
-    ...listBulkAssetReceives().filter((record) => record.STATUS === '1').map((record) => toAssetOption(record, 'BULK')),
-  ]
+export async function loadAssetAssignReferences(buId) {
+  const buIdParam = buId ? Number(buId) : undefined
 
-  // Keeps the frontend demonstrable before a receive record is entered.
-  const fallbackAssets = receivedAssets.length === 0
-    ? listAssetItems().filter((record) => record.STATUS === '1').map((record) => ({
-        value: `DEMO:${record.ID}`,
-        receiveId: '',
-        source: 'DEMO',
-        assetItemId: record.ID,
-        assetItemName: record.ITEM_NAME,
-        assetNo: `AST-DEMO-${String(record.ID).padStart(4, '0')}`,
-        availableDate: '',
-        label: `AST-DEMO-${String(record.ID).padStart(4, '0')} - ${record.ITEM_NAME}`,
-      }))
-    : []
+  try {
+    const [rawItems, rawEmployees] = await Promise.all([
+      assetItemsApi.list(buIdParam).catch(() => []),
+      employeesApi.list(buIdParam).catch(() => []),
+    ])
 
-  return {
-    availableAssets: [...receivedAssets, ...fallbackAssets]
-      .filter((option) => !assignedKeys.has(option.value)),
-    employees: reportingOfficerOptions,
-    conditions: assetConditionOptions,
+    const assetItems = extractList(rawItems)
+      .filter((r) => String(r.status ?? 1) === '1')
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const itemCode = r.itemCode || ''
+        const itemName = r.itemName || ''
+        const label = itemCode ? `${itemCode} - ${itemName}` : itemName || `Item ${id}`
+        return {
+          id,
+          ID: id,
+          itemCode,
+          itemName,
+          ITEM_NAME: itemName,
+          label,
+        }
+      })
+
+    const employees = extractList(rawEmployees)
+      .filter((r) => {
+        const active = String(r.status ?? 1) === '1'
+        if (!active) return false
+        if (buIdParam && r.buId != null && Number(r.buId) !== buIdParam) return false
+        return true
+      })
+      .map((r) => {
+        const id = String(r.id ?? '')
+        const employeeCode = r.employeeCode || ''
+        const employeeName = r.employeeName || ''
+        const label = employeeCode ? `${employeeCode} - ${employeeName}` : employeeName || `Employee ${id}`
+        return {
+          id,
+          ID: id,
+          value: id,
+          employeeId: employeeCode,
+          employeeCode,
+          name: employeeName,
+          employeeName,
+          label,
+        }
+      })
+
+    return {
+      assetItems,
+      employees,
+      conditions: assetConditionOptions,
+    }
+  } catch {
+    return {
+      assetItems: [],
+      employees: [],
+      conditions: assetConditionOptions,
+    }
   }
 }
