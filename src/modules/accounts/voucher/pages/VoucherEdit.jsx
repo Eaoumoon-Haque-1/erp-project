@@ -6,10 +6,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import { failActiveAction, showError } from '../../../../components/shared/actionAlerts'
-import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
-import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
-import { usersApi } from '../../../super-admin/user/api/userApi'
+import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { departmentGroupsApi } from '../../../hris/department-group/api/departmentGroupApi'
+import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankChequeMapApi } from '../../bank-cheque-mapping/api/bankChequeMapApi'
@@ -17,6 +16,9 @@ import { bankApi } from '../../bank/api/bankApi'
 import { calendarApi } from '../../calendar/api/calendarApi'
 import { paymentTypeMappingApi } from '../../payment-type-mapping/api/paymentTypeMappingApi'
 import { periodApi } from '../../period/api/periodApi'
+import { userLocationApi } from '../../user-location/api/userLocationApi'
+import { userSetupApi } from '../../user-setup/api/userSetupApi'
+import { mapUserSetupFromApi } from '../../user-setup/data/userSetupApiMapper'
 import { voucherTypeMappingApi } from '../../voucher-type-mapping/api/voucherTypeMappingApi'
 import { voucherApi } from '../api/voucherApi'
 import VoucherForm from '../components/VoucherForm'
@@ -30,14 +32,103 @@ import {
 
 const listPath = '/accounts/voucher'
 
+function getTodayIso() {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function validateVoucherDateAllowed(dateStr, userSetup) {
+  if (!dateStr) {
+    return 'Voucher Date is required'
+  }
+  if (!userSetup || !Array.isArray(userSetup.VOUCHER_DATE) || userSetup.VOUCHER_DATE.length === 0) {
+    return null
+  }
+  const rules = userSetup.VOUCHER_DATE
+  const hasAll = rules.some((r) => String(r).trim().toLowerCase() === 'all')
+  if (hasAll) return null
+
+  const todayStr = getTodayIso()
+  const hasPrev = rules.some((r) => String(r).toLowerCase().includes('previous'))
+  const hasFwd = rules.some(
+    (r) => String(r).toLowerCase().includes('forward') || String(r).toLowerCase().includes('future'),
+  )
+
+  if (dateStr < todayStr && !hasPrev) {
+    return 'Previous date data entry is not allowed by User Setup.'
+  }
+  if (dateStr > todayStr && !hasFwd) {
+    return 'Forward date data entry is not allowed by User Setup.'
+  }
+  return null
+}
+
+function resolvePeriodForDate(dateStr, calendars = [], periods = []) {
+  if (!dateStr) {
+    return { periodName: '', error: 'Voucher Date is required' }
+  }
+
+  const allMonths = (calendars || []).flatMap((c) => c.calendarMonths || [])
+  const matchedMonth = allMonths.find((m) => {
+    if (!m.fromDate || !m.toDate) return false
+    const f = String(m.fromDate).slice(0, 10)
+    const t = String(m.toDate).slice(0, 10)
+    return dateStr >= f && dateStr <= t
+  })
+
+  if (!matchedMonth) {
+    return {
+      periodName: '',
+      error: 'No accounting period found for selected Voucher Date.',
+    }
+  }
+
+  const periodOverride = (periods || []).find(
+    (p) =>
+      (p.afmCalendarMonthId != null &&
+        matchedMonth.id != null &&
+        String(p.afmCalendarMonthId) === String(matchedMonth.id)) ||
+      (p.periodName &&
+        matchedMonth.periodName &&
+        String(p.periodName).trim().toLowerCase() === String(matchedMonth.periodName).trim().toLowerCase()),
+  )
+
+  const effectiveStatus = String(
+    periodOverride?.periodStatus || matchedMonth.periodStatus || '',
+  )
+    .trim()
+    .toLowerCase()
+
+  if (effectiveStatus === 'open' || effectiveStatus === '1') {
+    return {
+      periodName: matchedMonth.periodName || '',
+      error: null,
+    }
+  }
+
+  return {
+    periodName: '',
+    error: `Accounting period "${matchedMonth.periodName}" is not open for data entry.`,
+  }
+}
+
+function calculateTotal(rows) {
+  const sumDr = (rows || []).reduce((s, row) => s + (parseFloat(row.drAmount) || 0), 0)
+  const sumCr = (rows || []).reduce((s, row) => s + (parseFloat(row.crAmount) || 0), 0)
+  const total = sumDr > 0 ? sumDr : sumCr
+  return total.toFixed(2)
+}
+
 function VoucherEdit() {
   const { voucherId } = useParams()
   const navigate = useNavigate()
   const { session } = useAuth()
+  const sessionUserId = String(session?.userId ?? session?.id ?? '').trim()
   const sessionGroupId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()
   const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
-  const sessionGroupName = String(session?.groupName ?? session?.businessGroupName ?? '').trim()
-  const sessionBuName = String(session?.buName ?? session?.businessUnitName ?? '').trim()
 
   const [values, setValues] = useState(initialVoucherValues)
   const [details, setDetails] = useState([])
@@ -49,60 +140,34 @@ function VoucherEdit() {
   const [detailErrors, setDetailErrors] = useState([])
   const [submitting, setSubmitting] = useState(false)
 
-  // Dropdown options
-  const [voucherTypeOptions, setVoucherTypeOptions] = useState([])
+  // Lookups and user setup
+  const [userSetup, setUserSetup] = useState(null)
+  const [loadedCalendars, setLoadedCalendars] = useState([])
+  const [loadedPeriods, setLoadedPeriods] = useState([])
+
+  const [rawVoucherTypes, setRawVoucherTypes] = useState([])
+  const [rawLocations, setRawLocations] = useState([])
+  const [rawBankAccounts, setRawBankAccounts] = useState([])
+  const [rawCostCenters, setRawCostCenters] = useState([])
+
   const [paymentTypeOptions, setPaymentTypeOptions] = useState([])
   const [throughOptions, setThroughOptions] = useState([])
-  const [periodOptions, setPeriodOptions] = useState([])
   const [coaOptions, setCoaOptions] = useState([])
-  const [costCenterOptions, setCostCenterOptions] = useState([])
-  const [bankAccountOptions, setBankAccountOptions] = useState([])
   const [allCheques, setAllCheques] = useState([])
 
-  const currentBuId = values.BU_ID || sessionBuId
+  const activeBuId = values.BU_ID || sessionBuId
 
   // Load existing voucher
   useEffect(() => {
     let active = true
 
-    Promise.all([
-      voucherApi.get(voucherId),
-      usersApi.list().catch(() => []),
-      employeesApi.list().catch(() => []),
-    ])
-      .then(([record, users, employees]) => {
+    voucherApi
+      .get(voucherId)
+      .then((record) => {
         if (!active) return
-        const userMap = new Map(
-          (users || []).map((u) => {
-            const id = String(u.id ?? u.ID ?? '')
-            const userName = u.userName ?? u.user_name ?? u.USER_NAME ?? id
-            return [id, userName]
-          }),
-        )
-        const empMap = new Map(
-          (employees || []).map((e) => {
-            const id = String(e.id ?? e.ID ?? '')
-            const code = String(
-              e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
-            ).trim()
-            const name = String(
-              e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
-            ).trim()
-            const display =
-              code && name ? `${code}: ${name}` : code || name || id
-            return [id, display]
-          }),
-        )
         setOriginalRecord(record)
-        const mapped = mapVoucherFromApi(record, userMap, empMap)
-        setValues({
-          ...mapped,
-          BG_ID: sessionGroupId || mapped.BG_ID,
-          BU_ID: sessionBuId || mapped.BU_ID,
-          GROUP_NAME: sessionGroupName || mapped.GROUP_NAME,
-          BUSINESS_UNIT: sessionBuName || mapped.BUSINESS_UNIT,
-          CHEQUE_DATE: mapped.CHEQUE_DATE || new Date().toISOString().slice(0, 10),
-        })
+        const mapped = mapVoucherFromApi(record)
+        setValues(mapped)
         setDetails(mapped.details.length > 0 ? mapped.details : [createInitialDetailRow()])
         setAttachments(mapped.attachments)
         setAuditLog(mapped.AUDIT_LOG)
@@ -118,82 +183,132 @@ function VoucherEdit() {
     return () => {
       active = false
     }
-  }, [voucherId, sessionGroupId, sessionBuId, sessionGroupName, sessionBuName])
+  }, [voucherId])
 
-  // Initial lookups using currentBuId
+  // Load lookups when activeBuId is available
   useEffect(() => {
-    if (!currentBuId) return undefined
+    if (!activeBuId) return undefined
     let active = true
+
+    // User Setup for logged-in user
+    userSetupApi
+      .list({ buId: activeBuId, status: 1 })
+      .then((records) => {
+        if (!active) return
+        const setups = (records || []).map(mapUserSetupFromApi)
+        const mySetup =
+          setups.find(
+            (s) =>
+              String(s.USER_ID) === sessionUserId &&
+              (String(s.STATUS) === '1' || s.STATUS === 1),
+          ) ||
+          setups.find((s) => String(s.USER_ID) === sessionUserId) ||
+          setups[0] ||
+          null
+        setUserSetup(mySetup)
+
+        if (mySetup) {
+          const dateErr = validateVoucherDateAllowed(values.VOUCHER_DATE, mySetup)
+          if (dateErr) {
+            setErrors((prev) => ({ ...prev, VOUCHER_DATE: dateErr }))
+          }
+        }
+      })
+      .catch(() => {
+        if (active) setUserSetup(null)
+      })
 
     // Voucher Types
     afmLookupApi
-      .getValuesByTypeCode('VT001', currentBuId, 1)
+      .getValuesByTypeCode('VT001', activeBuId, 1)
       .then((rows) => {
         if (!active) return
-        setVoucherTypeOptions(
+        setRawVoucherTypes(
           (rows || []).map((r) => ({
             value: String(r.id),
             label: r.value || r.valueCode,
+            code: r.valueCode,
           })),
         )
       })
       .catch(() => {
-        if (active) setVoucherTypeOptions([])
+        if (active) setRawVoucherTypes([])
       })
 
-    // Open Periods: fetch from both periodApi and calendarApi
+    // Calendars and Periods
     Promise.allSettled([
-      periodApi.getOpenPeriods(currentBuId),
-      calendarApi.list({ buId: currentBuId }),
-      periodApi.list({ buId: currentBuId }),
-    ])
-      .then(([openRes, calsRes, periodsRes]) => {
+      calendarApi.list({ buId: activeBuId }),
+      periodApi.list({ buId: activeBuId }),
+    ]).then(([calsRes, periodsRes]) => {
+      if (!active) return
+
+      const cals =
+        calsRes.status === 'fulfilled' && Array.isArray(calsRes.value) ? calsRes.value : []
+      const periods =
+        periodsRes.status === 'fulfilled' && Array.isArray(periodsRes.value)
+          ? periodsRes.value
+          : []
+
+      setLoadedCalendars(cals)
+      setLoadedPeriods(periods)
+
+      // Resolve Period Name for currently loaded voucher date
+      if (values.VOUCHER_DATE) {
+        const { periodName, error: pErr } = resolvePeriodForDate(values.VOUCHER_DATE, cals, periods)
+        if (periodName) {
+          setValues((prev) => ({ ...prev, PERIOD_NAME: periodName }))
+        }
+        if (pErr) {
+          setErrors((prev) => ({ ...prev, PERIOD_NAME: pErr }))
+        }
+      }
+    })
+
+    // User Locations (active)
+    userLocationApi
+      .list({ buId: activeBuId, status: 1 })
+      .then((rows) => {
         if (!active) return
-
-        const namesFromOpenApi =
-          openRes.status === 'fulfilled' && Array.isArray(openRes.value) ? openRes.value : []
-
-        const cals =
-          calsRes.status === 'fulfilled' && Array.isArray(calsRes.value) ? calsRes.value : []
-        const namesFromCalendar = cals
-          .flatMap((c) =>
-            (c.calendarMonths || [])
-              .filter((m) => String(m.periodStatus || '').trim().toLowerCase() === 'open')
-              .map((m) => String(m.periodName || '').trim()),
-          )
-          .filter(Boolean)
-
-        const periods =
-          periodsRes.status === 'fulfilled' && Array.isArray(periodsRes.value) ? periodsRes.value : []
-        const namesFromPeriods = periods
-          .filter((p) => String(p.periodStatus || '').trim().toLowerCase() === 'open')
-          .map((p) => String(p.periodName || '').trim())
-          .filter(Boolean)
-
-        const distinctNames = Array.from(
-          new Set([
-            ...namesFromOpenApi,
-            ...namesFromCalendar,
-            ...namesFromPeriods,
-            values.PERIOD_NAME ? String(values.PERIOD_NAME).trim() : null,
-          ]),
+        setRawLocations(
+          (rows || []).map((r) => ({
+            value: String(r.id),
+            label: r.shortName ? `${r.location} (${r.shortName})` : r.location,
+          })),
         )
-          .filter(Boolean)
-          .sort()
-
-        setPeriodOptions(distinctNames.map((name) => ({ value: name, label: name })))
       })
       .catch(() => {
-        if (active) {
-          setPeriodOptions(
-            values.PERIOD_NAME ? [{ value: values.PERIOD_NAME, label: values.PERIOD_NAME }] : [],
-          )
-        }
+        if (active) setRawLocations([])
       })
+
+    // Cost Centers: loaded from HR_DEPT joined with HR_DEPT_GROUP matching login user's Business Unit
+    Promise.allSettled([
+      departmentsApi.list(sessionGroupId || undefined),
+      departmentGroupsApi.list(),
+    ]).then(([deptRes, groupRes]) => {
+      if (!active) return
+      const depts = deptRes.status === 'fulfilled' && Array.isArray(deptRes.value) ? deptRes.value : []
+      const groups = groupRes.status === 'fulfilled' && Array.isArray(groupRes.value) ? groupRes.value : []
+
+      const buGroups = groups.filter((g) => String(g.buId ?? '') === String(activeBuId))
+      const allowedDeptIds = new Set(buGroups.map((g) => String(g.deptId)))
+
+      const matchedDepts = depts.filter((d) => {
+        const inBu = buGroups.length === 0 ? true : allowedDeptIds.has(String(d.id))
+        const isActive = d.status === 1 || d.status === '1' || d.status === undefined || d.status === null
+        return inBu && isActive
+      })
+
+      setRawCostCenters(
+        matchedDepts.map((d) => ({
+          value: String(d.id),
+          label: d.departmentName || d.shortName || String(d.id),
+        })),
+      )
+    })
 
     // Chart of Accounts where Ledger Head = Active Account, Is Active = yes
     afmChartOfAccountsApi
-      .list({ buId: currentBuId, status: 1 })
+      .list({ buId: activeBuId, status: 1 })
       .then((rows) => {
         if (!active) return
         const filtered = (rows || []).filter((r) => {
@@ -204,76 +319,78 @@ function VoucherEdit() {
             (isActive === '1' || isActive === 'true' || isActive === '')
           )
         })
-        setCoaOptions(
-          filtered.map((r) => ({
-            value: String(r.id),
-            label: `${r.accountCode} - ${r.accountHeadName}`,
-            code: r.accountCode,
-            name: r.accountHeadName,
-            source: r.accountsSource,
-          })),
+        const mappedCoa = filtered.map((r) => ({
+          value: String(r.id),
+          label: `${r.accountCode} - ${r.accountHeadName}`,
+          code: r.accountCode,
+          name: r.accountHeadName,
+          source: r.accountsSource || r.source || 'None',
+          accountsSource: r.accountsSource || r.source || 'None',
+        }))
+        setCoaOptions(mappedCoa)
+
+        setDetails((prev) =>
+          prev.map((row) => {
+            if (!row.coaSourceType || row.coaSourceType === 'None') {
+              const matched = mappedCoa.find((c) => String(c.value) === String(row.coaId))
+              if (matched) {
+                return {
+                  ...row,
+                  coaSourceType: matched.source,
+                  accountsSource: matched.source,
+                }
+              }
+            }
+            return row
+          }),
         )
       })
       .catch(() => {
         if (active) setCoaOptions([])
       })
 
-    // Cost Centers
-    voucherApi
-      .getCostCenters(currentBuId)
-      .then((rows) => {
-        if (!active) return
-        setCostCenterOptions(
-          (rows || []).map((r) => ({
-            value: String(r.id),
-            label: r.costCenter,
-          })),
-        )
-      })
-      .catch(() => {
-        if (active) setCostCenterOptions([])
-      })
-
-    // Bank Accounts: only active
+    // Bank Accounts: active
     bankApi
-      .list({ buId: currentBuId })
+      .list({ buId: activeBuId })
       .then((banks) => {
         if (!active) return
         const accts = []
         ;(banks || []).forEach((b) => {
-          const isBankActive = b.status === 1 || b.status === '1' || b.status === undefined || b.status === null
+          const isBankActive =
+            b.status === 1 || b.status === '1' || b.status === undefined || b.status === null
           if (isBankActive && Array.isArray(b.bankDetails)) {
             b.bankDetails.forEach((d) => {
-              const isDetailActive = d.status === 1 || d.status === '1' || d.status === undefined || d.status === null
+              const isDetailActive =
+                d.status === 1 || d.status === '1' || d.status === undefined || d.status === null
               const accNum = String(d.accountNumber ?? d.accountNo ?? '').trim()
-              if (isDetailActive && accNum) {
-                const labelParts = [
-                  b.bankName || b.shortName,
-                  d.accountName,
-                  d.branchName,
-                ].filter(Boolean).join(' - ')
+              if (isDetailActive && d.id) {
+                const bankName = b.bankName || b.shortName || 'Bank'
+                const branchStr = d.branchName ? ` (${d.branchName.trim()})` : ''
+                const label = `${bankName} : ${accNum || d.accountName || 'Account'}${branchStr}`
                 accts.push({
-                  value: accNum,
-                  label: labelParts ? `${accNum} (${labelParts})` : accNum,
-                  bankId: String(b.id),
+                  value: String(d.id),
+                  label,
+                  id: String(d.id),
                   bankAccountId: String(d.id),
+                  bankId: String(b.id),
                   accountNumber: accNum,
                   accountName: d.accountName || '',
-                  bankName: b.bankName || '',
+                  bankName,
+                  branchName: d.branchName || '',
                 })
               }
             })
           }
         })
-        setBankAccountOptions(accts)
+        setRawBankAccounts(accts)
       })
       .catch(() => {
-        if (active) setBankAccountOptions([])
+        if (active) setRawBankAccounts([])
       })
 
     // Cheques from Bank Cheque Mapping
     bankChequeMapApi
-      .list({ buId: currentBuId })
+      .list({ buId: activeBuId })
       .then((rows) => {
         if (!active) return
         setAllCheques(rows || [])
@@ -285,17 +402,73 @@ function VoucherEdit() {
     return () => {
       active = false
     }
-  }, [currentBuId, values.PERIOD_NAME])
+  }, [activeBuId, sessionGroupId, sessionUserId, values.VOUCHER_DATE])
+
+  // Filter options as per User Setup, preserving existing voucher values
+  const voucherTypeOptions = useMemo(() => {
+    if (!userSetup?.VOUCHER_TYPE || userSetup.VOUCHER_TYPE.length === 0) {
+      return rawVoucherTypes
+    }
+    const allowed = userSetup.VOUCHER_TYPE.map(String)
+    return rawVoucherTypes.filter(
+      (vt) =>
+        allowed.includes(String(vt.value)) ||
+        (vt.code && allowed.includes(String(vt.code))) ||
+        (vt.label && allowed.includes(String(vt.label))) ||
+        String(vt.value) === String(values.VOUCHER_TYPE_ID),
+    )
+  }, [rawVoucherTypes, userSetup, values.VOUCHER_TYPE_ID])
+
+  const locationOptions = useMemo(() => {
+    if (!userSetup?.LOCATION || userSetup.LOCATION.length === 0) {
+      return rawLocations
+    }
+    const allowed = userSetup.LOCATION.map(String)
+    return rawLocations.filter(
+      (loc) =>
+        allowed.includes(String(loc.value)) ||
+        (loc.label && allowed.includes(String(loc.label))) ||
+        String(loc.value) === String(values.LOCATION_ID),
+    )
+  }, [rawLocations, userSetup, values.LOCATION_ID])
+
+  const bankAccountOptions = useMemo(() => {
+    if (!userSetup?.BANK_ACCOUNT || userSetup.BANK_ACCOUNT.length === 0) {
+      return rawBankAccounts
+    }
+    const allowed = userSetup.BANK_ACCOUNT.map(String)
+    return rawBankAccounts.filter(
+      (ba) =>
+        allowed.includes(String(ba.value)) ||
+        (ba.bankAccountId && allowed.includes(String(ba.bankAccountId))) ||
+        (ba.accountNumber && allowed.includes(String(ba.accountNumber))) ||
+        String(ba.value) === String(values.BANK_ACCOUNT),
+    )
+  }, [rawBankAccounts, userSetup, values.BANK_ACCOUNT])
+
+  const costCenterOptions = useMemo(() => {
+    if (!userSetup?.COST_CENTER || userSetup.COST_CENTER.length === 0) {
+      return rawCostCenters
+    }
+    const allowed = userSetup.COST_CENTER.map(String)
+    const existingDeptIds = new Set(details.map((d) => String(d.costCenterId)).filter(Boolean))
+    return rawCostCenters.filter(
+      (cc) =>
+        allowed.includes(String(cc.value)) ||
+        (cc.label && allowed.includes(String(cc.label))) ||
+        existingDeptIds.has(String(cc.value)),
+    )
+  }, [rawCostCenters, userSetup, details])
 
   // Payment Types: depend on selected Voucher Type
   useEffect(() => {
-    if (!currentBuId || !values.VOUCHER_TYPE_ID) {
+    if (!activeBuId || !values.VOUCHER_TYPE_ID) {
       return undefined
     }
     let active = true
 
     voucherTypeMappingApi
-      .getByVoucherType(currentBuId, values.VOUCHER_TYPE_ID, 1)
+      .getByVoucherType(activeBuId, values.VOUCHER_TYPE_ID, 1)
       .then((rows) => {
         if (!active) return
         setPaymentTypeOptions(
@@ -312,17 +485,17 @@ function VoucherEdit() {
     return () => {
       active = false
     }
-  }, [currentBuId, values.VOUCHER_TYPE_ID])
+  }, [activeBuId, values.VOUCHER_TYPE_ID])
 
   // Payment Throughs: depend on selected Payment Type
   useEffect(() => {
-    if (!currentBuId || !values.PAYMENT_TYPE_ID) {
+    if (!activeBuId || !values.PAYMENT_TYPE_ID) {
       return undefined
     }
     let active = true
 
     paymentTypeMappingApi
-      .getByPaymentType(currentBuId, values.PAYMENT_TYPE_ID, 1)
+      .getByPaymentType(activeBuId, values.PAYMENT_TYPE_ID, 1)
       .then((rows) => {
         if (!active) return
         setThroughOptions(
@@ -339,7 +512,7 @@ function VoucherEdit() {
     return () => {
       active = false
     }
-  }, [currentBuId, values.PAYMENT_TYPE_ID])
+  }, [activeBuId, values.PAYMENT_TYPE_ID])
 
   // Cheque numbers: derived from selected Bank Account
   const chequeOptions = useMemo(() => {
@@ -348,38 +521,38 @@ function VoucherEdit() {
 
     const matchedAccount = bankAccountOptions.find((a) => {
       const aVal = String(a.value || '').trim().toLowerCase()
-      const aId = String(a.bankAccountId || '').trim().toLowerCase()
-      return aVal === selected || aId === selected
+      const aId = String(a.bankAccountId || a.id || '').trim().toLowerCase()
+      const aNum = String(a.accountNumber || '').trim().toLowerCase()
+      return aVal === selected || aId === selected || aNum === selected
     })
 
     const matching = allCheques.filter((c) => {
-      const isActive = c.status === 1 || c.status === '1' || c.status === undefined || c.status === null
-      if (!isActive) return false
+      const isActive =
+        c.status === 1 || c.status === '1' || c.status === undefined || c.status === null
+      if (!isActive && String(c.chequeNo) !== String(values.CHEQUE_NO)) return false
 
       const cAcc = String(c.accountNumber || c.accountNo || '').trim().toLowerCase()
       const cAccId = String(c.bankAccountId || '').trim().toLowerCase()
 
-      if (cAcc && cAcc === selected) return true
       if (cAccId && cAccId === selected) return true
-      if (matchedAccount && cAccId && cAccId === String(matchedAccount.bankAccountId).toLowerCase()) return true
-      if (matchedAccount && cAcc && cAcc === String(matchedAccount.accountNumber).toLowerCase()) return true
+      if (cAcc && cAcc === selected) return true
+      if (matchedAccount && cAccId && cAccId === String(matchedAccount.bankAccountId || matchedAccount.value).toLowerCase())
+        return true
+      if (matchedAccount && cAcc && matchedAccount.accountNumber && cAcc === String(matchedAccount.accountNumber).toLowerCase())
+        return true
 
       return false
     })
 
-    const distinctCheques = Array.from(
-      new Set([
-        ...matching.map((c) => c.chequeNo),
-        values.CHEQUE_NO ? values.CHEQUE_NO : null,
-      ].filter(Boolean)),
+    const distinct = Array.from(
+      new Set(
+        [...matching.map((c) => c.chequeNo), values.CHEQUE_NO ? values.CHEQUE_NO : null].filter(
+          Boolean,
+        ),
+      ),
     )
-    return distinctCheques.map((no) => {
-      const found = matching.find((c) => c.chequeNo === no)
-      return {
-        value: no,
-        label: found && found.chequeStatus ? `${no} (${found.chequeStatus})` : no,
-      }
-    })
+
+    return distinct.map((no) => ({ value: no, label: no }))
   }, [allCheques, bankAccountOptions, values.BANK_ACCOUNT, values.CHEQUE_NO])
 
   // Form field change handler
@@ -390,6 +563,39 @@ function VoucherEdit() {
     }
     if (field === 'PAYMENT_TYPE_ID' && !value) {
       setThroughOptions([])
+    }
+
+    if (field === 'VOUCHER_DATE') {
+      const dateErr = validateVoucherDateAllowed(value, userSetup)
+      const { periodName, error: pErr } = resolvePeriodForDate(
+        value,
+        loadedCalendars,
+        loadedPeriods,
+      )
+
+      setValues((prev) => ({
+        ...prev,
+        VOUCHER_DATE: value,
+        PERIOD_NAME: periodName,
+      }))
+
+      setErrors((prev) => {
+        const next = { ...prev }
+        if (dateErr) {
+          next.VOUCHER_DATE = dateErr
+        } else {
+          delete next.VOUCHER_DATE
+        }
+
+        if (pErr) {
+          next.PERIOD_NAME = pErr
+        } else {
+          delete next.PERIOD_NAME
+        }
+
+        return next
+      })
+      return
     }
 
     setValues((prev) => ({ ...prev, [field]: value }))
@@ -406,11 +612,25 @@ function VoucherEdit() {
   const handleDetailChange = (index, field, value) => {
     setDetails((prev) => {
       const copy = [...prev]
-      copy[index] = { ...copy[index], [field]: value }
+      const updatedRow = { ...copy[index], [field]: value }
 
+      if (field === 'coaId') {
+        const opt = coaOptions.find((c) => String(c.value) === String(value))
+        if (opt) {
+          updatedRow.accountHeadName = opt.name || opt.label || ''
+          updatedRow.accountCode = opt.code || ''
+          const src = opt.source || opt.accountsSource || 'None'
+          updatedRow.coaSourceType = src
+          updatedRow.accountsSource = src
+        }
+      }
+
+      copy[index] = updatedRow
+
+      // Auto update total voucher amount & cheque amount when DR/CR amounts change
       if (field === 'drAmount' || field === 'crAmount') {
-        const sumDr = copy.reduce((s, row) => s + (parseFloat(row.drAmount) || 0), 0)
-        setValues((v) => ({ ...v, VOUCHER_AMOUNT: sumDr.toFixed(2) }))
+        const totalAmt = calculateTotal(copy)
+        setValues((v) => ({ ...v, VOUCHER_AMOUNT: totalAmt, CHEQUE_AMOUNT: totalAmt }))
       }
 
       return copy
@@ -430,7 +650,11 @@ function VoucherEdit() {
   }
 
   const handleAddDetail = () => {
-    setDetails((prev) => [...prev, createInitialDetailRow()])
+    const newRow = createInitialDetailRow()
+    if (userSetup?.COST_CENTER_DEFAULT) {
+      newRow.costCenterId = String(userSetup.COST_CENTER_DEFAULT)
+    }
+    setDetails((prev) => [...prev, newRow])
   }
 
   const handleRemoveDetail = (index) => {
@@ -438,8 +662,11 @@ function VoucherEdit() {
       showError('Cannot delete all detail rows. At least one row is required.')
       return
     }
-    setDetails((prev) => prev.filter((_, i) => i !== index))
+    const nextDetails = details.filter((_, i) => i !== index)
+    setDetails(nextDetails)
     setDetailErrors((prev) => prev.filter((_, i) => i !== index))
+    const totalAmt = calculateTotal(nextDetails)
+    setValues((v) => ({ ...v, VOUCHER_AMOUNT: totalAmt, CHEQUE_AMOUNT: totalAmt }))
   }
 
   // Attachment handlers
@@ -459,71 +686,53 @@ function VoucherEdit() {
     setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // Form validation prior to confirm dialog
-  const handleValidate = () => {
+  // Submit
+  const handleSubmit = async (e) => {
+    e?.preventDefault?.()
+
+    const totalAmt = calculateTotal(details)
     const submitValues = {
       ...values,
-      BG_ID: sessionGroupId || values.BG_ID,
-      BU_ID: currentBuId,
-      GROUP_NAME: sessionGroupName || values.GROUP_NAME,
-      BUSINESS_UNIT: sessionBuName || values.BUSINESS_UNIT,
+      VOUCHER_AMOUNT: totalAmt,
+      CHEQUE_AMOUNT: totalAmt,
     }
 
     const validation = validateVoucher(submitValues, details, attachments)
-    if (!validation.isValid) {
-      setErrors(validation.errors)
+    const dateErr = validateVoucherDateAllowed(values.VOUCHER_DATE, userSetup)
+    const { error: pErr } = resolvePeriodForDate(
+      values.VOUCHER_DATE,
+      loadedCalendars,
+      loadedPeriods,
+    )
+
+    const combinedErrors = {
+      ...validation.errors,
+      ...(dateErr ? { VOUCHER_DATE: dateErr } : {}),
+      ...(pErr ? { PERIOD_NAME: pErr } : {}),
+    }
+
+    if (Object.keys(combinedErrors).length > 0 || !validation.isValid) {
+      setErrors(combinedErrors)
       setDetailErrors(validation.detailErrors)
       showError('Please correct the highlighted form errors.')
-      return false
+      return
     }
 
     if (!validation.isBalanced) {
       showError(
         `Voucher is not balanced! Total Debit (${validation.totalDr}) must equal Total Credit (${validation.totalCr}).`,
       )
-      return false
-    }
-
-    return true
-  }
-
-  // Submit
-  const handleSubmit = async (e) => {
-    e?.preventDefault?.()
-
-    if (!handleValidate()) return
-
-    let submitBgId = sessionGroupId || values.BG_ID
-    const submitBuId = currentBuId
-
-    if (!submitBgId && submitBuId) {
-      try {
-        const bu = await businessUnitsApi.get(submitBuId)
-        if (bu?.bgId) {
-          submitBgId = String(bu.bgId)
-        }
-      } catch {
-        // proceed
-      }
-    }
-
-    const submitValues = {
-      ...values,
-      BG_ID: submitBgId,
-      BU_ID: submitBuId,
-      GROUP_NAME: sessionGroupName || values.GROUP_NAME,
-      BUSINESS_UNIT: sessionBuName || values.BUSINESS_UNIT,
+      return
     }
 
     setSubmitting(true)
     try {
       const payload = mapVoucherToApi(submitValues, details, attachments, originalRecord)
       await voucherApi.update(voucherId, payload)
+      showSuccess('Account Voucher updated successfully!')
       navigate(listPath)
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Unable to update voucher.')
-      failActiveAction(msg)
-      showError(msg)
+      showError(getApiErrorMessage(err, 'Unable to update voucher.'))
     } finally {
       setSubmitting(false)
     }
@@ -531,7 +740,7 @@ function VoucherEdit() {
 
   if (loading) {
     return (
-      <FormPage title={'Edit Account Voucher'} listTo={listPath} hideActions>
+      <FormPage title={'Edit Account Voucher'} backPath={listPath}>
         <div className={'py-12 text-center text-xs text-gray-500'}>
           Loading voucher data...
         </div>
@@ -542,12 +751,8 @@ function VoucherEdit() {
   return (
     <FormPage
       title={`Edit Account Voucher: ${values.VOUCHER_NO || ''}`}
-      listTo={listPath}
-      submitLabel={'Update'}
+      backPath={listPath}
       hideActions
-      onSubmit={handleSubmit}
-      onValidate={handleValidate}
-      submitting={submitting}
     >
       <VoucherForm
         values={values}
@@ -561,11 +766,11 @@ function VoucherEdit() {
         voucherTypeOptions={voucherTypeOptions}
         paymentTypeOptions={paymentTypeOptions}
         throughOptions={throughOptions}
-        periodOptions={periodOptions}
         bankAccountOptions={bankAccountOptions}
         chequeOptions={chequeOptions}
         coaOptions={coaOptions}
         costCenterOptions={costCenterOptions}
+        locationOptions={locationOptions}
         onChange={handleChange}
         onDetailChange={handleDetailChange}
         onAddDetail={handleAddDetail}

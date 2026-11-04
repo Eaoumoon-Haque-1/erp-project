@@ -8,6 +8,8 @@ import FormPage from '../../../../components/shared/FormPage'
 import { showError } from '../../../../components/shared/actionAlerts'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 import { usersApi } from '../../../super-admin/user/api/userApi'
+import { departmentGroupsApi } from '../../../hris/department-group/api/departmentGroupApi'
+import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankChequeMapApi } from '../../bank-cheque-mapping/api/bankChequeMapApi'
@@ -15,6 +17,7 @@ import { bankApi } from '../../bank/api/bankApi'
 import { calendarApi } from '../../calendar/api/calendarApi'
 import { paymentTypeMappingApi } from '../../payment-type-mapping/api/paymentTypeMappingApi'
 import { periodApi } from '../../period/api/periodApi'
+import { userLocationApi } from '../../user-location/api/userLocationApi'
 import { voucherTypeMappingApi } from '../../voucher-type-mapping/api/voucherTypeMappingApi'
 import { voucherApi } from '../api/voucherApi'
 import VoucherForm from '../components/VoucherForm'
@@ -42,6 +45,7 @@ function VoucherView() {
   const [costCenterOptions, setCostCenterOptions] = useState([])
   const [bankAccountOptions, setBankAccountOptions] = useState([])
   const [allCheques, setAllCheques] = useState([])
+  const [locationOptions, setLocationOptions] = useState([])
 
   const buId = values.BU_ID
 
@@ -168,34 +172,75 @@ function VoucherView() {
       .list({ buId })
       .then((rows) => {
         if (!active) return
-        setCoaOptions(
-          (rows || []).map((r) => ({
-            value: String(r.id),
-            label: `${r.accountCode} - ${r.accountHeadName}`,
-            code: r.accountCode,
-            name: r.accountHeadName,
-            source: r.accountsSource,
-          })),
+        const mappedCoa = (rows || []).map((r) => ({
+          value: String(r.id),
+          label: `${r.accountCode} - ${r.accountHeadName}`,
+          code: r.accountCode,
+          name: r.accountHeadName,
+          source: r.accountsSource || r.source || 'None',
+          accountsSource: r.accountsSource || r.source || 'None',
+        }))
+        setCoaOptions(mappedCoa)
+
+        setDetails((prev) =>
+          prev.map((row) => {
+            if (!row.coaSourceType || row.coaSourceType === 'None') {
+              const matched = mappedCoa.find((c) => String(c.value) === String(row.coaId))
+              if (matched) {
+                return {
+                  ...row,
+                  coaSourceType: matched.source,
+                  accountsSource: matched.source,
+                }
+              }
+            }
+            return row
+          }),
         )
       })
       .catch(() => {
         if (active) setCoaOptions([])
       })
 
-    // Cost Centers
-    voucherApi
-      .getCostCenters(buId)
+    // Cost Centers: loaded from HR_DEPT and HR_DEPT_GROUP matching BU
+    Promise.allSettled([
+      departmentsApi.list(values.BG_ID || undefined),
+      departmentGroupsApi.list(),
+    ]).then(([deptRes, groupRes]) => {
+      if (!active) return
+      const depts = deptRes.status === 'fulfilled' && Array.isArray(deptRes.value) ? deptRes.value : []
+      const groups = groupRes.status === 'fulfilled' && Array.isArray(groupRes.value) ? groupRes.value : []
+
+      const buGroups = groups.filter((g) => String(g.buId ?? '') === String(buId))
+      const allowedDeptIds = new Set(buGroups.map((g) => String(g.deptId)))
+
+      const matchedDepts = depts.filter((d) => {
+        const inBu = buGroups.length === 0 ? true : allowedDeptIds.has(String(d.id))
+        return inBu
+      })
+
+      setCostCenterOptions(
+        matchedDepts.map((d) => ({
+          value: String(d.id),
+          label: d.departmentName || d.shortName || String(d.id),
+        })),
+      )
+    })
+
+    // User Locations
+    userLocationApi
+      .list({ buId })
       .then((rows) => {
         if (!active) return
-        setCostCenterOptions(
+        setLocationOptions(
           (rows || []).map((r) => ({
             value: String(r.id),
-            label: r.costCenter,
+            label: r.shortName ? `${r.location} (${r.shortName})` : r.location,
           })),
         )
       })
       .catch(() => {
-        if (active) setCostCenterOptions([])
+        if (active) setLocationOptions([])
       })
 
     // Bank Accounts
@@ -208,20 +253,20 @@ function VoucherView() {
           if (Array.isArray(b.bankDetails)) {
             b.bankDetails.forEach((d) => {
               const accNum = String(d.accountNumber ?? d.accountNo ?? '').trim()
-              if (accNum) {
-                const labelParts = [
-                  b.bankName || b.shortName,
-                  d.accountName,
-                  d.branchName,
-                ].filter(Boolean).join(' - ')
+              if (d.id) {
+                const bankName = b.bankName || b.shortName || 'Bank'
+                const branchStr = d.branchName ? ` (${d.branchName.trim()})` : ''
+                const label = `${bankName} : ${accNum || d.accountName || 'Account'}${branchStr}`
                 accts.push({
-                  value: accNum,
-                  label: labelParts ? `${accNum} (${labelParts})` : accNum,
-                  bankId: String(b.id),
+                  value: String(d.id),
+                  label,
+                  id: String(d.id),
                   bankAccountId: String(d.id),
+                  bankId: String(b.id),
                   accountNumber: accNum,
                   accountName: d.accountName || '',
-                  bankName: b.bankName || '',
+                  bankName,
+                  branchName: d.branchName || '',
                 })
               }
             })
@@ -247,7 +292,7 @@ function VoucherView() {
     return () => {
       active = false
     }
-  }, [buId, values.PERIOD_NAME])
+  }, [buId, values.PERIOD_NAME, values.BG_ID])
 
   // Payment Types
   useEffect(() => {
@@ -303,10 +348,26 @@ function VoucherView() {
   const chequeOptions = useMemo(() => {
     if (!values.BANK_ACCOUNT) return []
     const selected = String(values.BANK_ACCOUNT).trim().toLowerCase()
+
+    const matchedAccount = bankAccountOptions.find((a) => {
+      const aVal = String(a.value || '').trim().toLowerCase()
+      const aId = String(a.bankAccountId || a.id || '').trim().toLowerCase()
+      const aNum = String(a.accountNumber || '').trim().toLowerCase()
+      return aVal === selected || aId === selected || aNum === selected
+    })
+
     const matched = allCheques.filter((c) => {
       const cAcc = String(c.accountNumber || c.accountNo || '').trim().toLowerCase()
       const cAccId = String(c.bankAccountId || '').trim().toLowerCase()
-      return cAcc === selected || cAccId === selected
+
+      if (cAccId && cAccId === selected) return true
+      if (cAcc && cAcc === selected) return true
+      if (matchedAccount && cAccId && cAccId === String(matchedAccount.bankAccountId || matchedAccount.value).toLowerCase())
+        return true
+      if (matchedAccount && cAcc && matchedAccount.accountNumber && cAcc === String(matchedAccount.accountNumber).toLowerCase())
+        return true
+
+      return false
     })
     const distinct = Array.from(
       new Set(
@@ -316,7 +377,7 @@ function VoucherView() {
       ),
     )
     return distinct.map((no) => ({ value: no, label: no }))
-  }, [allCheques, values.BANK_ACCOUNT, values.CHEQUE_NO])
+  }, [allCheques, bankAccountOptions, values.BANK_ACCOUNT, values.CHEQUE_NO])
 
   if (loading) {
     return (
@@ -361,6 +422,7 @@ function VoucherView() {
         chequeOptions={chequeOptions}
         coaOptions={coaOptions}
         costCenterOptions={costCenterOptions}
+        locationOptions={locationOptions}
         onCancel={() => navigate(listPath)}
       />
     </FormPage>

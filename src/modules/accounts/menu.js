@@ -48,6 +48,16 @@ export const accountsMenu = [{
           key: 'afm-period-open',
           path: '/accounts/voucher-setup/period',
         },
+        {
+          label: 'User Location',
+          key: 'afm-user-location',
+          path: '/accounts/voucher-setup/user-location',
+        },
+        {
+          label: 'User Setup',
+          key: 'afm-user-setup',
+          path: '/accounts/voucher-setup/user-setup',
+        },
       ],
     },
   ],
