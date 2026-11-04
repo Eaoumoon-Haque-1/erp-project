@@ -36,6 +36,14 @@ import VoucherList from './voucher/pages/VoucherList'
 import VoucherCreate from './voucher/pages/VoucherCreate'
 import VoucherEdit from './voucher/pages/VoucherEdit'
 import VoucherView from './voucher/pages/VoucherView'
+import UserLocationCreate from './user-location/pages/UserLocationCreate'
+import UserLocationEdit from './user-location/pages/UserLocationEdit'
+import UserLocationList from './user-location/pages/UserLocationList'
+import UserLocationView from './user-location/pages/UserLocationView'
+import UserSetupCreate from './user-setup/pages/UserSetupCreate'
+import UserSetupEdit from './user-setup/pages/UserSetupEdit'
+import UserSetupList from './user-setup/pages/UserSetupList'
+import UserSetupView from './user-setup/pages/UserSetupView'
 
 export const accountsRoutes = [
   // Fallbacks & shortcuts
@@ -100,6 +108,18 @@ export const accountsRoutes = [
   { path: 'accounts/voucher-setup/period/close/create', element: <ClosePeriodCreate /> },
   { path: 'accounts/voucher-setup/period/:periodId/edit', element: <PeriodEdit /> },
   { path: 'accounts/voucher-setup/period/:periodId/view', element: <PeriodView /> },
+
+  // Voucher Setup -> User Location (AFM_USER_LOCATION)
+  { path: 'accounts/voucher-setup/user-location', element: <UserLocationList /> },
+  { path: 'accounts/voucher-setup/user-location/create', element: <UserLocationCreate /> },
+  { path: 'accounts/voucher-setup/user-location/:locationId/edit', element: <UserLocationEdit /> },
+  { path: 'accounts/voucher-setup/user-location/:locationId/view', element: <UserLocationView /> },
+
+  // Voucher Setup -> User Setup (AFM_USER_SETUP)
+  { path: 'accounts/voucher-setup/user-setup', element: <UserSetupList /> },
+  { path: 'accounts/voucher-setup/user-setup/create', element: <UserSetupCreate /> },
+  { path: 'accounts/voucher-setup/user-setup/:setupId/edit', element: <UserSetupEdit /> },
+  { path: 'accounts/voucher-setup/user-setup/:setupId/view', element: <UserSetupView /> },
 
   // Direct alias routes for AFM Chart of Accounts
   { path: 'accounts/afm-chart-of-accounts', element: <AfmChartOfAccountsList /> },
@@ -172,6 +192,18 @@ export const accountsRoutes = [
   { path: 'accounts/period-open/create', element: <OpenPeriodCreate /> },
   { path: 'accounts/accounting-period-open', element: <PeriodList /> },
   { path: 'accounts/accounting-period-open/create', element: <OpenPeriodCreate /> },
+
+  // Direct alias routes for User Location
+  { path: 'accounts/user-location', element: <UserLocationList /> },
+  { path: 'accounts/user-location/create', element: <UserLocationCreate /> },
+  { path: 'accounts/user-location/:locationId/edit', element: <UserLocationEdit /> },
+  { path: 'accounts/user-location/:locationId/view', element: <UserLocationView /> },
+
+  // Direct alias routes for User Setup
+  { path: 'accounts/user-setup', element: <UserSetupList /> },
+  { path: 'accounts/user-setup/create', element: <UserSetupCreate /> },
+  { path: 'accounts/user-setup/:setupId/edit', element: <UserSetupEdit /> },
+  { path: 'accounts/user-setup/:setupId/view', element: <UserSetupView /> },
 
   // Account Voucher (AFM_VOUCHER, AFM_VOUCHER_DETAIL, AFM_VOUCHER_ATTACH)
   { path: 'accounts/voucher', element: <VoucherList /> },

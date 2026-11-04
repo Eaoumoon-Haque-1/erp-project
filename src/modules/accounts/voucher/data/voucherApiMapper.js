@@ -58,6 +58,8 @@ export function mapVoucherFromApi(
     coaId: d.coaId != null ? String(d.coaId) : '',
     accountCode: d.accountCode || '',
     accountHeadName: d.accountHeadName || '',
+    coaSourceType: d.coaSourceType || d.accountsSource || '',
+    accountsSource: d.coaSourceType || d.accountsSource || '',
     coaSourceName: d.coaSourceName || '',
     coaSourceId: d.coaSourceId != null ? String(d.coaSourceId) : '',
     costCenterId: d.costCenterId != null ? String(d.costCenterId) : '',
@@ -195,6 +197,7 @@ export function mapVoucherToApi(values, details = [], attachments = [], original
   const mappedDetails = details.map((d) => ({
     id: d.id || null,
     coaId: d.coaId ? Number(d.coaId) : null,
+    coaSourceType: d.coaSourceType || d.accountsSource || null,
     coaSourceName: d.coaSourceName ? String(d.coaSourceName).trim() : null,
     coaSourceId: d.coaSourceId ? Number(d.coaSourceId) : null,
     costCenterId: d.costCenterId ? Number(d.costCenterId) : null,

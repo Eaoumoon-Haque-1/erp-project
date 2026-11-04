@@ -12,7 +12,6 @@ import { useId } from 'react'
 import DateInput from '../../../../components/shared/DateInput'
 import SearchableSelect from '../../../../components/shared/SearchableSelect'
 import {
-  AC_SOURCE_OPTIONS,
   POSTED_OPTIONS,
   RECONCILED_OPTIONS,
   VOUCHER_STATUS_OPTIONS,
@@ -79,7 +78,6 @@ function VoucherForm({
   paymentTypeOptions = [],
   throughOptions = [],
   locationOptions = [],
-  periodOptions = [],
   bankAccountOptions = [],
   chequeOptions = [],
   coaOptions = [],
@@ -100,6 +98,7 @@ function VoucherForm({
   const totalDr = details.reduce((sum, d) => sum + (parseFloat(d.drAmount) || 0), 0)
   const totalCr = details.reduce((sum, d) => sum + (parseFloat(d.crAmount) || 0), 0)
   const isBalanced = Math.abs(totalDr - totalCr) < 0.001
+  const calculatedTotal = (totalDr > 0 ? totalDr : (totalCr > 0 ? totalCr : (parseFloat(values.VOUCHER_AMOUNT) || 0))).toFixed(2)
 
   const handleFileUpload = (index, event) => {
     const file = event.target.files?.[0]
@@ -349,50 +348,34 @@ function VoucherForm({
 
           {/* ---------------- COLUMN 2 ---------------- */}
           <div className={'space-y-3'}>
-            {/* Period Name: Searchable with write option, required */}
+            {/* Period Name: readonly textfield derived from Voucher Date */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Period Name<span className={'text-rose-500 ml-0.5'}>*</span>
               </label>
-              {readOnly ? (
-                <input
-                  type={'text'}
-                  value={values.PERIOD_NAME || '-'}
-                  readOnly
-                  className={inputClass(null, true)}
-                />
-              ) : (
-                <SearchableSelect
-                  id={'PERIOD_NAME'}
-                  name={'PERIOD_NAME'}
-                  value={values.PERIOD_NAME || ''}
-                  options={periodOptions}
-                  placeholder={
-                    periodOptions.length === 0
-                      ? '-- No Open Periods Available --'
-                      : '-- Select or Write Period Name --'
-                  }
-                  disabled={periodOptions.length === 0}
-                  error={Boolean(errors.PERIOD_NAME)}
-                  onChange={(val) => onChange('PERIOD_NAME', val)}
-                  inputClassName={'h-8 text-xs'}
-                />
-              )}
+              <input
+                type={'text'}
+                id={'PERIOD_NAME'}
+                name={'PERIOD_NAME'}
+                value={values.PERIOD_NAME || ''}
+                readOnly
+                placeholder={'Period Name (autofilled by Voucher Date)'}
+                className={inputClass(errors.PERIOD_NAME, true)}
+              />
               <FieldError id={`${formId}-pname-err`} message={errors.PERIOD_NAME} />
             </div>
 
-            {/* Voucher Amount */}
+            {/* Voucher Amount: readonly, autofilled with total voucher amount */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Voucher Amount
               </label>
               <input
                 type={'text'}
-                value={values.VOUCHER_AMOUNT || '0.00'}
-                onChange={(e) => onChange('VOUCHER_AMOUNT', e.target.value)}
-                readOnly={readOnly}
+                value={calculatedTotal}
+                readOnly
                 placeholder={'0.00'}
-                className={inputClass(errors.VOUCHER_AMOUNT, readOnly)}
+                className={inputClass(errors.VOUCHER_AMOUNT, true)}
               />
             </div>
 
@@ -409,50 +392,6 @@ function VoucherForm({
                 readOnly={readOnly}
                 className={inputClass(errors.VOUCHER_SOURCE, readOnly)}
               />
-            </div>
-
-            {/* Voucher Source Link */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Voucher Source Link
-              </label>
-              {readOnly ? (
-                values.VOUCHER_SOURCE_LINK ? (
-                  <div className={'flex items-center space-x-2'}>
-                    <input
-                      type={'text'}
-                      value={values.VOUCHER_SOURCE_LINK}
-                      readOnly
-                      className={inputClass(null, true)}
-                    />
-                    {String(values.VOUCHER_SOURCE_LINK).startsWith('http') && (
-                      <a
-                        href={values.VOUCHER_SOURCE_LINK}
-                        target={'_blank'}
-                        rel={'noopener noreferrer'}
-                        className={'px-2 py-1 text-xs text-teal-600 hover:text-teal-800 underline shrink-0'}
-                      >
-                        Open
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <input
-                    type={'text'}
-                    value={'-'}
-                    readOnly
-                    className={inputClass(null, true)}
-                  />
-                )
-              ) : (
-                <input
-                  type={'text'}
-                  value={values.VOUCHER_SOURCE_LINK || ''}
-                  onChange={(e) => onChange('VOUCHER_SOURCE_LINK', e.target.value)}
-                  placeholder={'External link or document reference'}
-                  className={inputClass(errors.VOUCHER_SOURCE_LINK, false)}
-                />
-              )}
             </div>
 
             {/* Voucher Status */}
@@ -509,7 +448,11 @@ function VoucherForm({
                 <input
                   type={'text'}
                   value={
-                    bankAccountOptions.find((o) => String(o.value) === String(values.BANK_ACCOUNT))?.label ||
+                    bankAccountOptions.find(
+                      (o) =>
+                        String(o.value) === String(values.BANK_ACCOUNT) ||
+                        (o.accountNumber && String(o.accountNumber) === String(values.BANK_ACCOUNT)),
+                    )?.label ||
                     values.BANK_ACCOUNT ||
                     '-'
                   }
@@ -595,19 +538,17 @@ function VoucherForm({
               <FieldError id={`${formId}-cdate-err`} message={errors.CHEQUE_DATE} />
             </div>
 
-            {/* Cheque Amount */}
+            {/* Cheque Amount: readonly, autofilled with total voucher amount */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Cheque Amount
               </label>
               <input
-                type={'number'}
-                step={'0.01'}
-                value={values.CHEQUE_AMOUNT || (readOnly ? '-' : '')}
-                onChange={(e) => onChange('CHEQUE_AMOUNT', e.target.value)}
+                type={'text'}
+                value={calculatedTotal}
+                readOnly
                 placeholder={'0.00'}
-                readOnly={readOnly}
-                className={inputClass(errors.CHEQUE_AMOUNT, readOnly)}
+                className={inputClass(errors.CHEQUE_AMOUNT, true)}
               />
             </div>
 
@@ -771,9 +712,9 @@ function VoucherForm({
                                 if (opt?.code) {
                                   onDetailChange(index, 'accountCode', opt.code)
                                 }
-                                if (opt?.source && opt.source !== 'None' && !row.coaSourceType) {
-                                  onDetailChange(index, 'coaSourceType', opt.source)
-                                }
+                                const sourceVal = opt?.source || opt?.accountsSource || 'None'
+                                onDetailChange(index, 'coaSourceType', sourceVal)
+                                onDetailChange(index, 'accountsSource', sourceVal)
                               }}
                               inputClassName={'h-7 py-0.5 text-xs'}
                             />
@@ -784,31 +725,20 @@ function VoucherForm({
                         )}
                       </td>
 
-                      {/* A/C Source */}
+                      {/* A/C Source: readonly textfield derived from selected Accounts Name */}
                       <td className={'px-2 py-1.5'}>
-                        {readOnly ? (
-                          <div className={'py-1 px-2 bg-gray-50 rounded text-xs text-gray-800'}>
-                            {row.coaSourceType || row.coaSourceName || '-'}
-                          </div>
-                        ) : (
-                          <select
-                            value={row.coaSourceType || row.coaSourceName || ''}
-                            onChange={(e) => {
-                              onDetailChange(index, 'coaSourceType', e.target.value)
-                              if (!row.coaSourceName) {
-                                onDetailChange(index, 'coaSourceName', e.target.value)
-                              }
-                            }}
-                            className={tableInputClass(false, false)}
-                          >
-                            <option value={''}>-- Source --</option>
-                            {AC_SOURCE_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        )}
+                        <input
+                          type={'text'}
+                          readOnly
+                          value={
+                            row.coaSourceType ||
+                            row.accountsSource ||
+                            coaOptions.find((o) => String(o.value) === String(row.coaId))?.source ||
+                            coaOptions.find((o) => String(o.value) === String(row.coaId))?.accountsSource ||
+                            'None'
+                          }
+                          className={tableInputClass(false, true)}
+                        />
                       </td>
 
                       {/* A/C Source Name */}
