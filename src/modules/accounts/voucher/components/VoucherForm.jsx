@@ -74,6 +74,8 @@ function VoucherForm({
   submitting = false,
   submitLabel = 'Submit',
   readOnly = false,
+  isEdit = false,
+  onEdit,
   voucherTypeOptions = [],
   paymentTypeOptions = [],
   throughOptions = [],
@@ -82,6 +84,9 @@ function VoucherForm({
   chequeOptions = [],
   coaOptions = [],
   costCenterOptions = [],
+  employeeOptions = [],
+  supplierOptions = [],
+  customerOptions = [],
   onChange = () => {},
   onDetailChange = () => {},
   onAddDetail = () => {},
@@ -713,8 +718,13 @@ function VoucherForm({
                                   onDetailChange(index, 'accountCode', opt.code)
                                 }
                                 const sourceVal = opt?.source || opt?.accountsSource || 'None'
+                                const prevSource = row.coaSourceType || row.accountsSource
                                 onDetailChange(index, 'coaSourceType', sourceVal)
                                 onDetailChange(index, 'accountsSource', sourceVal)
+                                if (String(sourceVal).trim().toLowerCase() !== String(prevSource).trim().toLowerCase()) {
+                                  onDetailChange(index, 'coaSourceId', '')
+                                  onDetailChange(index, 'coaSourceName', '')
+                                }
                               }}
                               inputClassName={'h-7 py-0.5 text-xs'}
                             />
@@ -743,32 +753,168 @@ function VoucherForm({
 
                       {/* A/C Source Name */}
                       <td className={'px-2 py-1.5'}>
-                        {readOnly ? (
-                          <div className={'py-1 px-2 bg-gray-50 rounded text-xs text-gray-800'}>
-                            {row.coaSourceName && row.coaSourceName !== row.coaSourceType
-                              ? row.coaSourceName
-                              : (row.coaSourceId != null && String(row.coaSourceId) !== ''
-                                  ? String(row.coaSourceId)
-                                  : (row.coaSourceName || '-'))}
-                          </div>
-                        ) : (
-                          <input
-                            type={'text'}
-                            value={
-                              row.coaSourceName && row.coaSourceName !== row.coaSourceType
-                                ? row.coaSourceName
-                                : (row.coaSourceId || '')
+                        {(() => {
+                          const currentSource = String(
+                            row.coaSourceType ||
+                            row.accountsSource ||
+                            coaOptions.find((o) => String(o.value) === String(row.coaId))?.source ||
+                            coaOptions.find((o) => String(o.value) === String(row.coaId))?.accountsSource ||
+                            ''
+                          ).trim().toLowerCase()
+
+                          const isEmployeeSource =
+                            currentSource === 'employee' || currentSource === 'employees'
+                          const isSupplierSource =
+                            currentSource === 'supplier' || currentSource === 'suppliers'
+                          const isCustomerSource =
+                            currentSource === 'customer' || currentSource === 'customers'
+
+                          if (isEmployeeSource) {
+                            if (readOnly) {
+                              const emp = employeeOptions.find(
+                                (o) => String(o.value) === String(row.coaSourceId),
+                              )
+                              const display =
+                                emp?.label ||
+                                (row.coaSourceName && row.coaSourceName !== row.coaSourceType
+                                  ? row.coaSourceName
+                                  : (row.coaSourceId != null && String(row.coaSourceId) !== ''
+                                      ? String(row.coaSourceId)
+                                      : '-'))
+                              return (
+                                <div className={'py-1 px-2 bg-gray-50 rounded text-xs text-gray-800 break-words'}>
+                                  {display}
+                                </div>
+                              )
                             }
-                            onChange={(e) => {
-                              onDetailChange(index, 'coaSourceName', e.target.value)
-                              if (/^\d+$/.test(e.target.value.trim())) {
-                                onDetailChange(index, 'coaSourceId', e.target.value.trim())
+
+                            return (
+                              <SearchableSelect
+                                id={`source-emp-${index}`}
+                                name={`details[${index}].coaSourceId`}
+                                value={row.coaSourceId || ''}
+                                options={employeeOptions}
+                                placeholder={'-- Select Employee --'}
+                                fallbackDisplay={row.coaSourceName || ''}
+                                error={Boolean(rowErr.coaSourceId)}
+                                onChange={(val, opt) => {
+                                  onDetailChange(index, 'coaSourceId', val ? String(val) : '')
+                                  onDetailChange(index, 'coaSourceName', opt?.label || opt?.name || '')
+                                }}
+                                inputClassName={'h-7 py-0.5 text-xs'}
+                              />
+                            )
+                          }
+
+                          if (isSupplierSource) {
+                            if (readOnly) {
+                              const sup = supplierOptions.find(
+                                (o) => String(o.value) === String(row.coaSourceId),
+                              )
+                              const display =
+                                sup?.label ||
+                                (row.coaSourceName && row.coaSourceName !== row.coaSourceType
+                                  ? row.coaSourceName
+                                  : (row.coaSourceId != null && String(row.coaSourceId) !== ''
+                                      ? String(row.coaSourceId)
+                                      : '-'))
+                              return (
+                                <div className={'py-1 px-2 bg-gray-50 rounded text-xs text-gray-800 break-words'}>
+                                  {display}
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <SearchableSelect
+                                id={`source-sup-${index}`}
+                                name={`details[${index}].coaSourceId`}
+                                value={row.coaSourceId || ''}
+                                options={supplierOptions}
+                                placeholder={'-- Select Supplier --'}
+                                fallbackDisplay={row.coaSourceName || ''}
+                                error={Boolean(rowErr.coaSourceId)}
+                                onChange={(val, opt) => {
+                                  onDetailChange(index, 'coaSourceId', val ? String(val) : '')
+                                  onDetailChange(index, 'coaSourceName', opt?.label || opt?.name || '')
+                                }}
+                                inputClassName={'h-7 py-0.5 text-xs'}
+                              />
+                            )
+                          }
+
+                          if (isCustomerSource) {
+                            if (readOnly) {
+                              const cus = customerOptions.find(
+                                (o) => String(o.value) === String(row.coaSourceId),
+                              )
+                              const display =
+                                cus?.label ||
+                                (row.coaSourceName && row.coaSourceName !== row.coaSourceType
+                                  ? row.coaSourceName
+                                  : (row.coaSourceId != null && String(row.coaSourceId) !== ''
+                                      ? String(row.coaSourceId)
+                                      : '-'))
+                              return (
+                                <div className={'py-1 px-2 bg-gray-50 rounded text-xs text-gray-800 break-words'}>
+                                  {display}
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <SearchableSelect
+                                id={`source-cus-${index}`}
+                                name={`details[${index}].coaSourceId`}
+                                value={row.coaSourceId || ''}
+                                options={customerOptions}
+                                placeholder={'-- Select Customer --'}
+                                fallbackDisplay={row.coaSourceName || ''}
+                                error={Boolean(rowErr.coaSourceId)}
+                                onChange={(val, opt) => {
+                                  onDetailChange(index, 'coaSourceId', val ? String(val) : '')
+                                  onDetailChange(index, 'coaSourceName', opt?.label || opt?.name || '')
+                                }}
+                                inputClassName={'h-7 py-0.5 text-xs'}
+                              />
+                            )
+                          }
+
+                          if (readOnly) {
+                            return (
+                              <div className={'py-1 px-2 bg-gray-50 rounded text-xs text-gray-800'}>
+                                {row.coaSourceName && row.coaSourceName !== row.coaSourceType
+                                  ? row.coaSourceName
+                                  : (row.coaSourceId != null && String(row.coaSourceId) !== ''
+                                      ? String(row.coaSourceId)
+                                      : '-')}
+                              </div>
+                            )
+                          }
+
+                          const isNone = currentSource === 'none' || !currentSource
+
+                          return (
+                            <input
+                              type={'text'}
+                              value={
+                                row.coaSourceName && row.coaSourceName !== row.coaSourceType
+                                  ? row.coaSourceName
+                                  : (row.coaSourceId || '')
                               }
-                            }}
-                            placeholder={'Source Ref / Name'}
-                            className={tableInputClass(false, false)}
-                          />
-                        )}
+                              disabled={isNone}
+                              readOnly={isNone}
+                              onChange={(e) => {
+                                onDetailChange(index, 'coaSourceName', e.target.value)
+                                if (/^\d+$/.test(e.target.value.trim())) {
+                                  onDetailChange(index, 'coaSourceId', e.target.value.trim())
+                                }
+                              }}
+                              placeholder={isNone ? '-' : 'Source Ref / Name'}
+                              className={tableInputClass(false, isNone)}
+                            />
+                          )
+                        })()}
                       </td>
 
                       {/* Cost Center */}
@@ -1027,7 +1173,91 @@ function VoucherForm({
       </div>
 
       {/* ============================================================ */}
-      {/* SECTION 5: AUDIT LOG (If Viewing / Editing)                  */}
+      {/* SECTION 5: ACTIONS (Above Audit Log, Left Side)              */}
+      {/* ============================================================ */}
+      {readOnly && (
+        <div className={'flex items-center gap-2 pt-2'}>
+          {onCancel && (
+            <button
+              type={'button'}
+              onClick={onCancel}
+              className={
+                'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-xs transition-colors'
+              }
+            >
+              Back to List
+            </button>
+          )}
+          {onEdit && (
+            <button
+              type={'button'}
+              onClick={onEdit}
+              className={
+                'inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded bg-[#038b8d] hover:bg-[#027577] text-white shadow-xs focus:outline-none transition-colors'
+              }
+            >
+              Edit Voucher
+            </button>
+          )}
+        </div>
+      )}
+
+      {!readOnly && (isEdit || submitLabel === 'Update') && (
+        <div className={'flex items-center gap-2 pt-2'}>
+          {onCancel && (
+            <button
+              type={'button'}
+              onClick={onCancel}
+              disabled={submitting}
+              className={
+                'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-xs transition-colors'
+              }
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type={'button'}
+            onClick={onSubmit}
+            disabled={submitting}
+            className={
+              'inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded bg-[#038b8d] hover:bg-[#027577] text-white shadow-xs focus:outline-none disabled:opacity-50 transition-colors'
+            }
+          >
+            {submitting ? 'Updating...' : 'Update'}
+          </button>
+        </div>
+      )}
+
+      {!readOnly && !isEdit && submitLabel !== 'Update' && (
+        <div className={'flex items-center gap-2 pt-2'}>
+          {onCancel && (
+            <button
+              type={'button'}
+              onClick={onCancel}
+              disabled={submitting}
+              className={
+                'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-xs transition-colors'
+              }
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type={'button'}
+            onClick={onSubmit}
+            disabled={submitting}
+            className={
+              'inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded bg-[#038b8d] hover:bg-[#027577] text-white shadow-xs focus:outline-none disabled:opacity-50 transition-colors'
+            }
+          >
+            {submitting ? 'Submitting...' : submitLabel || 'Submit'}
+          </button>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* SECTION 6: AUDIT LOG (If Viewing / Editing)                  */}
       {/* ============================================================ */}
       {auditLog && (
         <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
@@ -1158,37 +1388,6 @@ function VoucherForm({
           </div>
         </div>
       )}
-
-      {/* ============================================================ */}
-      {/* SECTION 6: ACTIONS                                          */}
-      {/* ============================================================ */}
-      <div className={'flex items-center justify-end space-x-3 pt-2'}>
-        {onCancel && (
-          <button
-            type={'button'}
-            onClick={onCancel}
-            disabled={submitting}
-            className={
-              'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-sm transition-colors'
-            }
-          >
-            {readOnly ? 'Back to List' : 'Cancel'}
-          </button>
-        )}
-
-        {!readOnly && (
-          <button
-            type={'submit'}
-            onClick={onSubmit}
-            disabled={submitting}
-            className={
-              'inline-flex items-center px-5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded shadow-sm disabled:opacity-50 transition-colors'
-            }
-          >
-            {submitting ? 'Saving...' : submitLabel}
-          </button>
-        )}
-      </div>
     </div>
   )
 }

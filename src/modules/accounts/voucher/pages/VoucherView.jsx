@@ -17,6 +17,8 @@ import { bankApi } from '../../bank/api/bankApi'
 import { calendarApi } from '../../calendar/api/calendarApi'
 import { paymentTypeMappingApi } from '../../payment-type-mapping/api/paymentTypeMappingApi'
 import { periodApi } from '../../period/api/periodApi'
+import { supplierApi } from '../../supplier/api/supplierApi'
+import { customerApi } from '../../customer/api/customerApi'
 import { userLocationApi } from '../../user-location/api/userLocationApi'
 import { voucherTypeMappingApi } from '../../voucher-type-mapping/api/voucherTypeMappingApi'
 import { voucherApi } from '../api/voucherApi'
@@ -46,6 +48,9 @@ function VoucherView() {
   const [bankAccountOptions, setBankAccountOptions] = useState([])
   const [allCheques, setAllCheques] = useState([])
   const [locationOptions, setLocationOptions] = useState([])
+  const [employeeOptions, setEmployeeOptions] = useState([])
+  const [supplierOptions, setSupplierOptions] = useState([])
+  const [customerOptions, setCustomerOptions] = useState([])
 
   const buId = values.BU_ID
 
@@ -56,8 +61,10 @@ function VoucherView() {
       voucherApi.get(voucherId),
       usersApi.list().catch(() => []),
       employeesApi.list().catch(() => []),
+      supplierApi.list().catch(() => []),
+      customerApi.list().catch(() => []),
     ])
-      .then(([record, users, employees]) => {
+      .then(([record, users, employees, suppliers, customers]) => {
         if (!active) return
         const userMap = new Map(
           (users || []).map((u) => {
@@ -80,6 +87,45 @@ function VoucherView() {
             return [id, display]
           }),
         )
+        const empOptions = (employees || []).map((e) => {
+          const id = String(e.id ?? e.ID ?? '')
+          const code = String(
+            e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
+          ).trim()
+          const name = String(
+            e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
+          ).trim()
+          const label = code && name ? `${code}: ${name}` : code || name || id
+          return { value: id, label, code, name }
+        })
+        setEmployeeOptions(empOptions)
+
+        const supOptions = (suppliers || []).map((s) => {
+          const id = String(s.id ?? s.ID ?? '')
+          const code = String(
+            s.supplierCode ?? s.supplier_code ?? s.SUPPLIER_CODE ?? '',
+          ).trim()
+          const name = String(
+            s.supplierName ?? s.supplier_name ?? s.SUPPLIER_NAME ?? '',
+          ).trim()
+          const label = code && name ? `${code}: ${name}` : code || name || id
+          return { value: id, label, code, name }
+        })
+        setSupplierOptions(supOptions)
+
+        const cusOptions = (customers || []).map((c) => {
+          const id = String(c.id ?? c.ID ?? '')
+          const code = String(
+            c.customerCode ?? c.customer_code ?? c.CUSTOMER_CODE ?? '',
+          ).trim()
+          const name = String(
+            c.customerName ?? c.customer_name ?? c.CUSTOMER_NAME ?? '',
+          ).trim()
+          const label = code && name ? `${code}: ${name}` : code || name || id
+          return { value: id, label, code, name }
+        })
+        setCustomerOptions(cusOptions)
+
         const mapped = mapVoucherFromApi(record, userMap, empMap)
         setValues(mapped)
         setDetails(mapped.details)
@@ -394,19 +440,6 @@ function VoucherView() {
       title={`Account Voucher: ${values.VOUCHER_NO || ''}`}
       listTo={listPath}
       hideActions
-      afterActions={
-        <div className={'flex items-center justify-end pt-3'}>
-          <button
-            type={'button'}
-            onClick={() => navigate(`/accounts/voucher/${voucherId}/edit`)}
-            className={
-              'px-4 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded shadow-sm transition-colors'
-            }
-          >
-            Edit Voucher
-          </button>
-        </div>
-      }
     >
       <VoucherForm
         values={values}
@@ -423,6 +456,10 @@ function VoucherView() {
         coaOptions={coaOptions}
         costCenterOptions={costCenterOptions}
         locationOptions={locationOptions}
+        employeeOptions={employeeOptions}
+        supplierOptions={supplierOptions}
+        customerOptions={customerOptions}
+        onEdit={() => navigate(`/accounts/voucher/${voucherId}/edit`)}
         onCancel={() => navigate(listPath)}
       />
     </FormPage>

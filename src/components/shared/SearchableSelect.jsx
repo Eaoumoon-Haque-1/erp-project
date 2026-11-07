@@ -13,6 +13,7 @@ function SearchableSelect({
   readOnly = false,
   error = false,
   allowClear = true,
+  fallbackDisplay = '',
   onChange = () => {},
   className = '',
   inputClassName = '',
@@ -35,8 +36,9 @@ function SearchableSelect({
     if (!value && !isTyping) return ''
     if (isTyping) return searchTerm
     if (selectedOption) return selectedOption.label
+    if (fallbackDisplay) return fallbackDisplay
     return String(value ?? '')
-  }, [isTyping, searchTerm, selectedOption, value])
+  }, [fallbackDisplay, isTyping, searchTerm, selectedOption, value])
 
   useEffect(() => {
     const handlePointerDown = (event) => {

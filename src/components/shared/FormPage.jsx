@@ -34,9 +34,10 @@ function FormPage({
   const action = submitLabel.toLowerCase().includes('update') ? 'update' : 'create'
 
   const handleSubmit = (event) => {
+    if (event?.preventDefault) event.preventDefault()
+    if (!onSubmit) return false
     // Optional: lets a page show its own inline errors before the confirm dialog opens.
     if (onValidate && !onValidate()) {
-      event.preventDefault()
       return false
     }
     return runConfirmedFormSubmit(event, { action, entityName }, onSubmit)
@@ -57,7 +58,7 @@ function FormPage({
       <PageHeader title={title} actionLabel={'List'} actionTo={listTo} />
       <section className={'erp-form-card'}>
         {/* Feature controls are provided through children; this shell owns only shared actions. */}
-        <form data-table={tableName} onSubmit={handleSubmit} onReset={onReset} noValidate>
+        <form data-table={tableName} onSubmit={handleSubmit} onReset={onReset} noValidate method={'post'} action={'#'}>
           {children}
           {!hideActions && (
             <div className={'erp-form-actions'}>
