@@ -35,6 +35,9 @@ function Navbar({ onDrawerToggle }) {
         </Link>
         <div className={"health-navbar-session"}>
           <span>{session?.username}</span>
+          <button type={"button"} onClick={() => navigate("/change-password")}>
+            Change Password
+          </button>
           <button type={"button"} onClick={handleLogout}>
             Logout
           </button>

@@ -1,11 +1,19 @@
 /**
  * @file Basic API-backed login page using the established Health Expert style.
  * Validation stays local; successful authentication returns the user to the
- * originally requested route.
+ * originally requested route. Cloudflare Turnstile is shown only after the
+ * backend answers a login attempt with `captchaRequired: true`.
  */
+import { Turnstile } from '@marsidev/react-turnstile'
 import { useRef, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../auth/useAuth'
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || ''
+// 'true' shows the widget from the start (pair with backend captcha.login-after-failures=0).
+const CAPTCHA_ALWAYS = import.meta.env.VITE_CAPTCHA_ALWAYS === 'true'
+const CAPTCHA_REQUIRED_MESSAGE = 'Please complete the captcha to continue'
+const CAPTCHA_LOAD_MESSAGE = 'Captcha could not be loaded. Refresh and try again.'
 
 function EyeIcon({ hidden }) {
   return (
@@ -40,11 +48,16 @@ function LoginPage() {
   const location = useLocation()
   const { isAuthenticated, login } = useAuth()
   const usernameRef = useRef(null)
+  const turnstileRef = useRef(null)
   const [values, setValues] = useState({ username: '', password: '' })
   const [errors, setErrors] = useState({})
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  // The token is single-use and short-lived, so it is cleared after every attempt.
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [needCaptcha, setNeedCaptcha] = useState(CAPTCHA_ALWAYS)
+  const [captchaFailed, setCaptchaFailed] = useState(false)
 
   if (isAuthenticated) return <Navigate to={'/'} replace />
 
@@ -55,8 +68,14 @@ function LoginPage() {
     setMessage('')
   }
 
+  const handleCaptchaError = () => {
+    setCaptchaToken('')
+    setCaptchaFailed(true)
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (submitting) return
     const nextErrors = {}
     if (!values.username.trim()) nextErrors.username = 'Username is required.'
     if (!values.password) nextErrors.password = 'Password is required.'
@@ -69,6 +88,7 @@ function LoginPage() {
       return
     }
 
+    const usedToken = captchaToken
     setSubmitting(true)
     setMessage('')
 
@@ -76,18 +96,30 @@ function LoginPage() {
       await login({
         username: values.username.trim(),
         password: values.password,
+        // Sent only when the widget produced a token.
+        ...(usedToken ? { captchaToken: usedToken } : {}),
       })
       const destination = location.state?.from?.pathname || '/'
       navigate(destination, { replace: true })
     } catch (error) {
-      const apiMessage =
-        error.response?.data?.message ||
-        (error.response?.status === 401
-          ? 'Invalid username or password.'
-          : 'Unable to sign in. Please try again.')
-      setMessage(apiMessage)
-      requestAnimationFrame(() => usernameRef.current?.focus())
+      if (error.response?.data?.captchaRequired === true) {
+        // Keep the typed credentials and show the widget until a login succeeds.
+        setNeedCaptcha(true)
+        setMessage(CAPTCHA_REQUIRED_MESSAGE)
+      } else {
+        const apiMessage =
+          error.response?.data?.message ||
+          (error.response?.status === 401
+            ? 'Invalid username or password.'
+            : 'Unable to sign in. Please try again.')
+        setMessage(apiMessage)
+        requestAnimationFrame(() => usernameRef.current?.focus())
+      }
     } finally {
+      if (usedToken) {
+        setCaptchaToken('')
+        turnstileRef.current?.reset()
+      }
       setSubmitting(false)
     }
   }
@@ -160,6 +192,34 @@ function LoginPage() {
               <p className={'erp-field-error'}>{errors.password}</p>
             )}
           </div>
+          <p className={'auth-field-link'}>
+            <Link to={'/forgot-password'}>Forgot password?</Link>
+          </p>
+          {needCaptcha && (
+            <div className={'auth-field flex flex-col items-center'}>
+              {TURNSTILE_SITE_KEY ? (
+                // Scaled down to 75% (the widget is fixed 300px wide); -my-2 trims the leftover gap.
+                <div className={'origin-center scale-75 -my-2'}>
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    scriptOptions={{ onError: handleCaptchaError }}
+                    onSuccess={(token) => {
+                      setCaptchaFailed(false)
+                      setCaptchaToken(token)
+                    }}
+                    onExpire={() => setCaptchaToken('')}
+                    onError={handleCaptchaError}
+                  />
+                </div>
+              ) : (
+                <p className={'erp-field-error'} role={'alert'}>{CAPTCHA_LOAD_MESSAGE}</p>
+              )}
+              {captchaFailed && TURNSTILE_SITE_KEY && (
+                <p className={'erp-field-error'} role={'alert'}>{CAPTCHA_LOAD_MESSAGE}</p>
+              )}
+            </div>
+          )}
           {message && (
             <p className={'auth-error'} role={'alert'}>
               {message}
@@ -168,7 +228,10 @@ function LoginPage() {
           <button
             type={'submit'}
             className={'primary-button auth-submit'}
-            disabled={submitting}
+            disabled={
+              submitting ||
+              (needCaptcha && (!TURNSTILE_SITE_KEY || captchaFailed || !captchaToken))
+            }
           >
             {submitting ? 'Signing in...' : 'Login'}
           </button>
