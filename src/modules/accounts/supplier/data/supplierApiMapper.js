@@ -45,7 +45,7 @@ export function mapSupplierFromApi(record = {}) {
     EMAIL: record.email || '',
     WEBSITE: record.website || '',
 
-    COUNTRY_ID: record.countryId != null ? String(record.countryId) : '1',
+    COUNTRY_ID: record.countryId != null ? String(record.countryId) : '',
     DIVISION: record.division || '',
     DISTRICT: record.district || '',
     ADDRESS: record.address || '',

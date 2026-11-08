@@ -64,6 +64,72 @@ function formatAuditDateTime(value) {
   return `${day}/${month}/${year} ${time}`
 }
 
+function getMimeTypeFromFileName(fileName = '') {
+  const ext = String(fileName).split('.').pop().toLowerCase()
+  const mimeMap = {
+    pdf: 'application/pdf',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    txt: 'text/plain',
+    csv: 'text/csv',
+    json: 'application/json',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    zip: 'application/zip',
+  }
+  return mimeMap[ext] || 'application/octet-stream'
+}
+
+function dataUrlToBlob(dataUrl, fallbackMime = 'application/octet-stream') {
+  const parts = dataUrl.split(',')
+  const mimeMatch = parts[0]?.match(/:(.*?);/)
+  const mime = mimeMatch && mimeMatch[1] ? mimeMatch[1] : fallbackMime
+  const base64Data = parts[1] || ''
+  const byteCharacters = atob(base64Data)
+  const byteNumbers = new Uint8Array(byteCharacters.length)
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i)
+  }
+  return new Blob([byteNumbers], { type: mime })
+}
+
+function resolveAttachmentBlobUrl(attachmentFile, fileName = '') {
+  if (!attachmentFile) return null
+  const fileStr = String(attachmentFile).trim()
+  if (!fileStr) return null
+
+  if (fileStr.startsWith('http://') || fileStr.startsWith('https://') || fileStr.startsWith('/')) {
+    return { url: fileStr, isBlob: false }
+  }
+
+  try {
+    if (fileStr.startsWith('data:')) {
+      const blob = dataUrlToBlob(fileStr, getMimeTypeFromFileName(fileName))
+      const url = URL.createObjectURL(blob)
+      return { url, isBlob: true }
+    }
+    // Raw base64 string
+    const mime = getMimeTypeFromFileName(fileName)
+    const byteCharacters = atob(fileStr)
+    const byteNumbers = new Uint8Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+    const blob = new Blob([byteNumbers], { type: mime })
+    const url = URL.createObjectURL(blob)
+    return { url, isBlob: true }
+  } catch (err) {
+    console.error('Error resolving attachment:', err)
+    return { url: fileStr, isBlob: false }
+  }
+}
+
 function VoucherForm({
   values,
   errors = {},
@@ -75,6 +141,7 @@ function VoucherForm({
   submitLabel = 'Submit',
   readOnly = false,
   isEdit = false,
+  isBankChequeReadOnly = false,
   onEdit,
   voucherTypeOptions = [],
   paymentTypeOptions = [],
@@ -105,6 +172,42 @@ function VoucherForm({
   const isBalanced = Math.abs(totalDr - totalCr) < 0.001
   const calculatedTotal = (totalDr > 0 ? totalDr : (totalCr > 0 ? totalCr : (parseFloat(values.VOUCHER_AMOUNT) || 0))).toFixed(2)
 
+  const handleViewAttachment = (row) => {
+    if (!row?.attachmentFile) return
+    const fileName = row.attachmentFileName || 'attachment'
+    const resolved = resolveAttachmentBlobUrl(row.attachmentFile, fileName)
+    if (!resolved?.url) return
+
+    const win = window.open(resolved.url, '_blank', 'noopener,noreferrer')
+    if (!win) {
+      const link = document.createElement('a')
+      link.href = resolved.url
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
+  const handleDownloadAttachment = (row) => {
+    if (!row?.attachmentFile) return
+    const fileName = row.attachmentFileName || 'attachment'
+    const resolved = resolveAttachmentBlobUrl(row.attachmentFile, fileName)
+    if (!resolved?.url) return
+
+    const link = document.createElement('a')
+    link.href = resolved.url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    if (resolved.isBlob) {
+      setTimeout(() => URL.revokeObjectURL(resolved.url), 10000)
+    }
+  }
+
   const handleFileUpload = (index, event) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -117,45 +220,64 @@ function VoucherForm({
       })
     }
     reader.readAsDataURL(file)
+    event.target.value = ''
   }
 
   return (
     <div className={'space-y-5'}>
       {/* ============================================================ */}
-      {/* SECTION 1: MASTER DATA (3 COLUMNS)                           */}
+      {/* SECTION 1: MASTER DATA (6 COLUMNS)                           */}
       {/* ============================================================ */}
       <div className={'bg-white rounded-lg border border-gray-200 shadow-sm p-4'}>
-        <div className={'grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3'}>
+        <div className={'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-4 gap-y-3'}>
           {/* ---------------- COLUMN 1 ---------------- */}
           <div className={'space-y-3'}>
-            {/* Voucher Date */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Voucher Date<span className={'text-rose-500 ml-0.5'}>*</span>
-              </label>
-              {readOnly ? (
+            {/* Row 1: Voucher Date & Period Name side-by-side */}
+            <div className={'grid grid-cols-2 gap-2'}>
+              <div>
+                <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                  Voucher Date<span className={'text-rose-500 ml-0.5'}>*</span>
+                </label>
+                {readOnly ? (
+                  <input
+                    type={'text'}
+                    value={values.VOUCHER_DATE || '-'}
+                    readOnly
+                    className={inputClass(null, true)}
+                  />
+                ) : (
+                  <DateInput
+                    id={'VOUCHER_DATE'}
+                    name={'VOUCHER_DATE'}
+                    value={values.VOUCHER_DATE || ''}
+                    onChange={(e) => {
+                      const val = e?.target?.value !== undefined ? e.target.value : e
+                      onChange('VOUCHER_DATE', val)
+                    }}
+                    className={inputClass(errors.VOUCHER_DATE, false)}
+                  />
+                )}
+                <FieldError id={`${formId}-vdate-err`} message={errors.VOUCHER_DATE} />
+              </div>
+
+              <div>
+                <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                  Period Name<span className={'text-rose-500 ml-0.5'}>*</span>
+                </label>
                 <input
                   type={'text'}
-                  value={values.VOUCHER_DATE || '-'}
+                  id={'PERIOD_NAME'}
+                  name={'PERIOD_NAME'}
+                  value={values.PERIOD_NAME || ''}
                   readOnly
-                  className={inputClass(null, true)}
+                  placeholder={'Period Name'}
+                  className={inputClass(errors.PERIOD_NAME, true)}
                 />
-              ) : (
-                <DateInput
-                  id={'VOUCHER_DATE'}
-                  name={'VOUCHER_DATE'}
-                  value={values.VOUCHER_DATE || ''}
-                  onChange={(e) => {
-                    const val = e?.target?.value !== undefined ? e.target.value : e
-                    onChange('VOUCHER_DATE', val)
-                  }}
-                  className={inputClass(errors.VOUCHER_DATE, false)}
-                />
-              )}
-              <FieldError id={`${formId}-vdate-err`} message={errors.VOUCHER_DATE} />
+                <FieldError id={`${formId}-pname-err`} message={errors.PERIOD_NAME} />
+              </div>
             </div>
 
-            {/* Voucher Type */}
+            {/* Row 2: Voucher Type */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Voucher Type<span className={'text-rose-500 ml-0.5'}>*</span>
@@ -197,23 +319,7 @@ function VoucherForm({
               <FieldError id={`${formId}-vtype-err`} message={errors.VOUCHER_TYPE_ID} />
             </div>
 
-            {/* Voucher No. */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Voucher No.<span className={'text-rose-500 ml-0.5'}>*</span>
-              </label>
-              <input
-                type={'text'}
-                value={values.VOUCHER_NO || (readOnly ? '-' : '')}
-                onChange={(e) => onChange('VOUCHER_NO', e.target.value)}
-                placeholder={'e.g. V-2026-0001'}
-                readOnly={readOnly}
-                className={inputClass(errors.VOUCHER_NO, readOnly)}
-              />
-              <FieldError id={`${formId}-vno-err`} message={errors.VOUCHER_NO} />
-            </div>
-
-            {/* Location */}
+            {/* Row 3: Location */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Location
@@ -244,8 +350,27 @@ function VoucherForm({
                 </select>
               )}
             </div>
+          </div>
 
-            {/* Payment Type: depends on Voucher Type */}
+          {/* ---------------- COLUMN 2 ---------------- */}
+          <div className={'space-y-3'}>
+            {/* Row 1: Voucher No. */}
+            <div>
+              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                Voucher No.<span className={'text-rose-500 ml-0.5'}>*</span>
+              </label>
+              <input
+                type={'text'}
+                value={values.VOUCHER_NO || (readOnly ? '-' : '')}
+                onChange={(e) => onChange('VOUCHER_NO', e.target.value)}
+                placeholder={'e.g. V-2026-0001'}
+                readOnly={readOnly}
+                className={inputClass(errors.VOUCHER_NO, readOnly)}
+              />
+              <FieldError id={`${formId}-vno-err`} message={errors.VOUCHER_NO} />
+            </div>
+
+            {/* Row 2: Payment Type */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Payment Type
@@ -291,22 +416,7 @@ function VoucherForm({
               )}
             </div>
 
-            {/* Paid To (Cheque Name) */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Paid To (Cheque Name)
-              </label>
-              <input
-                type={'text'}
-                value={values.PAYMENT_TO || (readOnly ? '-' : '')}
-                onChange={(e) => onChange('PAYMENT_TO', e.target.value)}
-                placeholder={'Enter payee name'}
-                readOnly={readOnly}
-                className={inputClass(errors.PAYMENT_TO, readOnly)}
-              />
-            </div>
-
-            {/* Through: depends on Payment Type */}
+            {/* Row 3: Through */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Through
@@ -351,26 +461,9 @@ function VoucherForm({
             </div>
           </div>
 
-          {/* ---------------- COLUMN 2 ---------------- */}
+          {/* ---------------- COLUMN 3 ---------------- */}
           <div className={'space-y-3'}>
-            {/* Period Name: readonly textfield derived from Voucher Date */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Period Name<span className={'text-rose-500 ml-0.5'}>*</span>
-              </label>
-              <input
-                type={'text'}
-                id={'PERIOD_NAME'}
-                name={'PERIOD_NAME'}
-                value={values.PERIOD_NAME || ''}
-                readOnly
-                placeholder={'Period Name (autofilled by Voucher Date)'}
-                className={inputClass(errors.PERIOD_NAME, true)}
-              />
-              <FieldError id={`${formId}-pname-err`} message={errors.PERIOD_NAME} />
-            </div>
-
-            {/* Voucher Amount: readonly, autofilled with total voucher amount */}
+            {/* Row 1: Voucher Amount */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Voucher Amount
@@ -384,72 +477,30 @@ function VoucherForm({
               />
             </div>
 
-            {/* Voucher Source */}
+            {/* Row 2: Paid To (Cheque Name) */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Voucher Source
+                Paid To (Cheque Name)
               </label>
               <input
                 type={'text'}
-                value={values.VOUCHER_SOURCE || 'MANUAL'}
-                onChange={(e) => onChange('VOUCHER_SOURCE', e.target.value)}
-                placeholder={'e.g. MANUAL'}
+                value={values.PAYMENT_TO || (readOnly ? '-' : '')}
+                onChange={(e) => onChange('PAYMENT_TO', e.target.value)}
+                placeholder={'Enter payee name'}
                 readOnly={readOnly}
-                className={inputClass(errors.VOUCHER_SOURCE, readOnly)}
-              />
-            </div>
-
-            {/* Voucher Status */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Voucher Status
-              </label>
-              {readOnly ? (
-                <input
-                  type={'text'}
-                  value={values.VOUCHER_STATUS || 'DRAFT'}
-                  readOnly
-                  className={inputClass(null, true)}
-                />
-              ) : (
-                <select
-                  value={values.VOUCHER_STATUS || 'DRAFT'}
-                  onChange={(e) => onChange('VOUCHER_STATUS', e.target.value)}
-                  className={inputClass(errors.VOUCHER_STATUS, false)}
-                >
-                  {VOUCHER_STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {/* Approval Code */}
-            <div>
-              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Approval Code
-              </label>
-              <input
-                type={'text'}
-                value={values.APPROVAL_CODE || (readOnly ? '-' : '')}
-                onChange={(e) => onChange('APPROVAL_CODE', e.target.value)}
-                placeholder={'e.g. APPR-1029'}
-                readOnly={readOnly}
-                className={inputClass(errors.APPROVAL_CODE, readOnly)}
+                className={inputClass(errors.PAYMENT_TO, readOnly)}
               />
             </div>
           </div>
 
-          {/* ---------------- COLUMN 3 ---------------- */}
+          {/* ---------------- COLUMN 4 ---------------- */}
           <div className={'space-y-3'}>
-            {/* Bank Account: Searchable with write option */}
+            {/* Row 1: Bank Account */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Bank Account
               </label>
-              {readOnly ? (
+              {readOnly || isBankChequeReadOnly ? (
                 <input
                   type={'text'}
                   value={
@@ -482,12 +533,12 @@ function VoucherForm({
               <FieldError id={`${formId}-bacc-err`} message={errors.BANK_ACCOUNT} />
             </div>
 
-            {/* Cheque No.: Searchable with write option */}
+            {/* Row 2: Cheque No. */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Cheque No.
               </label>
-              {readOnly ? (
+              {readOnly || isBankChequeReadOnly ? (
                 <input
                   type={'text'}
                   value={values.CHEQUE_NO || '-'}
@@ -516,48 +567,133 @@ function VoucherForm({
               <FieldError id={`${formId}-cno-err`} message={errors.CHEQUE_NO} />
             </div>
 
-            {/* Cheque Date */}
+            {/* Row 3: Cheque Date & Cheque Amount side-by-side */}
+            <div className={'grid grid-cols-2 gap-2'}>
+              <div>
+                <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                  Cheque Date
+                </label>
+                {readOnly || isBankChequeReadOnly ? (
+                  <input
+                    type={'text'}
+                    value={values.CHEQUE_DATE || '-'}
+                    readOnly
+                    className={inputClass(null, true)}
+                  />
+                ) : (
+                  <DateInput
+                    id={'CHEQUE_DATE'}
+                    name={'CHEQUE_DATE'}
+                    value={values.CHEQUE_DATE || ''}
+                    onChange={(e) => {
+                      const val = e?.target?.value !== undefined ? e.target.value : e
+                      onChange('CHEQUE_DATE', val)
+                    }}
+                    className={inputClass(errors.CHEQUE_DATE, false)}
+                  />
+                )}
+                <FieldError id={`${formId}-cdate-err`} message={errors.CHEQUE_DATE} />
+              </div>
+
+              <div>
+                <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                  Cheque Amount
+                </label>
+                {readOnly || isBankChequeReadOnly ? (
+                  <input
+                    type={'text'}
+                    value={
+                      values.CHEQUE_AMOUNT !== undefined && values.CHEQUE_AMOUNT !== ''
+                        ? values.CHEQUE_AMOUNT
+                        : calculatedTotal
+                    }
+                    readOnly
+                    placeholder={'0.00'}
+                    className={inputClass(errors.CHEQUE_AMOUNT, true)}
+                  />
+                ) : (
+                  <input
+                    type={'text'}
+                    id={'CHEQUE_AMOUNT'}
+                    name={'CHEQUE_AMOUNT'}
+                    value={
+                      values.CHEQUE_AMOUNT !== undefined && values.CHEQUE_AMOUNT !== ''
+                        ? values.CHEQUE_AMOUNT
+                        : calculatedTotal
+                    }
+                    onChange={(e) => onChange('CHEQUE_AMOUNT', e.target.value)}
+                    placeholder={'0.00'}
+                    className={inputClass(errors.CHEQUE_AMOUNT, false)}
+                  />
+                )}
+                <FieldError id={`${formId}-camount-err`} message={errors.CHEQUE_AMOUNT} />
+              </div>
+            </div>
+          </div>
+
+          {/* ---------------- COLUMN 5 ---------------- */}
+          <div className={'space-y-3'}>
+            {/* Row 1: Voucher Source */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Cheque Date
+                Voucher Source
+              </label>
+              <input
+                type={'text'}
+                value={values.VOUCHER_SOURCE || 'MANUAL'}
+                onChange={(e) => onChange('VOUCHER_SOURCE', e.target.value)}
+                placeholder={'e.g. MANUAL'}
+                readOnly={readOnly}
+                className={inputClass(errors.VOUCHER_SOURCE, readOnly)}
+              />
+            </div>
+
+            {/* Row 2: Voucher Status */}
+            <div>
+              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                Voucher Status
               </label>
               {readOnly ? (
                 <input
                   type={'text'}
-                  value={values.CHEQUE_DATE || '-'}
+                  value={values.VOUCHER_STATUS || 'DRAFT'}
                   readOnly
                   className={inputClass(null, true)}
                 />
               ) : (
-                <DateInput
-                  id={'CHEQUE_DATE'}
-                  name={'CHEQUE_DATE'}
-                  value={values.CHEQUE_DATE || ''}
-                  onChange={(e) => {
-                    const val = e?.target?.value !== undefined ? e.target.value : e
-                    onChange('CHEQUE_DATE', val)
-                  }}
-                  className={inputClass(errors.CHEQUE_DATE, false)}
-                />
+                <select
+                  value={values.VOUCHER_STATUS || 'DRAFT'}
+                  onChange={(e) => onChange('VOUCHER_STATUS', e.target.value)}
+                  className={inputClass(errors.VOUCHER_STATUS, false)}
+                >
+                  {VOUCHER_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               )}
-              <FieldError id={`${formId}-cdate-err`} message={errors.CHEQUE_DATE} />
             </div>
 
-            {/* Cheque Amount: readonly, autofilled with total voucher amount */}
+            {/* Row 3: Approval Code */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
-                Cheque Amount
+                Approval Code
               </label>
               <input
                 type={'text'}
-                value={calculatedTotal}
-                readOnly
-                placeholder={'0.00'}
-                className={inputClass(errors.CHEQUE_AMOUNT, true)}
+                value={values.APPROVAL_CODE || (readOnly ? '-' : '')}
+                onChange={(e) => onChange('APPROVAL_CODE', e.target.value)}
+                placeholder={'e.g. APPR-1029'}
+                readOnly={readOnly}
+                className={inputClass(errors.APPROVAL_CODE, readOnly)}
               />
             </div>
+          </div>
 
-            {/* Is Posted? */}
+          {/* ---------------- COLUMN 6 ---------------- */}
+          <div className={'space-y-3'}>
+            {/* Row 1: Is Posted? */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Is Posted?
@@ -584,7 +720,7 @@ function VoucherForm({
               )}
             </div>
 
-            {/* Is Reconciled? */}
+            {/* Row 2: Is Reconciled? */}
             <div>
               <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
                 Is Reconciled?
@@ -1089,7 +1225,8 @@ function VoucherForm({
             <thead>
               <tr className={'bg-gray-100 text-gray-700 font-semibold border-b border-gray-200'}>
                 <th className={'px-3 py-2 text-center w-12'}>SL No.</th>
-                <th className={'px-3 py-2'}>File Name / Attachment</th>
+                <th className={'px-3 py-2 min-w-[220px]'}>File Name / Description</th>
+                <th className={'px-3 py-2 min-w-[260px]'}>Attached File / Upload / Download</th>
                 {!readOnly && <th className={'px-3 py-2 text-center w-20'}>Action</th>}
               </tr>
             </thead>
@@ -1097,75 +1234,122 @@ function VoucherForm({
               {attachments.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={readOnly ? 2 : 3}
+                    colSpan={readOnly ? 3 : 4}
                     className={'px-4 py-4 text-center text-xs text-gray-400 italic'}
                   >
-                    No attachments added.
+                    No attachments added.{!readOnly && ' Click "+ Add More" to add rows.'}
                   </td>
                 </tr>
               ) : (
-                attachments.map((row, index) => (
-                  <tr key={index} className={'hover:bg-gray-50'}>
-                    <td className={'px-3 py-2 text-center font-medium text-gray-600'}>
-                      {index + 1}
-                    </td>
-                    <td className={'px-3 py-2'}>
-                      {readOnly ? (
-                        row.attachmentFile ? (
-                          <a
-                            href={row.attachmentFile}
-                            download={row.attachmentFileName || `attachment-${index + 1}`}
-                            className={'text-teal-600 hover:underline font-medium'}
-                          >
-                            📎 {row.attachmentFileName || 'Download file'}
-                          </a>
+                attachments.map((row, index) => {
+                  const hasFile = Boolean(row.attachmentFile && String(row.attachmentFile).trim())
+                  return (
+                    <tr key={index} className={'hover:bg-gray-50 transition-colors'}>
+                      <td className={'px-3 py-2 text-center font-medium text-gray-600'}>
+                        {index + 1}
+                      </td>
+
+                      {/* File Name / Description */}
+                      <td className={'px-3 py-2'}>
+                        {readOnly ? (
+                          <span className={'font-medium text-gray-800'}>
+                            {row.attachmentFileName || 'Unnamed Attachment'}
+                          </span>
                         ) : (
-                          <span>{row.attachmentFileName || '-'}</span>
-                        )
-                      ) : (
-                        <div className={'flex items-center space-x-2'}>
-                          <input
-                            type={'file'}
-                            id={`file-input-${index}`}
-                            onChange={(e) => handleFileUpload(index, e)}
-                            className={'hidden'}
-                          />
-                          <label
-                            htmlFor={`file-input-${index}`}
-                            className={
-                              'cursor-pointer px-2.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded shadow-sm'
-                            }
-                          >
-                            Browse File
-                          </label>
                           <input
                             type={'text'}
                             value={row.attachmentFileName || ''}
                             onChange={(e) =>
                               onAttachmentChange(index, { attachmentFileName: e.target.value })
                             }
-                            placeholder={'File Name / Description'}
-                            className={tableInputClass(false, false, 'flex-1')}
+                            placeholder={'Enter file name or description'}
+                            className={tableInputClass(false, false, 'w-full')}
                           />
-                        </div>
-                      )}
-                    </td>
-                    {!readOnly && (
-                      <td className={'px-3 py-2 text-center'}>
-                        <button
-                          type={'button'}
-                          onClick={() => onRemoveAttachment(index)}
-                          className={
-                            'p-1 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded transition-colors'
-                          }
-                          title={'Remove attachment'}
-                        >
-                          ❌
-                        </button>
+                        )}
                       </td>
-                    )}
-                  </tr>
-                ))
+
+                      {/* Attached File (Upload, View & Download) */}
+                      <td className={'px-3 py-2'}>
+                        {hasFile ? (
+                          <div className={'flex items-center gap-2 flex-wrap'}>
+                            <button
+                              type={'button'}
+                              onClick={() => handleViewAttachment(row)}
+                              className={
+                                'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded shadow-sm transition-colors cursor-pointer'
+                              }
+                              title={'View / Open attachment in a new tab'}
+                            >
+                              👁️ View
+                            </button>
+                            <button
+                              type={'button'}
+                              onClick={() => handleDownloadAttachment(row)}
+                              className={
+                                'inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-300 rounded shadow-sm transition-colors cursor-pointer'
+                              }
+                              title={'Download attachment to computer'}
+                            >
+                              ⬇️ Download
+                            </button>
+                            {!readOnly && (
+                              <label
+                                className={
+                                  'cursor-pointer inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded shadow-sm transition-colors'
+                                }
+                                title={'Upload a different file'}
+                              >
+                                🔄 Change
+                                <input
+                                  type={'file'}
+                                  className={'sr-only'}
+                                  onChange={(e) => handleFileUpload(index, e)}
+                                />
+                              </label>
+                            )}
+                            <span className={'text-[11px] text-gray-600 truncate max-w-[180px] font-mono'}>
+                              📎 {row.attachmentFileName || 'file'}
+                            </span>
+                          </div>
+                        ) : !readOnly ? (
+                          <label
+                            className={
+                              'cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-400 rounded shadow-sm transition-colors'
+                            }
+                            title={'Choose a file to upload'}
+                          >
+                            📁 Choose / Upload File
+                            <input
+                              type={'file'}
+                              className={'sr-only'}
+                              onChange={(e) => handleFileUpload(index, e)}
+                            />
+                          </label>
+                        ) : (
+                          <span className={'text-gray-400 italic text-[11px]'}>
+                            No file attached
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Action buttons (when editable) */}
+                      {!readOnly && (
+                        <td className={'px-3 py-2 text-center'}>
+                          <button
+                            type={'button'}
+                            onClick={() => onRemoveAttachment(index)}
+                            className={
+                              'p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded transition-colors text-xs font-bold'
+                            }
+                            title={'Remove attachment row'}
+                          >
+                            ❌
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

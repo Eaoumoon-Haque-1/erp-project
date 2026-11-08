@@ -75,6 +75,10 @@ export function mapVoucherMappingFromApi(
       record.paymentTypeId != null ? String(record.paymentTypeId) : '',
     PAYMENT_TYPE_VALUE: record.paymentTypeValue ?? '',
     PAYMENT_TYPE_CODE: record.paymentTypeValueCode ?? '',
+    BANK_CHEQUE_MODE:
+      String(record.bankChequeMode ?? record.BANK_CHEQUE_MODE ?? '').trim().toLowerCase() === 'editable'
+        ? 'Editable'
+        : 'Readonly',
     STATUS: String(record.status ?? 1),
     CREATED_USER_ID: createdUserId !== '' ? String(createdUserId) : '',
     CREATED_USER_NAME: resolveAuditActor(
@@ -129,6 +133,7 @@ export function mapVoucherMappingToApi(values = {}) {
     buId: Number(values.BU_ID),
     voucherTypeId: Number(values.VOUCHER_TYPE_ID),
     paymentTypeId: Number(values.PAYMENT_TYPE_ID),
+    bankChequeMode: values.BANK_CHEQUE_MODE || 'Readonly',
     status: Number(values.STATUS ?? 1),
   }
 }

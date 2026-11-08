@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Shared application-layout component: DrawerSidebar.
  * Sections: layout-specific helpers/state and rendered navigation or shell markup.
  * Preserve responsive desktop/mobile behavior and keep feature logic out of layout components.
@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { appMenu } from '../../app/menu'
 import DrawerMenuGroup from './DrawerMenuGroup'
+import { isPathMatching } from './menuUtils'
 
 const baseClass =
   'health-sidebar fixed inset-y-0 left-0 z-30 mt-14 lg:static lg:mt-0 lg:translate-x-0'
@@ -27,7 +28,7 @@ function findActiveMenuPath(items, pathname, parentPath = []) {
       continue
     }
 
-    if (pathname === item.path || pathname.startsWith(`${item.path}/`)) {
+    if (isPathMatching(item, pathname)) {
       return parentPath
     }
   }

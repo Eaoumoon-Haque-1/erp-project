@@ -128,7 +128,40 @@ function VoucherTypeMappingForm({
             <FieldError id={'VMAP_PAYMENT_TYPE_ID-error'} message={errors.PAYMENT_TYPE_ID} />
           </div>
 
-          {/* 3. is active ? (Active / Inactive) */}
+          {/* 3. Bank Account, Cheque No, Cheque Date, Cheque Amount (Readonly / Editable) */}
+          <div>
+            <label className={'block text-xs font-medium text-gray-700 mb-1'}>
+              Bank Account, Cheque No, Cheque Date, Cheque Amount<span className={'text-rose-500 ml-0.5'}>*</span>
+            </label>
+            <div className={'flex items-center gap-6 h-8'}>
+              <label className={'inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700'}>
+                <input
+                  type={'radio'}
+                  id={'VMAP_BANK_CHEQUE_MODE_READONLY'}
+                  name={'BANK_CHEQUE_MODE'}
+                  value={'Readonly'}
+                  checked={String(values.BANK_CHEQUE_MODE || '').trim().toLowerCase() !== 'editable'}
+                  onChange={onChange}
+                  className={'text-teal-600 focus:ring-teal-500 cursor-pointer'}
+                />
+                <span>Readonly</span>
+              </label>
+              <label className={'inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700'}>
+                <input
+                  type={'radio'}
+                  id={'VMAP_BANK_CHEQUE_MODE_EDITABLE'}
+                  name={'BANK_CHEQUE_MODE'}
+                  value={'Editable'}
+                  checked={String(values.BANK_CHEQUE_MODE || '').trim().toLowerCase() === 'editable'}
+                  onChange={onChange}
+                  className={'text-teal-600 focus:ring-teal-500 cursor-pointer'}
+                />
+                <span>Editable</span>
+              </label>
+            </div>
+          </div>
+
+          {/* 4. is active ? (Active / Inactive) */}
           <div>
             <span className={'block text-xs font-medium text-gray-700 mb-1'}>
               is active ?<span className={'text-rose-500 ml-0.5'}>*</span>

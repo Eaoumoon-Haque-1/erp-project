@@ -158,6 +158,7 @@ function VoucherCreate() {
   // Lookups and user setup
   const [userSetup, setUserSetup] = useState(null)
   const [loadedCalendars, setLoadedCalendars] = useState([])
+  const [voucherTypeMappings, setVoucherTypeMappings] = useState([])
   const [loadedPeriods, setLoadedPeriods] = useState([])
 
   const [rawVoucherTypes, setRawVoucherTypes] = useState([])
@@ -546,9 +547,11 @@ function VoucherCreate() {
     )
   }, [rawCostCenters, userSetup])
 
-  // 2. Payment Types: depend on selected Voucher Type
+  // 2. Payment Types & Mappings: depend on selected Voucher Type
   useEffect(() => {
     if (!sessionBuId || !values.VOUCHER_TYPE_ID) {
+      setVoucherTypeMappings([])
+      setPaymentTypeOptions([])
       return undefined
     }
     let active = true
@@ -557,6 +560,7 @@ function VoucherCreate() {
       .getByVoucherType(sessionBuId, values.VOUCHER_TYPE_ID, 1)
       .then((rows) => {
         if (!active) return
+        setVoucherTypeMappings(rows || [])
         setPaymentTypeOptions(
           (rows || []).map((r) => ({
             value: String(r.paymentTypeId),
@@ -565,13 +569,30 @@ function VoucherCreate() {
         )
       })
       .catch(() => {
-        if (active) setPaymentTypeOptions([])
+        if (active) {
+          setVoucherTypeMappings([])
+          setPaymentTypeOptions([])
+        }
       })
 
     return () => {
       active = false
     }
   }, [sessionBuId, values.VOUCHER_TYPE_ID])
+
+  const isBankChequeReadOnly = useMemo(() => {
+    if (!values.VOUCHER_TYPE_ID) return false
+    const list = voucherTypeMappings || []
+    if (list.length === 0) return false
+
+    const matched =
+      (values.PAYMENT_TYPE_ID &&
+        list.find((m) => String(m.paymentTypeId) === String(values.PAYMENT_TYPE_ID))) ||
+      list[0]
+
+    if (!matched) return false
+    return String(matched.bankChequeMode || '').trim().toLowerCase() === 'readonly'
+  }, [voucherTypeMappings, values.VOUCHER_TYPE_ID, values.PAYMENT_TYPE_ID])
 
   // 3. Payment Throughs: depend on selected Payment Type
   useEffect(() => {
@@ -874,6 +895,7 @@ function VoucherCreate() {
         attachments={attachments}
         submitting={submitting}
         submitLabel={'Submit'}
+        isBankChequeReadOnly={isBankChequeReadOnly}
         voucherTypeOptions={voucherTypeOptions}
         paymentTypeOptions={paymentTypeOptions}
         throughOptions={throughOptions}

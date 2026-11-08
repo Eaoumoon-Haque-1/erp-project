@@ -4,7 +4,7 @@
  * Group Name and Business Unit are retrieved from session data and hidden from filter/columns.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
@@ -13,9 +13,6 @@ import { showError, showSuccess } from '../../../../components/shared/actionAler
 import { customerApi } from '../api/customerApi'
 import { mapCustomerFromApi, mapCustomerToApi } from '../data/customerApiMapper'
 import { CUSTOMER_TYPE_OPTIONS } from '../validation/customerValidation'
-
-const listPath = '/accounts/customer'
-const createPath = '/accounts/customer/create'
 
 const columns = [
   {
@@ -81,6 +78,12 @@ const columns = [
 
 function CustomerList() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/customer')
+    ? '/accounts/voucher-setup/customer'
+    : '/accounts/customer'
+  const createPath = `${listPath}/create`
+
   const { session } = useAuth()
   const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
   const sessionBgId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()

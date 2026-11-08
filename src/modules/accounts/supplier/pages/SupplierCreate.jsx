@@ -4,7 +4,7 @@
  * Group Name and Business Unit are retrieved from session and not shown in form.
  */
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
@@ -14,10 +14,12 @@ import SupplierForm from '../components/SupplierForm'
 import { mapSupplierToApi } from '../data/supplierApiMapper'
 import { initialSupplierValues, validateSupplier } from '../validation/supplierValidation'
 
-const listPath = '/accounts/supplier'
-
 function SupplierCreate() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/supplier')
+    ? '/accounts/voucher-setup/supplier'
+    : '/accounts/supplier'
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()
   const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()

@@ -4,7 +4,7 @@
  * Displays Audit Log block matching standard system style.
  */
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
@@ -13,11 +13,13 @@ import CustomerForm from '../components/CustomerForm'
 import { mapCustomerFromApi, mapCustomerToApi } from '../data/customerApiMapper'
 import { initialCustomerValues, validateCustomer } from '../validation/customerValidation'
 
-const listPath = '/accounts/customer'
-
 function CustomerEdit() {
   const { customerId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/customer')
+    ? '/accounts/voucher-setup/customer'
+    : '/accounts/customer'
 
   const [values, setValues] = useState(initialCustomerValues)
   const [auditLog, setAuditLog] = useState(null)

@@ -88,7 +88,7 @@ export const initialCustomerValues = {
   ALTERNATE_PHONE: '',
   EMAIL: '',
   WEBSITE: '',
-  COUNTRY_ID: '1',
+  COUNTRY_ID: '',
   DIVISION: '',
   DISTRICT: '',
   ADDRESS: '',
@@ -130,12 +130,8 @@ export function validateCustomer(values = {}) {
     errors.CUSTOMER_TYPE = 'Customer Type is required'
   }
 
-  if (!values.PHONE || !String(values.PHONE).trim()) {
-    errors.PHONE = 'Phone number is required'
-  }
-
-  if (!values.COUNTRY_ID || !String(values.COUNTRY_ID).trim()) {
-    errors.COUNTRY_ID = 'Country is required'
+  if (values.PHONE && String(values.PHONE).trim().length > 50) {
+    errors.PHONE = 'Phone number cannot exceed 50 characters'
   }
 
   if (!values.ADDRESS || !String(values.ADDRESS).trim()) {

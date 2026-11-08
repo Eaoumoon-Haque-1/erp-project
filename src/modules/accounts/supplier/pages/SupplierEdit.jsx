@@ -4,7 +4,7 @@
  * Displays Audit Log block matching standard system style.
  */
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
@@ -13,11 +13,13 @@ import SupplierForm from '../components/SupplierForm'
 import { mapSupplierFromApi, mapSupplierToApi } from '../data/supplierApiMapper'
 import { initialSupplierValues, validateSupplier } from '../validation/supplierValidation'
 
-const listPath = '/accounts/supplier'
-
 function SupplierEdit() {
   const { supplierId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/supplier')
+    ? '/accounts/voucher-setup/supplier'
+    : '/accounts/supplier'
 
   const [values, setValues] = useState(initialSupplierValues)
   const [auditLog, setAuditLog] = useState(null)

@@ -15,11 +15,12 @@ import CustomerForm from '../components/CustomerForm'
 import { mapCustomerToApi } from '../data/customerApiMapper'
 import { initialCustomerValues, validateCustomer } from '../validation/customerValidation'
 
-const listPath = '/accounts/customer'
-
 function CustomerCreate() {
   const navigate = useNavigate()
   const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/customer')
+    ? '/accounts/voucher-setup/customer'
+    : '/accounts/customer'
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()
   const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()

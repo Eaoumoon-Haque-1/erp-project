@@ -275,7 +275,7 @@ function SupplierForm({
               {/* Phone */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'PHONE'}>
-                  Phone<span className={'text-rose-500 ml-0.5'}>*</span>
+                  Phone
                 </label>
                 <input
                   id={'PHONE'}
@@ -356,12 +356,12 @@ function SupplierForm({
               {/* Country */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'COUNTRY_ID'}>
-                  Country<span className={'text-rose-500 ml-0.5'}>*</span>
+                  Country
                 </label>
                 <select
                   id={'COUNTRY_ID'}
                   name={'COUNTRY_ID'}
-                  value={values.COUNTRY_ID || '1'}
+                  value={values.COUNTRY_ID || ''}
                   disabled={readOnly}
                   onChange={handleChange}
                   className={inputClass(errors.COUNTRY_ID, readOnly)}

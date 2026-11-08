@@ -3,7 +3,7 @@
  * Displays details of an existing AFM_SUPPLIER_INFO record with Audit Log block.
  */
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError } from '../../../../components/shared/actionAlerts'
@@ -12,11 +12,13 @@ import SupplierForm from '../components/SupplierForm'
 import { mapSupplierFromApi } from '../data/supplierApiMapper'
 import { initialSupplierValues } from '../validation/supplierValidation'
 
-const listPath = '/accounts/supplier'
-
 function SupplierView() {
   const { supplierId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/supplier')
+    ? '/accounts/voucher-setup/supplier'
+    : '/accounts/supplier'
 
   const [values, setValues] = useState(initialSupplierValues)
   const [auditLog, setAuditLog] = useState(null)
@@ -75,7 +77,7 @@ function SupplierView() {
         readOnly={true}
         auditLog={auditLog}
         editLabel={'Edit Supplier'}
-        onEdit={() => navigate(`/accounts/supplier/${supplierId}/edit`)}
+        onEdit={() => navigate(`${listPath}/${supplierId}/edit`)}
         onCancel={() => navigate(listPath)}
       />
     </FormPage>

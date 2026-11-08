@@ -1,9 +1,10 @@
-﻿/**
+/**
  * @file Shared application-layout component: DrawerMenuGroup.
  * Sections: layout-specific helpers/state and rendered navigation or shell markup.
  * Preserve responsive desktop/mobile behavior and keep feature logic out of layout components.
  */
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
+import { isPathMatching } from './menuUtils'
 
 function ModuleIcon() {
   return (
@@ -40,18 +41,20 @@ function DrawerMenuItem({
   onMenuToggle,
   onNavigate,
 }) {
+  const location = useLocation()
   const hasChildren = Boolean(item.children)
   const itemKey = item.key || item.path
   const expanded = hasChildren && openMenuPath[depth] === itemKey
 
   if (!hasChildren) {
+    const isCustomActive = isPathMatching(item, location.pathname)
     return (
       <NavLink
         key={item.path}
         to={item.path}
         onClick={onNavigate}
         className={({ isActive }) =>
-          ['health-sidebar-link', isActive ? 'active' : ''].join(' ')
+          ['health-sidebar-link', (isActive || isCustomActive) ? 'active' : ''].join(' ')
         }
       >
         {item.label}

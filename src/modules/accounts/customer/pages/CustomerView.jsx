@@ -3,7 +3,7 @@
  * Displays details of an existing AFM_CUSTOMER_INFO record with Audit Log block.
  */
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError } from '../../../../components/shared/actionAlerts'
@@ -12,11 +12,13 @@ import CustomerForm from '../components/CustomerForm'
 import { mapCustomerFromApi } from '../data/customerApiMapper'
 import { initialCustomerValues } from '../validation/customerValidation'
 
-const listPath = '/accounts/customer'
-
 function CustomerView() {
   const { customerId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const listPath = location.pathname.startsWith('/accounts/voucher-setup/customer')
+    ? '/accounts/voucher-setup/customer'
+    : '/accounts/customer'
 
   const [values, setValues] = useState(initialCustomerValues)
   const [auditLog, setAuditLog] = useState(null)
@@ -75,7 +77,7 @@ function CustomerView() {
         readOnly={true}
         auditLog={auditLog}
         editLabel={'Edit Customer'}
-        onEdit={() => navigate(`/accounts/customer/${customerId}/edit`)}
+        onEdit={() => navigate(`${listPath}/${customerId}/edit`)}
         onCancel={() => navigate(listPath)}
       />
     </FormPage>

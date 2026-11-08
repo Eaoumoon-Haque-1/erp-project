@@ -346,7 +346,7 @@ function CustomerForm({
               {/* Phone */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Phone <span className={'text-rose-500'}>*</span>
+                  Phone
                 </label>
                 <input
                   type={'text'}
@@ -426,7 +426,7 @@ function CustomerForm({
               {/* Country */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Country <span className={'text-rose-500'}>*</span>
+                  Country
                 </label>
                 {readOnly ? (
                   <input
@@ -442,10 +442,11 @@ function CustomerForm({
                 ) : (
                   <select
                     name={'COUNTRY_ID'}
-                    value={values.COUNTRY_ID || '1'}
+                    value={values.COUNTRY_ID || ''}
                     onChange={handleChange}
                     className={inputClass(errors.COUNTRY_ID, false)}
                   >
+                    <option value="">Select country</option>
                     {COUNTRY_OPTIONS.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}

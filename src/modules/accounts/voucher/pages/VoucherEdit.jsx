@@ -161,6 +161,7 @@ function VoucherEdit() {
   const [supplierOptions, setSupplierOptions] = useState([])
   const [customerOptions, setCustomerOptions] = useState([])
   const [allCheques, setAllCheques] = useState([])
+  const [voucherTypeMappings, setVoucherTypeMappings] = useState([])
 
   const activeBuId = values.BU_ID || sessionBuId
 
@@ -636,9 +637,11 @@ function VoucherEdit() {
     )
   }, [rawCostCenters, userSetup, details])
 
-  // Payment Types: depend on selected Voucher Type
+  // Payment Types & Mappings: depend on selected Voucher Type
   useEffect(() => {
     if (!activeBuId || !values.VOUCHER_TYPE_ID) {
+      setVoucherTypeMappings([])
+      setPaymentTypeOptions([])
       return undefined
     }
     let active = true
@@ -647,6 +650,7 @@ function VoucherEdit() {
       .getByVoucherType(activeBuId, values.VOUCHER_TYPE_ID, 1)
       .then((rows) => {
         if (!active) return
+        setVoucherTypeMappings(rows || [])
         setPaymentTypeOptions(
           (rows || []).map((r) => ({
             value: String(r.paymentTypeId),
@@ -655,13 +659,30 @@ function VoucherEdit() {
         )
       })
       .catch(() => {
-        if (active) setPaymentTypeOptions([])
+        if (active) {
+          setVoucherTypeMappings([])
+          setPaymentTypeOptions([])
+        }
       })
 
     return () => {
       active = false
     }
   }, [activeBuId, values.VOUCHER_TYPE_ID])
+
+  const isBankChequeReadOnly = useMemo(() => {
+    if (!values.VOUCHER_TYPE_ID) return false
+    const list = voucherTypeMappings || []
+    if (list.length === 0) return false
+
+    const matched =
+      (values.PAYMENT_TYPE_ID &&
+        list.find((m) => String(m.paymentTypeId) === String(values.PAYMENT_TYPE_ID))) ||
+      list[0]
+
+    if (!matched) return false
+    return String(matched.bankChequeMode || '').trim().toLowerCase() === 'readonly'
+  }, [voucherTypeMappings, values.VOUCHER_TYPE_ID, values.PAYMENT_TYPE_ID])
 
   // Payment Throughs: depend on selected Payment Type
   useEffect(() => {
@@ -927,7 +948,7 @@ function VoucherEdit() {
   return (
     <FormPage
       title={`Edit Account Voucher: ${values.VOUCHER_NO || ''}`}
-      backPath={listPath}
+      listTo={listPath}
       hideActions
     >
       <VoucherForm
@@ -940,6 +961,7 @@ function VoucherEdit() {
         isEdit={true}
         submitting={submitting}
         submitLabel={'Update'}
+        isBankChequeReadOnly={isBankChequeReadOnly}
         voucherTypeOptions={voucherTypeOptions}
         paymentTypeOptions={paymentTypeOptions}
         throughOptions={throughOptions}
