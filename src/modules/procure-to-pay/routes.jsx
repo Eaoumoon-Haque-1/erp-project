@@ -10,8 +10,68 @@ import AssetUnitOfMeasureCreate from './asset-unit-of-measure/pages/AssetUnitOfM
 import AssetUnitOfMeasureEdit from './asset-unit-of-measure/pages/AssetUnitOfMeasureEdit'
 import AssetUnitOfMeasureList from './asset-unit-of-measure/pages/AssetUnitOfMeasureList'
 import AssetUnitOfMeasureView from './asset-unit-of-measure/pages/AssetUnitOfMeasureView'
+import ItemCategoryCreate from '../inventory/item-category/pages/ItemCategoryCreate'
+import ItemCategoryEdit from '../inventory/item-category/pages/ItemCategoryEdit'
+import ItemCategoryList from '../inventory/item-category/pages/ItemCategoryList'
+import ItemCategoryView from '../inventory/item-category/pages/ItemCategoryView'
+import ItemBrandCreate from '../inventory/item-brand/pages/ItemBrandCreate'
+import ItemBrandEdit from '../inventory/item-brand/pages/ItemBrandEdit'
+import ItemBrandList from '../inventory/item-brand/pages/ItemBrandList'
+import ItemBrandView from '../inventory/item-brand/pages/ItemBrandView'
+import ItemStoreCreate from '../inventory/item-store/pages/ItemStoreCreate'
+import ItemStoreEdit from '../inventory/item-store/pages/ItemStoreEdit'
+import ItemStoreList from '../inventory/item-store/pages/ItemStoreList'
+import ItemStoreView from '../inventory/item-store/pages/ItemStoreView'
 
 export const procureToPayRoutes = [
+  {
+    path: 'procure-to-pay/procurement-settings/item-category',
+    element: <ItemCategoryList />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-category/create',
+    element: <ItemCategoryCreate />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-category/:categoryId/view',
+    element: <ItemCategoryView />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-category/:categoryId/edit',
+    element: <ItemCategoryEdit />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-brand',
+    element: <ItemBrandList />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-brand/create',
+    element: <ItemBrandCreate />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-brand/:brandId/view',
+    element: <ItemBrandView />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-brand/:brandId/edit',
+    element: <ItemBrandEdit />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-store',
+    element: <ItemStoreList />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-store/create',
+    element: <ItemStoreCreate />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-store/:storeId/view',
+    element: <ItemStoreView />,
+  },
+  {
+    path: 'procure-to-pay/procurement-settings/item-store/:storeId/edit',
+    element: <ItemStoreEdit />,
+  },
   {
     path: 'procure-to-pay/procurement-settings/supplier-information',
     element: <VendorSupplierMasterList />,

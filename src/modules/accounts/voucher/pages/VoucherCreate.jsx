@@ -44,6 +44,15 @@ function getTodayIso() {
   return `${year}-${month}-${day}`
 }
 
+function getDayOffsetIso(offset) {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function validateVoucherDateAllowed(dateStr, userSetup) {
   if (!dateStr) {
     return 'Voucher Date is required'
@@ -56,11 +65,17 @@ function validateVoucherDateAllowed(dateStr, userSetup) {
   if (hasAll) return null
 
   const todayStr = getTodayIso()
+  const hasCurrent = rules.some(
+    (r) => String(r).toLowerCase().includes('current') || String(r).trim().toLowerCase() === 'all',
+  )
   const hasPrev = rules.some((r) => String(r).toLowerCase().includes('previous'))
   const hasFwd = rules.some(
     (r) => String(r).toLowerCase().includes('forward') || String(r).toLowerCase().includes('future'),
   )
 
+  if (dateStr === todayStr && !hasCurrent) {
+    return 'Current date data entry is not allowed by User Setup.'
+  }
   if (dateStr < todayStr && !hasPrev) {
     return 'Previous date data entry is not allowed by User Setup.'
   }
@@ -68,6 +83,39 @@ function validateVoucherDateAllowed(dateStr, userSetup) {
     return 'Forward date data entry is not allowed by User Setup.'
   }
   return null
+}
+
+function getVoucherDateLimits(userSetup) {
+  if (!userSetup || !Array.isArray(userSetup.VOUCHER_DATE) || userSetup.VOUCHER_DATE.length === 0) {
+    return { minDate: undefined, maxDate: undefined }
+  }
+  const rules = userSetup.VOUCHER_DATE
+  const hasAll = rules.some((r) => String(r).trim().toLowerCase() === 'all')
+  if (hasAll) {
+    return { minDate: undefined, maxDate: undefined }
+  }
+
+  const todayStr = getTodayIso()
+  const hasCurrent = rules.some(
+    (r) => String(r).toLowerCase().includes('current') || String(r).trim().toLowerCase() === 'all',
+  )
+  const hasPrev = rules.some((r) => String(r).toLowerCase().includes('previous'))
+  const hasFwd = rules.some(
+    (r) => String(r).toLowerCase().includes('forward') || String(r).toLowerCase().includes('future'),
+  )
+
+  if (hasCurrent) {
+    return {
+      minDate: !hasPrev ? todayStr : undefined,
+      maxDate: !hasFwd ? todayStr : undefined,
+    }
+  }
+
+  // Current date not allowed
+  return {
+    minDate: !hasPrev ? getDayOffsetIso(1) : undefined,
+    maxDate: !hasFwd ? getDayOffsetIso(-1) : undefined,
+  }
 }
 
 function resolvePeriodForDate(dateStr, calendars = [], periods = []) {
@@ -496,7 +544,9 @@ function VoucherCreate() {
     }
   }, [sessionBuId, sessionGroupId, sessionUserId])
 
-  // Filter options as per User Setup
+  // Filter options and date limits as per User Setup
+  const voucherDateLimits = useMemo(() => getVoucherDateLimits(userSetup), [userSetup])
+
   const voucherTypeOptions = useMemo(() => {
     if (!userSetup?.VOUCHER_TYPE || userSetup.VOUCHER_TYPE.length === 0) {
       return rawVoucherTypes
@@ -896,6 +946,8 @@ function VoucherCreate() {
         submitting={submitting}
         submitLabel={'Submit'}
         isBankChequeReadOnly={isBankChequeReadOnly}
+        voucherDateMin={voucherDateLimits.minDate}
+        voucherDateMax={voucherDateLimits.maxDate}
         voucherTypeOptions={voucherTypeOptions}
         paymentTypeOptions={paymentTypeOptions}
         throughOptions={throughOptions}

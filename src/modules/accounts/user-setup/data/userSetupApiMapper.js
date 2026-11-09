@@ -37,7 +37,9 @@ export function mapUserSetupFromApi(record = {}) {
     EMPLOYEE_NAME: record.employeeName || '',
     USER_DISPLAY_LABEL: record.userDisplayLabel || record.userName || '',
 
-    VOUCHER_DATE: csvToArray(record.voucherDate),
+    VOUCHER_DATE: csvToArray(record.voucherDate).map((v) =>
+      String(v).trim().toLowerCase() === 'all' ? 'Current date data entry allowed' : v,
+    ),
     VOUCHER_TYPE: csvToArray(record.voucherType),
     VOUCHER_TYPE_DEFAULT: record.voucherTypeDefault != null ? String(record.voucherTypeDefault) : '',
     VOUCHER_TYPE_DEFAULT_NAME: record.voucherTypeDefaultName || '',

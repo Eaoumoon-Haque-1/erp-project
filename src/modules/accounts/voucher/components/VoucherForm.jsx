@@ -142,6 +142,8 @@ function VoucherForm({
   readOnly = false,
   isEdit = false,
   isBankChequeReadOnly = false,
+  voucherDateMin,
+  voucherDateMax,
   onEdit,
   voucherTypeOptions = [],
   paymentTypeOptions = [],
@@ -250,6 +252,8 @@ function VoucherForm({
                     id={'VOUCHER_DATE'}
                     name={'VOUCHER_DATE'}
                     value={values.VOUCHER_DATE || ''}
+                    min={voucherDateMin}
+                    max={voucherDateMax}
                     onChange={(e) => {
                       const val = e?.target?.value !== undefined ? e.target.value : e
                       onChange('VOUCHER_DATE', val)

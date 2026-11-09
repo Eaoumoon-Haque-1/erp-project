@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Shared reusable UI/workflow component: DateInput.
  * Sections: reusable helpers, component behavior, accessibility, and rendered UI.
  * Changing this file can affect many features; keep props backward-compatible when possible.
@@ -18,6 +18,8 @@ function DateInput({
   readOnly = false,
   disabled = false,
   placeholder = "DD/MM/YYYY",
+  popperPlacement = "bottom-start",
+  popperClassName,
   onChange,
   ...accessibilityProps
 }) {
@@ -33,6 +35,8 @@ function DateInput({
       placeholderText={placeholder}
       className={className}
       wrapperClassName={"erp-date-picker-wrapper"}
+      popperPlacement={popperPlacement}
+      popperClassName={["!z-[9999]", popperClassName].filter(Boolean).join(" ")}
       required={required}
       readOnly={readOnly}
       disabled={disabled}

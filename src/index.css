@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Global ERP design system and responsive layout rules.
  * Sections: Tailwind import/theme tokens, shared controls/pages/tables/modals, feature layouts, and media queries.
  * Reuse existing erp-* classes first; add named feature classes near related rules instead of unexplained inline widths.
@@ -29,6 +29,30 @@
 }
 
 @layer components {
+  /* ========================================================
+     React Datepicker Popover (Layered above sidebar & headers)
+     ======================================================== */
+  .react-datepicker-popper {
+    z-index: 99999 !important;
+  }
+
+  .react-datepicker__day--disabled {
+    color: #cbd5e1 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+  }
+
+  .erp-date-picker-wrapper {
+    display: block;
+    width: 100%;
+  }
+
+  .erp-date-picker-wrapper .react-datepicker__input-container {
+    display: block;
+    width: 100%;
+  }
+
   .auth-page {
     display: grid;
     min-height: 100vh;
