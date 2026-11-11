@@ -10,6 +10,7 @@ import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { afmLookupApi } from '../../../../api/afmLookup'
 import { customerApi } from '../api/customerApi'
 import CustomerForm from '../components/CustomerForm'
 import { mapCustomerToApi } from '../data/customerApiMapper'
@@ -41,7 +42,45 @@ function CustomerCreate() {
     }
   })
   const [errors, setErrors] = useState({})
+  const [paymentTermsOptions, setPaymentTermsOptions] = useState([])
   const [submitting, setSubmitting] = useState(false)
+
+  // Fetch Payment Terms lookup values where typeCode = 'PTR001'
+  useEffect(() => {
+    let active = true
+    const fetchPaymentTerms = async () => {
+      try {
+        let res = await afmLookupApi
+          .getValuesByTypeCode('PTR001', sessionBuId || undefined, 1)
+          .catch(() => afmLookupApi.getValuesByCode('PTR001', sessionBuId || undefined, 1))
+          .catch(() => afmLookupApi.getValuesByCode('Payment Terms', sessionBuId || undefined, 1))
+
+        if ((!res || res.length === 0) && sessionBuId) {
+          res = await afmLookupApi
+            .getValuesByTypeCode('PTR001', undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode('PTR001', undefined, 1))
+            .catch(() => afmLookupApi.getValuesByCode('Payment Terms', undefined, 1))
+        }
+
+        if (!active) return
+        const opts = (res || [])
+          .filter((item) => item.status === undefined || item.status === null || Number(item.status) === 1)
+          .map((item) => ({
+            value: item.value || item.valueCode || String(item.id),
+            label: item.value || item.valueCode || String(item.id),
+            code: item.valueCode,
+          }))
+        setPaymentTermsOptions(opts)
+      } catch {
+        // proceed
+      }
+    }
+
+    fetchPaymentTerms()
+    return () => {
+      active = false
+    }
+  }, [sessionBuId])
 
   // Sync if URL search params change
   useEffect(() => {
@@ -105,10 +144,39 @@ function CustomerCreate() {
     }
   }, [sessionGroupId, sessionBuId])
 
-  const handleChange = (name, value) => {
-    setValues((prev) => ({ ...prev, [name]: value }))
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
+  const handleChange = (nameOrObj, value) => {
+    if (typeof nameOrObj === 'object' && nameOrObj !== null) {
+      setValues((prev) => ({ ...prev, ...nameOrObj }))
+      setErrors((prev) => {
+        const next = { ...prev }
+        Object.keys(nameOrObj).forEach((k) => delete next[k])
+        return next
+      })
+      return
+    }
+
+    setValues((prev) => {
+      const next = { ...prev, [nameOrObj]: value }
+      if (nameOrObj === 'AGREEMENT_DATE_FROM' || nameOrObj === 'AGREEMENT_DATE_TO') {
+        if (next.AGREEMENT_DATE_FROM && next.AGREEMENT_DATE_TO && next.AGREEMENT_DATE_TO < next.AGREEMENT_DATE_FROM) {
+          setErrors((errs) => ({
+            ...errs,
+            AGREEMENT_DATE_TO: 'Agreement Date (To) must be on or after Agreement Date (From)',
+          }))
+        } else {
+          setErrors((errs) => {
+            if (!errs.AGREEMENT_DATE_TO) return errs
+            const copy = { ...errs }
+            delete copy.AGREEMENT_DATE_TO
+            return copy
+          })
+        }
+      }
+      return next
+    })
+
+    if (errors[nameOrObj] && nameOrObj !== 'AGREEMENT_DATE_TO') {
+      setErrors((prev) => ({ ...prev, [nameOrObj]: undefined }))
     }
   }
 
@@ -177,6 +245,7 @@ function CustomerCreate() {
       <CustomerForm
         values={values}
         errors={errors}
+        paymentTermsOptions={paymentTermsOptions}
         submitting={submitting}
         submitLabel={'Save Customer'}
         onChange={handleChange}

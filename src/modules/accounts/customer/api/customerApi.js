@@ -37,6 +37,18 @@ export const customerApi = {
         params: { buId },
       }),
     ),
+
+  /**
+   * Updates customer finance status (Draft <-> Approved).
+   * @param {number|string} id Customer ID
+   * @param {string} [status] Optional target status ('Draft' or 'Approved')
+   */
+  updateFinanceStatus: (id, status) =>
+    unwrapApiResponse(
+      apiClient.patch(`${RESOURCE_PATH}/${id}/finance-status`, null, {
+        params: status ? { status } : undefined,
+      }),
+    ),
 }
 
 export default customerApi

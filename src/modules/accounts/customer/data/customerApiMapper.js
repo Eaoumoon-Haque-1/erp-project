@@ -42,7 +42,8 @@ export function mapCustomerFromApi(record = {}) {
     CONTACT_PERSON: record.contactPerson || '',
     DESIGNATION: record.designation || '',
     PHONE: record.phone || '',
-    ALTERNATE_PHONE: record.alternatePhone || '',
+    ALTERNATE_PHONE: record.alternatePhone || record.whatsappNo || '',
+    WHATSAPP_NO: record.alternatePhone || record.whatsappNo || '',
     EMAIL: record.email || '',
     WEBSITE: record.website || '',
 
@@ -57,11 +58,16 @@ export function mapCustomerFromApi(record = {}) {
     TIN_NUMBER: record.tinNumber || '',
 
     PAYMENT_TERMS: record.paymentTerms || '',
-    CREDIT_LIMIT: record.creditLimit != null ? String(record.creditLimit) : '0.00',
+    CREDIT_LOWER_LIMIT: record.creditLowerLimit != null ? String(record.creditLowerLimit) : '0.00',
+    CREDIT_UPPER_LIMIT: record.creditUpperLimit != null ? String(record.creditUpperLimit) : '0.00',
+    CREDIT_LIMIT: record.creditUpperLimit != null ? String(record.creditUpperLimit) : record.creditLimit != null ? String(record.creditLimit) : '0.00',
     CREDIT_DAYS: record.creditDays != null ? String(record.creditDays) : '0',
     CURRENCY_CODE: record.currencyCode || 'BDT',
     OPENING_BALANCE: record.openingBalance != null ? String(record.openingBalance) : '0.00',
     BALANCE_TYPE: record.balanceType || '',
+    AGREEMENT_DATE_FROM: record.agreementDateFrom ? String(record.agreementDateFrom).substring(0, 10) : '',
+    AGREEMENT_DATE_TO: record.agreementDateTo ? String(record.agreementDateTo).substring(0, 10) : '',
+    FINANCE_STATUS: record.financeStatus || record.financialStatus || 'Draft',
 
     REMARKS: record.remarks || '',
     STATUS: record.status != null ? String(record.status) : '1',
@@ -114,7 +120,7 @@ export function mapCustomerToApi(values = {}) {
     contactPerson: values.CONTACT_PERSON ? String(values.CONTACT_PERSON).trim() : null,
     designation: values.DESIGNATION ? String(values.DESIGNATION).trim() : null,
     phone: values.PHONE ? String(values.PHONE).trim() : null,
-    alternatePhone: values.ALTERNATE_PHONE ? String(values.ALTERNATE_PHONE).trim() : null,
+    alternatePhone: values.ALTERNATE_PHONE || values.WHATSAPP_NO ? String(values.ALTERNATE_PHONE || values.WHATSAPP_NO).trim() : null,
     email: values.EMAIL ? String(values.EMAIL).trim() : null,
     website: values.WEBSITE ? String(values.WEBSITE).trim() : null,
 
@@ -129,11 +135,15 @@ export function mapCustomerToApi(values = {}) {
     tinNumber: values.TIN_NUMBER ? String(values.TIN_NUMBER).trim() : null,
 
     paymentTerms: values.PAYMENT_TERMS ? String(values.PAYMENT_TERMS).trim() : null,
-    creditLimit: values.CREDIT_LIMIT !== '' && values.CREDIT_LIMIT != null ? Number(values.CREDIT_LIMIT) : 0,
+    creditLowerLimit: values.CREDIT_LOWER_LIMIT !== '' && values.CREDIT_LOWER_LIMIT != null ? Number(values.CREDIT_LOWER_LIMIT) : null,
+    creditUpperLimit: values.CREDIT_UPPER_LIMIT !== '' && values.CREDIT_UPPER_LIMIT != null ? Number(values.CREDIT_UPPER_LIMIT) : null,
     creditDays: values.CREDIT_DAYS !== '' && values.CREDIT_DAYS != null ? Number(values.CREDIT_DAYS) : 0,
     currencyCode: values.CURRENCY_CODE ? String(values.CURRENCY_CODE).trim() : 'BDT',
     openingBalance: values.OPENING_BALANCE !== '' && values.OPENING_BALANCE != null ? Number(values.OPENING_BALANCE) : 0,
     balanceType: values.BALANCE_TYPE ? String(values.BALANCE_TYPE).trim() : null,
+    agreementDateFrom: values.AGREEMENT_DATE_FROM ? String(values.AGREEMENT_DATE_FROM).trim() : null,
+    agreementDateTo: values.AGREEMENT_DATE_TO ? String(values.AGREEMENT_DATE_TO).trim() : null,
+    financeStatus: values.FINANCE_STATUS ? String(values.FINANCE_STATUS).trim() : 'Draft',
 
     remarks: values.REMARKS ? String(values.REMARKS).trim() : null,
     status: values.STATUS !== undefined && values.STATUS !== '' ? Number(values.STATUS) : 1,

@@ -74,6 +74,8 @@ export const STATUS_OPTIONS = [
   { value: '0', label: 'Inactive' },
 ]
 
+export const FINANCE_STATUS_OPTIONS = ['Draft', 'Approved']
+
 export const initialCustomerValues = {
   BG_ID: '',
   BU_ID: '',
@@ -86,6 +88,7 @@ export const initialCustomerValues = {
   DESIGNATION: '',
   PHONE: '',
   ALTERNATE_PHONE: '',
+  WHATSAPP_NO: '',
   EMAIL: '',
   WEBSITE: '',
   COUNTRY_ID: '',
@@ -97,11 +100,15 @@ export const initialCustomerValues = {
   TAX_REGISTRATION_NO: '',
   TIN_NUMBER: '',
   PAYMENT_TERMS: '',
-  CREDIT_LIMIT: '0.00',
+  CREDIT_LOWER_LIMIT: '0.00',
+  CREDIT_UPPER_LIMIT: '0.00',
   CREDIT_DAYS: '0',
   CURRENCY_CODE: 'BDT',
   OPENING_BALANCE: '0.00',
   BALANCE_TYPE: '',
+  AGREEMENT_DATE_FROM: '',
+  AGREEMENT_DATE_TO: '',
+  FINANCE_STATUS: 'Draft',
   REMARKS: '',
   STATUS: '1',
 }
@@ -134,8 +141,8 @@ export function validateCustomer(values = {}) {
     errors.PHONE = 'Phone number cannot exceed 50 characters'
   }
 
-  if (!values.ADDRESS || !String(values.ADDRESS).trim()) {
-    errors.ADDRESS = 'Billing / Full Address is required'
+  if (values.ADDRESS && String(values.ADDRESS).trim().length > 500) {
+    errors.ADDRESS = 'Billing / Full Address cannot exceed 500 characters'
   }
 
   if (values.EMAIL && String(values.EMAIL).trim()) {
@@ -145,8 +152,22 @@ export function validateCustomer(values = {}) {
     }
   }
 
-  if (values.CREDIT_LIMIT && isNaN(Number(values.CREDIT_LIMIT))) {
-    errors.CREDIT_LIMIT = 'Credit Limit must be a number'
+  if (values.CREDIT_LOWER_LIMIT !== undefined && values.CREDIT_LOWER_LIMIT !== '' && isNaN(Number(values.CREDIT_LOWER_LIMIT))) {
+    errors.CREDIT_LOWER_LIMIT = 'Credit Lower Limit must be a number'
+  }
+
+  if (values.CREDIT_UPPER_LIMIT !== undefined && values.CREDIT_UPPER_LIMIT !== '' && isNaN(Number(values.CREDIT_UPPER_LIMIT))) {
+    errors.CREDIT_UPPER_LIMIT = 'Credit Upper Limit must be a number'
+  }
+
+  if (
+    values.CREDIT_LOWER_LIMIT !== undefined && values.CREDIT_LOWER_LIMIT !== '' &&
+    values.CREDIT_UPPER_LIMIT !== undefined && values.CREDIT_UPPER_LIMIT !== '' &&
+    !isNaN(Number(values.CREDIT_LOWER_LIMIT)) && !isNaN(Number(values.CREDIT_UPPER_LIMIT)) &&
+    Number(values.CREDIT_UPPER_LIMIT) > 0 &&
+    Number(values.CREDIT_LOWER_LIMIT) > Number(values.CREDIT_UPPER_LIMIT)
+  ) {
+    errors.CREDIT_UPPER_LIMIT = 'Credit Upper Limit should be greater than or equal to Lower Limit'
   }
 
   if (values.OPENING_BALANCE && isNaN(Number(values.OPENING_BALANCE))) {
@@ -155,6 +176,14 @@ export function validateCustomer(values = {}) {
 
   if (values.CREDIT_DAYS && isNaN(Number(values.CREDIT_DAYS))) {
     errors.CREDIT_DAYS = 'Credit Days must be an integer'
+  }
+
+  if (
+    values.AGREEMENT_DATE_FROM &&
+    values.AGREEMENT_DATE_TO &&
+    values.AGREEMENT_DATE_TO < values.AGREEMENT_DATE_FROM
+  ) {
+    errors.AGREEMENT_DATE_TO = 'Agreement Date (To) must be on or after Agreement Date (From)'
   }
 
   return errors

@@ -9,6 +9,8 @@
  * 6. Additional Information
  * Plus Audit Log block on Edit and View screens.
  */
+import { useEffect, useState } from 'react'
+import { afmLookupApi } from '../../../../api/afmLookup'
 import {
   BALANCE_TYPE_OPTIONS,
   BUSINESS_TYPE_OPTIONS,
@@ -16,6 +18,7 @@ import {
   CURRENCY_OPTIONS,
   CUSTOMER_CATEGORY_OPTIONS,
   CUSTOMER_TYPE_OPTIONS,
+  FINANCE_STATUS_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
   STATUS_OPTIONS,
 } from '../validation/customerValidation'
@@ -76,21 +79,108 @@ function CustomerForm({
   submitting = false,
   submitLabel = 'Save Customer',
   editLabel = 'Edit Customer',
+  paymentTermsOptions = [],
   onEdit,
   onChange = () => {},
   onSubmit = () => {},
   onCancel,
 }) {
+  const [internalTermsOptions, setInternalTermsOptions] = useState([])
+
+  // Fallback to load PTR001 lookup values if paymentTermsOptions not supplied
+  useEffect(() => {
+    if (paymentTermsOptions && paymentTermsOptions.length > 0) return
+    let active = true
+    const buId = values.BU_ID || undefined
+
+    const fetchTerms = async () => {
+      try {
+        let res = await afmLookupApi
+          .getValuesByTypeCode('PTR001', buId, 1)
+          .catch(() => afmLookupApi.getValuesByCode('PTR001', buId, 1))
+          .catch(() => afmLookupApi.getValuesByCode('Payment Terms', buId, 1))
+
+        if ((!res || res.length === 0) && buId) {
+          res = await afmLookupApi
+            .getValuesByTypeCode('PTR001', undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode('PTR001', undefined, 1))
+            .catch(() => afmLookupApi.getValuesByCode('Payment Terms', undefined, 1))
+        }
+
+        if (!active) return
+        const opts = (res || [])
+          .filter((item) => item.status === undefined || item.status === null || Number(item.status) === 1)
+          .map((item) => ({
+            value: item.value || item.valueCode || String(item.id),
+            label: item.value || item.valueCode || String(item.id),
+            code: item.valueCode,
+          }))
+        setInternalTermsOptions(opts)
+      } catch {
+        // fallback
+      }
+    }
+
+    fetchTerms()
+    return () => {
+      active = false
+    }
+  }, [paymentTermsOptions, values.BU_ID])
+  const [sameAsBilling, setSameAsBilling] = useState(() => {
+    return Boolean(
+      values.ADDRESS &&
+      values.SHIPPING_ADDRESS &&
+      values.ADDRESS.trim() === values.SHIPPING_ADDRESS.trim()
+    )
+  })
+
+  // Synchronize sameAsBilling if record loads in edit/view mode
+  useEffect(() => {
+    if (
+      values.ADDRESS &&
+      values.SHIPPING_ADDRESS &&
+      values.ADDRESS.trim() === values.SHIPPING_ADDRESS.trim()
+    ) {
+      setSameAsBilling(true)
+    }
+  }, [values.ADDRESS, values.SHIPPING_ADDRESS])
+
   const handleChange = (e) => {
     const { name, value } = e.target
+    if (name === 'ADDRESS') {
+      if (sameAsBilling) {
+        onChange({ ADDRESS: value, SHIPPING_ADDRESS: value })
+      } else {
+        onChange('ADDRESS', value)
+      }
+      return
+    }
+    if (name === 'SHIPPING_ADDRESS') {
+      if (sameAsBilling && value !== values.ADDRESS) {
+        setSameAsBilling(false)
+      }
+      onChange('SHIPPING_ADDRESS', value)
+      return
+    }
     onChange(name, value)
   }
 
-  const handleCopyBillingToShipping = () => {
-    if (values.ADDRESS) {
-      onChange('SHIPPING_ADDRESS', values.ADDRESS)
+  const handleToggleSameAsBilling = (e) => {
+    const checked = e.target.checked
+    setSameAsBilling(checked)
+    if (checked) {
+      onChange('SHIPPING_ADDRESS', values.ADDRESS || '')
     }
   }
+
+  const isDateToBeforeFrom = Boolean(
+    values.AGREEMENT_DATE_FROM &&
+    values.AGREEMENT_DATE_TO &&
+    values.AGREEMENT_DATE_TO < values.AGREEMENT_DATE_FROM
+  )
+  const agreementDateToError = isDateToBeforeFrom
+    ? 'Agreement Date (To) must be on or after Agreement Date (From)'
+    : errors.AGREEMENT_DATE_TO
 
   return (
     <div
@@ -268,34 +358,6 @@ function CustomerForm({
                   </select>
                 )}
               </div>
-
-              {/* Status */}
-              <div>
-                <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Status
-                </label>
-                {readOnly ? (
-                  <input
-                    type={'text'}
-                    value={String(values.STATUS) === '1' ? 'Active' : 'Inactive'}
-                    readOnly
-                    className={inputClass(null, true)}
-                  />
-                ) : (
-                  <select
-                    name={'STATUS'}
-                    value={values.STATUS !== undefined ? String(values.STATUS) : '1'}
-                    onChange={handleChange}
-                    className={inputClass(null, false)}
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
             </div>
           </div>
 
@@ -360,18 +422,18 @@ function CustomerForm({
                 <FieldError id={'cust-phone-err'} message={errors.PHONE} />
               </div>
 
-              {/* Alternate Phone */}
+              {/* WhatsApp No */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Alternate Phone
+                  WhatsApp No
                 </label>
                 <input
                   type={'text'}
                   name={'ALTERNATE_PHONE'}
-                  value={values.ALTERNATE_PHONE || ''}
+                  value={values.ALTERNATE_PHONE || values.WHATSAPP_NO || ''}
                   onChange={handleChange}
                   readOnly={readOnly}
-                  placeholder={'Alternative phone number'}
+                  placeholder={'Enter WhatsApp number'}
                   className={inputClass(null, readOnly)}
                 />
               </div>
@@ -508,7 +570,7 @@ function CustomerForm({
               {/* Billing / Full Address */}
               <div className={'md:col-span-2'}>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Billing / Full Address <span className={'text-rose-500'}>*</span>
+                  Billing / Full Address
                 </label>
                 <textarea
                   name={'ADDRESS'}
@@ -528,15 +590,24 @@ function CustomerForm({
                   <label className={'block text-xs font-medium text-gray-700'}>
                     Shipping Address
                   </label>
-                  {!readOnly && (
-                    <button
-                      type={'button'}
-                      onClick={handleCopyBillingToShipping}
-                      className={'text-[11px] text-teal-600 hover:text-teal-800 font-medium transition-colors'}
-                    >
-                      Same as Billing Address
-                    </button>
-                  )}
+                  <label
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium select-none ${
+                      readOnly
+                        ? 'cursor-not-allowed text-gray-500'
+                        : 'cursor-pointer text-teal-700 hover:text-teal-800'
+                    }`}
+                  >
+                    <input
+                      type={'checkbox'}
+                      checked={Boolean(sameAsBilling)}
+                      disabled={readOnly}
+                      onChange={handleToggleSameAsBilling}
+                      className={
+                        'w-3.5 h-3.5 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer disabled:cursor-not-allowed'
+                      }
+                    />
+                    <span>Same as Billing Address</span>
+                  </label>
                 </div>
                 <textarea
                   name={'SHIPPING_ADDRESS'}
@@ -622,19 +693,47 @@ function CustomerForm({
                     className={inputClass(null, true)}
                   />
                 ) : (
-                  <select
-                    name={'PAYMENT_TERMS'}
-                    value={values.PAYMENT_TERMS || ''}
-                    onChange={handleChange}
-                    className={inputClass(null, false)}
-                  >
-                    <option value={''}>-- Select Payment Terms --</option>
-                    {PAYMENT_TERMS_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  (() => {
+                    const availableTerms =
+                      paymentTermsOptions && paymentTermsOptions.length > 0
+                        ? paymentTermsOptions
+                        : internalTermsOptions && internalTermsOptions.length > 0
+                        ? internalTermsOptions
+                        : PAYMENT_TERMS_OPTIONS.map((t) => ({ value: t, label: t }))
+
+                    const termsList = [...availableTerms]
+                    if (
+                      values.PAYMENT_TERMS &&
+                      !termsList.some(
+                        (opt) => (typeof opt === 'object' ? opt.value : opt) === values.PAYMENT_TERMS,
+                      )
+                    ) {
+                      termsList.unshift({
+                        value: values.PAYMENT_TERMS,
+                        label: values.PAYMENT_TERMS,
+                      })
+                    }
+
+                    return (
+                      <select
+                        name={'PAYMENT_TERMS'}
+                        value={values.PAYMENT_TERMS || ''}
+                        onChange={handleChange}
+                        className={inputClass(null, false)}
+                      >
+                        <option value={''}>-- Select Payment Terms --</option>
+                        {termsList.map((opt) => {
+                          const val = typeof opt === 'object' && opt !== null ? opt.value ?? opt.label : opt
+                          const label = typeof opt === 'object' && opt !== null ? opt.label ?? opt.value : opt
+                          return (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    )
+                  })()
                 )}
               </div>
 
@@ -666,22 +765,40 @@ function CustomerForm({
                 )}
               </div>
 
-              {/* Credit Limit */}
+              {/* Credit Lower Limit */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Credit Limit
+                  Credit Lower Limit
                 </label>
                 <input
                   type={'number'}
-                  step={'0.01'}
-                  name={'CREDIT_LIMIT'}
-                  value={values.CREDIT_LIMIT !== undefined ? values.CREDIT_LIMIT : '0.00'}
+                  step={'any'}
+                  name={'CREDIT_LOWER_LIMIT'}
+                  value={values.CREDIT_LOWER_LIMIT !== undefined ? values.CREDIT_LOWER_LIMIT : '0.00'}
                   onChange={handleChange}
                   readOnly={readOnly}
                   placeholder={'0.00'}
-                  className={inputClass(errors.CREDIT_LIMIT, readOnly)}
+                  className={inputClass(errors.CREDIT_LOWER_LIMIT, readOnly)}
                 />
-                <FieldError id={'cust-clim-err'} message={errors.CREDIT_LIMIT} />
+                <FieldError id={'cust-clow-err'} message={errors.CREDIT_LOWER_LIMIT} />
+              </div>
+
+              {/* Credit Upper Limit */}
+              <div>
+                <label className={'block text-xs font-medium text-gray-700 mb-1'}>
+                  Credit Upper Limit
+                </label>
+                <input
+                  type={'number'}
+                  step={'any'}
+                  name={'CREDIT_UPPER_LIMIT'}
+                  value={values.CREDIT_UPPER_LIMIT !== undefined ? values.CREDIT_UPPER_LIMIT : '0.00'}
+                  onChange={handleChange}
+                  readOnly={readOnly}
+                  placeholder={'0.00'}
+                  className={inputClass(errors.CREDIT_UPPER_LIMIT, readOnly)}
+                />
+                <FieldError id={'cust-cupp-err'} message={errors.CREDIT_UPPER_LIMIT} />
               </div>
 
               {/* Credit Days */}
@@ -747,6 +864,83 @@ function CustomerForm({
                   </select>
                 )}
               </div>
+
+              {/* Agreement Date (From) */}
+              <div>
+                <label className={'block text-xs font-medium text-gray-700 mb-1'}>
+                  Agreement Date (From)
+                </label>
+                {readOnly ? (
+                  <input
+                    type={'text'}
+                    value={values.AGREEMENT_DATE_FROM || '-'}
+                    readOnly
+                    className={inputClass(null, true)}
+                  />
+                ) : (
+                  <input
+                    type={'date'}
+                    name={'AGREEMENT_DATE_FROM'}
+                    value={values.AGREEMENT_DATE_FROM || ''}
+                    onChange={handleChange}
+                    className={inputClass(errors.AGREEMENT_DATE_FROM, false)}
+                  />
+                )}
+                <FieldError id={'cust-agfrom-err'} message={errors.AGREEMENT_DATE_FROM} />
+              </div>
+
+              {/* Agreement Date (To) */}
+              <div>
+                <label className={'block text-xs font-medium text-gray-700 mb-1'}>
+                  Agreement Date (To)
+                </label>
+                {readOnly ? (
+                  <input
+                    type={'text'}
+                    value={values.AGREEMENT_DATE_TO || '-'}
+                    readOnly
+                    className={inputClass(null, true)}
+                  />
+                ) : (
+                  <input
+                    type={'date'}
+                    name={'AGREEMENT_DATE_TO'}
+                    value={values.AGREEMENT_DATE_TO || ''}
+                    min={values.AGREEMENT_DATE_FROM || undefined}
+                    onChange={handleChange}
+                    className={inputClass(agreementDateToError, false)}
+                  />
+                )}
+                <FieldError id={'cust-agto-err'} message={agreementDateToError} />
+              </div>
+
+              {/* Finance Status (Dropdown, Data = Draft, Approved, default Draft) */}
+              <div>
+                <label className={'block text-xs font-medium text-gray-700 mb-1'}>
+                  Finance Status
+                </label>
+                {readOnly ? (
+                  <input
+                    type={'text'}
+                    value={values.FINANCE_STATUS || 'Draft'}
+                    readOnly
+                    className={inputClass(null, true)}
+                  />
+                ) : (
+                  <select
+                    name={'FINANCE_STATUS'}
+                    value={values.FINANCE_STATUS || 'Draft'}
+                    onChange={handleChange}
+                    className={inputClass(null, false)}
+                  >
+                    {FINANCE_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           </div>
 
@@ -774,6 +968,41 @@ function CustomerForm({
                 placeholder={'Additional customer notes or terms...'}
                 className={textareaClass(null, readOnly)}
               />
+            </div>
+
+            {/* Is Active */}
+            <div>
+              <label className={'block text-xs font-semibold text-gray-700 mb-1'}>
+                Is Active
+              </label>
+              {readOnly ? (
+                <input
+                  type={'text'}
+                  value={String(values.STATUS) === '1' ? 'Active' : 'Inactive'}
+                  readOnly
+                  className={inputClass(null, true)}
+                />
+              ) : (
+                <div className={'flex items-center h-8'}>
+                  <label className={'erp-switch-field cursor-pointer !h-8 !w-auto !text-xs gap-2 flex items-center'}>
+                    <input
+                      id={'cust-status-switch'}
+                      className={'erp-switch-control'}
+                      type={'checkbox'}
+                      role={'switch'}
+                      name={'STATUS'}
+                      checked={String(values.STATUS ?? '1') === '1'}
+                      onChange={(e) => {
+                        const val = e.target.checked ? '1' : '0'
+                        onChange('STATUS', val)
+                      }}
+                    />
+                    <span className={'text-xs font-medium text-gray-700 select-none'}>
+                      {String(values.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
+                    </span>
+                  </label>
+                </div>
+              )}
             </div>
           </div>
 

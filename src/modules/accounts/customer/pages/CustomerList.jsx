@@ -9,7 +9,7 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { confirmAction, showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { customerApi } from '../api/customerApi'
 import { mapCustomerFromApi, mapCustomerToApi } from '../data/customerApiMapper'
 import { CUSTOMER_TYPE_OPTIONS } from '../validation/customerValidation'
@@ -52,13 +52,39 @@ const columns = [
     ),
   },
   {
-    key: 'CREDIT_LIMIT',
-    label: 'Credit Limit',
+    key: 'CREDIT_LOWER_LIMIT',
+    label: 'Credit Lower Limit',
     render: (value) => (
       <span className={'text-xs font-medium text-gray-800'}>
-        {value != null ? Number(value).toFixed(2) : '0.00'}
+        {value != null && value !== '' ? Number(value).toFixed(2) : '0.00'}
       </span>
     ),
+  },
+  {
+    key: 'CREDIT_UPPER_LIMIT',
+    label: 'Credit Upper Limit',
+    render: (value) => (
+      <span className={'text-xs font-medium text-gray-800'}>
+        {value != null && value !== '' ? Number(value).toFixed(2) : '0.00'}
+      </span>
+    ),
+  },
+  {
+    key: 'FINANCE_STATUS',
+    label: 'Finance Status',
+    render: (value) => {
+      const isApproved = String(value || '').toLowerCase() === 'approved'
+      return (
+        <span
+          className={[
+            'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none',
+            isApproved ? 'bg-sky-600 text-white' : 'bg-amber-500 text-white',
+          ].join(' ')}
+        >
+          {value || 'Draft'}
+        </span>
+      )
+    },
   },
   {
     key: 'STATUS',
@@ -150,6 +176,34 @@ function CustomerList() {
     }
   }
 
+  const handleFinanceStatusChange = async (row) => {
+    const currentStatus = row.FINANCE_STATUS || 'Draft'
+    const nextStatus = String(currentStatus).toLowerCase() === 'approved' ? 'Draft' : 'Approved'
+    const confirmed = await confirmAction({
+      title: 'Change Finance Status?',
+      text: `Do you want to change Finance Status of "${row.CUSTOMER_NAME}" from ${currentStatus} to ${nextStatus}?`,
+      action: 'update',
+      confirmButtonText: `Yes, Set to ${nextStatus}`,
+    })
+    if (!confirmed) return
+
+    try {
+      const updated = await customerApi.updateFinanceStatus(row.ID, nextStatus)
+      const mapped = mapCustomerFromApi(updated)
+      setRows((items) =>
+        items.map((item) =>
+          item.ID === row.ID
+            ? { ...item, FINANCE_STATUS: mapped.FINANCE_STATUS || nextStatus }
+            : item,
+        ),
+      )
+      showSuccess(`Finance Status changed to ${nextStatus} successfully!`)
+    } catch (error) {
+      const msg = getApiErrorMessage(error, 'Unable to update finance status.')
+      showError(msg)
+    }
+  }
+
   // Distinct options derived from rows for individual dropdown search with write option
   const customerCodeOptions = useMemo(() => {
     const distinct = Array.from(
@@ -203,6 +257,19 @@ function CustomerList() {
         },
       },
       {
+        key: 'FINANCE_STATUS',
+        label: 'Finance Status',
+        placeholder: '--Select Finance Status--',
+        options: [
+          { value: 'Draft', label: 'Draft' },
+          { value: 'Approved', label: 'Approved' },
+        ],
+        matches: (row, value) => {
+          if (!value) return true
+          return String(row.FINANCE_STATUS || 'Draft').toLowerCase() === String(value).toLowerCase()
+        },
+      },
+      {
         key: 'STATUS',
         label: 'Status',
         placeholder: '--Select Status--',
@@ -229,13 +296,28 @@ function CustomerList() {
       columns={columns}
       rows={rows}
       renderActions={(row) => (
-        <ListRowActions
-          row={row}
-          onView={() => navigate(`${listPath}/${row.ID}/view`)}
-          onEdit={() => navigate(`${listPath}/${row.ID}/edit`)}
-          onDelete={handleDelete}
-          onStatusChange={handleStatusChange}
-        />
+        <div className={'flex items-center gap-1.5'}>
+          <button
+            type={'button'}
+            onClick={() => handleFinanceStatusChange(row)}
+            title={`Change Finance Status (Current: ${row.FINANCE_STATUS || 'Draft'})`}
+            className={[
+              'inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded shadow-xs transition-colors focus:outline-none',
+              String(row.FINANCE_STATUS).toLowerCase() === 'approved'
+                ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                : 'bg-[#038b8d] hover:bg-[#027577] text-white',
+            ].join(' ')}
+          >
+            {String(row.FINANCE_STATUS).toLowerCase() === 'approved' ? 'Set Draft' : 'Approve'}
+          </button>
+          <ListRowActions
+            row={row}
+            onView={() => navigate(`${listPath}/${row.ID}/view`)}
+            onEdit={() => navigate(`${listPath}/${row.ID}/edit`)}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusChange}
+          />
+        </div>
       )}
     />
   )
