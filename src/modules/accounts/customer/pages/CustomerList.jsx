@@ -180,8 +180,11 @@ function CustomerList() {
     const currentStatus = row.FINANCE_STATUS || 'Draft'
     const nextStatus = String(currentStatus).toLowerCase() === 'approved' ? 'Draft' : 'Approved'
     const confirmed = await confirmAction({
-      title: 'Change Finance Status?',
-      text: `Do you want to change Finance Status of "${row.CUSTOMER_NAME}" from ${currentStatus} to ${nextStatus}?`,
+      title: `${nextStatus === 'Approved' ? 'Approve Customer Financial Agreement' : 'Set Finance Status to Draft'}?`,
+      text:
+        nextStatus === 'Approved'
+          ? `Payment & Financial Information can not be editable next time. Do you want to Approved and Insert data for "${row.CUSTOMER_NAME}"?`
+          : `Do you want to change Finance Status of "${row.CUSTOMER_NAME}" from Approved to Draft?`,
       action: 'update',
       confirmButtonText: `Yes, Set to ${nextStatus}`,
     })

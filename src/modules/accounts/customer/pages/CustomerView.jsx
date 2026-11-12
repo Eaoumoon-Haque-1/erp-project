@@ -22,6 +22,7 @@ function CustomerView() {
 
   const [values, setValues] = useState(initialCustomerValues)
   const [auditLog, setAuditLog] = useState(null)
+  const [agreements, setAgreements] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -42,6 +43,14 @@ function CustomerView() {
       .finally(() => {
         if (active) setLoading(false)
       })
+
+    customerApi
+      .getFinancialAgreements(customerId)
+      .then((res) => {
+        if (!active) return
+        setAgreements(Array.isArray(res) ? res : [])
+      })
+      .catch(() => {})
 
     return () => {
       active = false
@@ -71,13 +80,33 @@ function CustomerView() {
       hideActions
     >
       <CustomerForm
+        customerId={customerId}
         values={values}
         errors={{}}
         isEdit={true}
         readOnly={true}
         auditLog={auditLog}
+        agreements={agreements}
         editLabel={'Edit Customer'}
         onEdit={() => navigate(`${listPath}/${customerId}/edit`)}
+        onChange={(updates) => {
+          if (typeof updates === 'object' && updates !== null) {
+            setValues((prev) => ({ ...prev, ...updates }))
+          }
+        }}
+        onAgreementCreated={(updatedCustomer) => {
+          if (updatedCustomer) {
+            const mapped = mapCustomerFromApi(updatedCustomer)
+            setValues(mapped)
+            setAuditLog(mapped.AUDIT_LOG || mapped)
+          }
+          if (customerId) {
+            customerApi
+              .getFinancialAgreements(customerId)
+              .then((res) => setAgreements(Array.isArray(res) ? res : []))
+              .catch(() => {})
+          }
+        }}
         onCancel={() => navigate(listPath)}
       />
     </FormPage>

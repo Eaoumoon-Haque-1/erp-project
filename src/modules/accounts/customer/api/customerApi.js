@@ -49,6 +49,21 @@ export const customerApi = {
         params: status ? { status } : undefined,
       }),
     ),
+
+  /**
+   * Retrieves financial agreements for a customer.
+   * @param {number|string} id Customer ID
+   */
+  getFinancialAgreements: (id) =>
+    unwrapApiResponse(apiClient.get(`${RESOURCE_PATH}/${id}/financial-agreements`)),
+
+  /**
+   * Creates a new financial agreement for customer and updates customer financial block.
+   * @param {number|string} id Customer ID
+   * @param {object} payload Agreement data
+   */
+  createNewAgreement: (id, payload) =>
+    unwrapApiResponse(apiClient.post(`${RESOURCE_PATH}/${id}/financial-agreements`, payload)),
 }
 
 export default customerApi

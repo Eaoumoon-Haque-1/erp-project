@@ -8,7 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { confirmAction, showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
 import { afmLookupApi } from '../../../../api/afmLookup'
 import { customerApi } from '../api/customerApi'
@@ -187,6 +187,16 @@ function CustomerCreate() {
       setErrors(validationErrors)
       showError('Please correct the highlighted errors before submitting.')
       return
+    }
+
+    if (String(values.FINANCE_STATUS || '').toLowerCase() === 'approved') {
+      const confirmed = await confirmAction({
+        title: 'Approve Financial Agreement?',
+        text: 'Payment & Financial Information can not be editable next time. Do you want to Approved and Insert data?',
+        action: 'update',
+        confirmButtonText: 'Yes, Approve & Insert',
+      })
+      if (!confirmed) return
     }
 
     setSubmitting(true)
