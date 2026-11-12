@@ -64,9 +64,11 @@ function AuthProvider({ children }) {
     )
 
     if (needsIdentity) {
-      enrichSessionIdentity(session).then((nextSession) => {
-        if (active) setSession(nextSession)
-      })
+      enrichSessionIdentity(session)
+        .then((nextSession) => {
+          if (active) setSession(nextSession)
+        })
+        .catch(() => {})
     }
 
     return () => {

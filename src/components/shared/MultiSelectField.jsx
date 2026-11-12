@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Shared reusable UI/workflow component: MultiSelectField.
  * Sections: reusable helpers, component behavior, accessibility, and rendered UI.
  * Changing this file can affect many features; keep props backward-compatible when possible.
@@ -11,22 +11,25 @@ function MultiSelectField({
   label,
   placeholder,
   options,
-  value,
+  value = [],
   error,
   disabled = false,
   required = false,
   growWithContent = false,
   inputRef,
+  className = "",
+  buttonClassName = "",
   onChange,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef(null);
+  const selectedValues = Array.isArray(value) ? value : [];
   const selectedLabels = useMemo(
     () =>
       options
-        .filter((option) => value.includes(option.value))
+        .filter((option) => selectedValues.map(String).includes(String(option.value)))
         .map((option) => option.label),
-    [options, value],
+    [options, selectedValues],
   );
 
   useEffect(() => {
@@ -38,22 +41,26 @@ function MultiSelectField({
   }, []);
 
   const toggleOption = (optionValue) => {
-    const nextValue = value.includes(optionValue)
-      ? value.filter((item) => item !== optionValue)
-      : [...value, optionValue];
-    onChange(name, nextValue);
+    const valStr = String(optionValue);
+    const exists = selectedValues.some((item) => String(item) === valStr);
+    const nextValue = exists
+      ? selectedValues.filter((item) => String(item) !== valStr)
+      : [...selectedValues, valStr];
+    onChange?.(name, nextValue);
   };
 
   return (
-    <div ref={rootRef}>
-      <label className={"erp-field-label"} htmlFor={id}>
-        {label}
-        {required && (
-          <span className={"erp-required"} aria-hidden={"true"}>
-            *
-          </span>
-        )}
-      </label>
+    <div ref={rootRef} className={className}>
+      {label && (
+        <label className={"erp-field-label"} htmlFor={id}>
+          {label}
+          {required && (
+            <span className={"erp-required"} aria-hidden={"true"}>
+              *
+            </span>
+          )}
+        </label>
+      )}
       <div className={"erp-multi-select"}>
         <button
           ref={inputRef}
@@ -64,6 +71,7 @@ function MultiSelectField({
             "erp-multi-select-trigger",
             growWithContent ? "erp-multi-select-trigger-grow" : "",
             error ? "erp-form-control-invalid" : "",
+            buttonClassName,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -82,7 +90,7 @@ function MultiSelectField({
           </span>
         </button>
 
-        {value.map((selectedValue) => (
+        {selectedValues.map((selectedValue) => (
           <input
             key={selectedValue}
             type={"hidden"}

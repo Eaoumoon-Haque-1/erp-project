@@ -69,10 +69,13 @@ export function mapVoucherFromApi(
   }))
 
   const attachments = (item.voucherAttachments || item.attachments || []).map((a) => ({
-    id: a.id != null ? a.id : null,
-    attachmentFileName: a.attachmentFileName || '',
-    attachmentFile: a.attachmentFile || '',
-    isActive: a.isActive != null ? a.isActive : 1,
+    id: a.id != null ? a.id : (a.ID != null ? a.ID : null),
+    attachmentFileName:
+      a.attachmentFileName || a.ATTACHMENT_FILE_NAME || a.fileName || a.name || '',
+    attachmentFile:
+      a.attachmentFile || a.ATTACHMENT_FILE || a.file || a.fileData || '',
+    isActive:
+      a.isActive != null ? a.isActive : (a.IS_ACTIVE != null ? a.IS_ACTIVE : 1),
   }))
 
   return {

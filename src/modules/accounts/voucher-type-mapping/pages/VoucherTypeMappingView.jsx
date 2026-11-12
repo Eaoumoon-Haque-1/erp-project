@@ -173,6 +173,14 @@ function VoucherTypeMappingView() {
                 )}
               </div>
             </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>
+                Bank Account, Cheque No, Cheque Date, Cheque Amount
+              </span>
+              <span className={'inline-flex items-center mt-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200'}>
+                {record.BANK_CHEQUE_MODE || 'Readonly'}
+              </span>
+            </div>
           </div>
         </div>
 

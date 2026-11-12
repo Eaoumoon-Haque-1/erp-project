@@ -58,6 +58,18 @@ export const accountsMenu = [{
           key: 'afm-user-setup',
           path: '/accounts/voucher-setup/user-setup',
         },
+        {
+          label: 'Supplier Information',
+          key: 'afm-supplier-master',
+          path: '/accounts/voucher-setup/supplier',
+          aliases: ['/accounts/supplier', '/accounts/supplier-info'],
+        },
+        {
+          label: 'Customer Information',
+          key: 'afm-customer-master',
+          path: '/accounts/voucher-setup/customer',
+          aliases: ['/accounts/customer', '/accounts/customer-info'],
+        },
       ],
     },
   ],

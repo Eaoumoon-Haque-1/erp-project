@@ -17,9 +17,11 @@ export function readAuthSession() {
       return null
     }
 
-    // Keep an expired access token only when it can be renewed. The Axios
-    // interceptor will exchange the refresh token before retrying the request.
-    if (session.expiresAt <= Date.now() && !session.refreshToken) {
+    // Keep an expired access token only when it can be renewed.
+    const hasValidRefreshToken = Boolean(
+      session.refreshToken && session.refreshToken !== session.accessToken,
+    )
+    if (session.expiresAt && session.expiresAt <= Date.now() && !hasValidRefreshToken) {
       clearAuthSession()
       return null
     }
@@ -36,14 +38,9 @@ export function saveAuthSession(response, previousSession = {}) {
   const accessToken = response.accessToken || previousSession.accessToken
   const session = {
     accessToken,
-    // The current backend does not return a distinct refreshToken. Until that
-    // contract is expanded, use its access token as the refresh credential the
-    // /auth/refresh request body expects. A real/rotated refresh token always
-    // takes priority when the backend starts returning one.
     refreshToken:
       response.refreshToken
-      || response.accessToken
-      || previousSession.refreshToken
+      || (previousSession.refreshToken !== previousSession.accessToken ? previousSession.refreshToken : '')
       || '',
     tokenType: response.tokenType || previousSession.tokenType || 'Bearer',
     expiresAt: Number.isFinite(expiresIn) && expiresIn > 0

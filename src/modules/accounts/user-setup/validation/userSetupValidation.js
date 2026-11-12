@@ -3,7 +3,7 @@
  */
 
 export const VOUCHER_DATE_OPTIONS = [
-  { value: 'All', label: 'All' },
+  { value: 'Current date data entry allowed', label: 'Current date data entry allowed' },
   { value: 'Previous date data entry allowed', label: 'Previous date data entry allowed' },
   { value: 'Forward date data entry allowed', label: 'Forward date data entry allowed' },
 ]

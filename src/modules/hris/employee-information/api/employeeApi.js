@@ -6,9 +6,15 @@ const employeePath = '/employees'
 const unwrap = unwrapApiResponse
 
 export const employeesApi = {
-  list: (buId) => unwrap(apiClient.get(employeePath, {
-    params: buId ? { buId } : undefined,
-  })),
+  list: (paramsOrBuId) => {
+    let params = undefined
+    if (typeof paramsOrBuId === 'object' && paramsOrBuId !== null) {
+      params = paramsOrBuId
+    } else if (paramsOrBuId) {
+      params = { buId: paramsOrBuId }
+    }
+    return unwrap(apiClient.get(employeePath, { params }))
+  },
   get: (id) => unwrap(apiClient.get(`${employeePath}/${id}`)),
   create: (payload) => unwrap(apiClient.post(employeePath, payload)),
   update: (id, payload) => unwrap(apiClient.put(`${employeePath}/${id}`, payload)),

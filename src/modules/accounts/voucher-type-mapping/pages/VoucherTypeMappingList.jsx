@@ -51,6 +51,15 @@ const columns = [
       </div>
     ),
   },
+  {
+    key: 'BANK_CHEQUE_MODE',
+    label: 'Bank / Cheque Mode',
+    render: (value) => (
+      <span className={'px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700'}>
+        {value || 'Readonly'}
+      </span>
+    ),
+  },
   { key: 'BUSINESS_UNIT', label: 'Business Unit' },
   {
     key: 'STATUS',

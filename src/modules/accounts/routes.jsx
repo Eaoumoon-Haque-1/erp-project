@@ -44,6 +44,14 @@ import UserSetupCreate from './user-setup/pages/UserSetupCreate'
 import UserSetupEdit from './user-setup/pages/UserSetupEdit'
 import UserSetupList from './user-setup/pages/UserSetupList'
 import UserSetupView from './user-setup/pages/UserSetupView'
+import SupplierCreate from './supplier/pages/SupplierCreate'
+import SupplierEdit from './supplier/pages/SupplierEdit'
+import SupplierList from './supplier/pages/SupplierList'
+import SupplierView from './supplier/pages/SupplierView'
+import CustomerCreate from './customer/pages/CustomerCreate'
+import CustomerEdit from './customer/pages/CustomerEdit'
+import CustomerList from './customer/pages/CustomerList'
+import CustomerView from './customer/pages/CustomerView'
 
 export const accountsRoutes = [
   // Fallbacks & shortcuts
@@ -120,6 +128,34 @@ export const accountsRoutes = [
   { path: 'accounts/voucher-setup/user-setup/create', element: <UserSetupCreate /> },
   { path: 'accounts/voucher-setup/user-setup/:setupId/edit', element: <UserSetupEdit /> },
   { path: 'accounts/voucher-setup/user-setup/:setupId/view', element: <UserSetupView /> },
+
+  // Supplier Information (AFM_SUPPLIER_INFO)
+  { path: 'accounts/supplier', element: <SupplierList /> },
+  { path: 'accounts/supplier/create', element: <SupplierCreate /> },
+  { path: 'accounts/supplier/:supplierId/edit', element: <SupplierEdit /> },
+  { path: 'accounts/supplier/:supplierId/view', element: <SupplierView /> },
+  { path: 'accounts/supplier-info', element: <SupplierList /> },
+  { path: 'accounts/supplier-info/create', element: <SupplierCreate /> },
+  { path: 'accounts/supplier-info/:supplierId/edit', element: <SupplierEdit /> },
+  { path: 'accounts/supplier-info/:supplierId/view', element: <SupplierView /> },
+  { path: 'accounts/voucher-setup/supplier', element: <SupplierList /> },
+  { path: 'accounts/voucher-setup/supplier/create', element: <SupplierCreate /> },
+  { path: 'accounts/voucher-setup/supplier/:supplierId/edit', element: <SupplierEdit /> },
+  { path: 'accounts/voucher-setup/supplier/:supplierId/view', element: <SupplierView /> },
+
+  // Customer Information (AFM_CUSTOMER_INFO)
+  { path: 'accounts/customer', element: <CustomerList /> },
+  { path: 'accounts/customer/create', element: <CustomerCreate /> },
+  { path: 'accounts/customer/:customerId/edit', element: <CustomerEdit /> },
+  { path: 'accounts/customer/:customerId/view', element: <CustomerView /> },
+  { path: 'accounts/customer-info', element: <CustomerList /> },
+  { path: 'accounts/customer-info/create', element: <CustomerCreate /> },
+  { path: 'accounts/customer-info/:customerId/edit', element: <CustomerEdit /> },
+  { path: 'accounts/customer-info/:customerId/view', element: <CustomerView /> },
+  { path: 'accounts/voucher-setup/customer', element: <CustomerList /> },
+  { path: 'accounts/voucher-setup/customer/create', element: <CustomerCreate /> },
+  { path: 'accounts/voucher-setup/customer/:customerId/edit', element: <CustomerEdit /> },
+  { path: 'accounts/voucher-setup/customer/:customerId/view', element: <CustomerView /> },
 
   // Direct alias routes for AFM Chart of Accounts
   { path: 'accounts/afm-chart-of-accounts', element: <AfmChartOfAccountsList /> },

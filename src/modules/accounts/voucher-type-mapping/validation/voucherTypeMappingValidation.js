@@ -9,6 +9,7 @@ export const initialVoucherMappingValues = {
   BU_ID: '',
   VOUCHER_TYPE_ID: '',
   PAYMENT_TYPE_ID: '',
+  BANK_CHEQUE_MODE: 'Readonly',
   STATUS: '1',
 }
 
@@ -32,6 +33,7 @@ export function validateVoucherTypeMapping(
     BU_ID: String(values.BU_ID ?? '').trim(),
     VOUCHER_TYPE_ID: String(values.VOUCHER_TYPE_ID ?? '').trim(),
     PAYMENT_TYPE_ID: String(values.PAYMENT_TYPE_ID ?? '').trim(),
+    BANK_CHEQUE_MODE: String(values.BANK_CHEQUE_MODE ?? 'Readonly').trim(),
     STATUS: String(values.STATUS ?? '1'),
   }
 

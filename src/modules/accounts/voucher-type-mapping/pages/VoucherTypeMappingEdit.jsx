@@ -86,6 +86,7 @@ function VoucherTypeMappingEdit() {
           BU_ID: sessionBusinessUnitId || mapped.BU_ID,
           VOUCHER_TYPE_ID: mapped.VOUCHER_TYPE_ID,
           PAYMENT_TYPE_ID: mapped.PAYMENT_TYPE_ID,
+          BANK_CHEQUE_MODE: mapped.BANK_CHEQUE_MODE || 'Readonly',
           STATUS: mapped.STATUS,
         }
         setOriginal(loaded)

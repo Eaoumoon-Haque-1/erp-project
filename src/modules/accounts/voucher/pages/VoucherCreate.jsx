@@ -10,6 +10,7 @@ import { failActiveAction, showError } from '../../../../components/shared/actio
 import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
 import { departmentGroupsApi } from '../../../hris/department-group/api/departmentGroupApi'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankChequeMapApi } from '../../bank-cheque-mapping/api/bankChequeMapApi'
@@ -17,6 +18,8 @@ import { bankApi } from '../../bank/api/bankApi'
 import { calendarApi } from '../../calendar/api/calendarApi'
 import { paymentTypeMappingApi } from '../../payment-type-mapping/api/paymentTypeMappingApi'
 import { periodApi } from '../../period/api/periodApi'
+import { supplierApi } from '../../supplier/api/supplierApi'
+import { customerApi } from '../../customer/api/customerApi'
 import { userLocationApi } from '../../user-location/api/userLocationApi'
 import { userSetupApi } from '../../user-setup/api/userSetupApi'
 import { mapUserSetupFromApi } from '../../user-setup/data/userSetupApiMapper'
@@ -41,6 +44,15 @@ function getTodayIso() {
   return `${year}-${month}-${day}`
 }
 
+function getDayOffsetIso(offset) {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function validateVoucherDateAllowed(dateStr, userSetup) {
   if (!dateStr) {
     return 'Voucher Date is required'
@@ -53,11 +65,17 @@ function validateVoucherDateAllowed(dateStr, userSetup) {
   if (hasAll) return null
 
   const todayStr = getTodayIso()
+  const hasCurrent = rules.some(
+    (r) => String(r).toLowerCase().includes('current') || String(r).trim().toLowerCase() === 'all',
+  )
   const hasPrev = rules.some((r) => String(r).toLowerCase().includes('previous'))
   const hasFwd = rules.some(
     (r) => String(r).toLowerCase().includes('forward') || String(r).toLowerCase().includes('future'),
   )
 
+  if (dateStr === todayStr && !hasCurrent) {
+    return 'Current date data entry is not allowed by User Setup.'
+  }
   if (dateStr < todayStr && !hasPrev) {
     return 'Previous date data entry is not allowed by User Setup.'
   }
@@ -65,6 +83,39 @@ function validateVoucherDateAllowed(dateStr, userSetup) {
     return 'Forward date data entry is not allowed by User Setup.'
   }
   return null
+}
+
+function getVoucherDateLimits(userSetup) {
+  if (!userSetup || !Array.isArray(userSetup.VOUCHER_DATE) || userSetup.VOUCHER_DATE.length === 0) {
+    return { minDate: undefined, maxDate: undefined }
+  }
+  const rules = userSetup.VOUCHER_DATE
+  const hasAll = rules.some((r) => String(r).trim().toLowerCase() === 'all')
+  if (hasAll) {
+    return { minDate: undefined, maxDate: undefined }
+  }
+
+  const todayStr = getTodayIso()
+  const hasCurrent = rules.some(
+    (r) => String(r).toLowerCase().includes('current') || String(r).trim().toLowerCase() === 'all',
+  )
+  const hasPrev = rules.some((r) => String(r).toLowerCase().includes('previous'))
+  const hasFwd = rules.some(
+    (r) => String(r).toLowerCase().includes('forward') || String(r).toLowerCase().includes('future'),
+  )
+
+  if (hasCurrent) {
+    return {
+      minDate: !hasPrev ? todayStr : undefined,
+      maxDate: !hasFwd ? todayStr : undefined,
+    }
+  }
+
+  // Current date not allowed
+  return {
+    minDate: !hasPrev ? getDayOffsetIso(1) : undefined,
+    maxDate: !hasFwd ? getDayOffsetIso(-1) : undefined,
+  }
 }
 
 function resolvePeriodForDate(dateStr, calendars = [], periods = []) {
@@ -155,6 +206,7 @@ function VoucherCreate() {
   // Lookups and user setup
   const [userSetup, setUserSetup] = useState(null)
   const [loadedCalendars, setLoadedCalendars] = useState([])
+  const [voucherTypeMappings, setVoucherTypeMappings] = useState([])
   const [loadedPeriods, setLoadedPeriods] = useState([])
 
   const [rawVoucherTypes, setRawVoucherTypes] = useState([])
@@ -165,6 +217,9 @@ function VoucherCreate() {
   const [paymentTypeOptions, setPaymentTypeOptions] = useState([])
   const [throughOptions, setThroughOptions] = useState([])
   const [coaOptions, setCoaOptions] = useState([])
+  const [employeeOptions, setEmployeeOptions] = useState([])
+  const [supplierOptions, setSupplierOptions] = useState([])
+  const [customerOptions, setCustomerOptions] = useState([])
   const [allCheques, setAllCheques] = useState([])
 
   // 1. Initial lookups (User Setup, Calendars, Periods, Types, Locations, Banks, Cheques, Cost Centers, COA)
@@ -393,12 +448,105 @@ function VoucherCreate() {
         if (active) setAllCheques([])
       })
 
+    // Active Employees matching login user's BG_ID and BU_ID
+    employeesApi
+      .list({ buId: sessionBuId, bgId: sessionGroupId || undefined, status: 1 })
+      .then((records) => {
+        if (!active) return
+        const list = Array.isArray(records) ? records : []
+        const filtered = list.filter((e) => {
+          const matchBu = !sessionBuId || String(e.buId ?? '') === sessionBuId
+          const matchBg = !sessionGroupId || String(e.bgId ?? '') === sessionGroupId
+          const isActive = String(e.status ?? '1') === '1' || e.status === 1 || e.status == null
+          return matchBu && matchBg && isActive
+        })
+        const opts = filtered.map((e) => {
+          const code = String(e.employeeCode ?? e.employee_code ?? '').trim()
+          const name = String(e.employeeName ?? e.employee_name ?? '').trim()
+          const label = code && name ? `${code}: ${name}` : code || name || String(e.id)
+          return {
+            value: String(e.id),
+            label,
+            code,
+            name,
+          }
+        })
+        setEmployeeOptions(opts)
+      })
+      .catch(() => {
+        if (active) setEmployeeOptions([])
+      })
+
+    // Active Suppliers matching login user's BG_ID and BU_ID
+    supplierApi
+      .list({ buId: sessionBuId, bgId: sessionGroupId || undefined, status: 1 })
+      .then((records) => {
+        if (!active) return
+        const list = Array.isArray(records) ? records : []
+        const filtered = list.filter((s) => {
+          const matchBu = !sessionBuId || String(s.buId ?? '') === sessionBuId
+          const matchBg = !sessionGroupId || String(s.bgId ?? '') === sessionGroupId
+          const isActive = String(s.status ?? '1') === '1' || s.status === 1 || s.status == null
+          return matchBu && matchBg && isActive
+        })
+        const opts = filtered.map((s) => {
+          const code = String(s.supplierCode ?? s.supplier_code ?? '').trim()
+          const name = String(s.supplierName ?? s.supplier_name ?? '').trim()
+          const label = code && name ? `${code}: ${name}` : code || name || String(s.id)
+          return {
+            value: String(s.id),
+            label,
+            code,
+            name,
+          }
+        })
+        setSupplierOptions(opts)
+      })
+      .catch(() => {
+        if (active) setSupplierOptions([])
+      })
+
+    // Active Customers matching login user's BG_ID and BU_ID
+    customerApi
+      .list({ buId: sessionBuId, bgId: sessionGroupId || undefined, status: 1 })
+      .then((records) => {
+        if (!active) return
+        const list = Array.isArray(records) ? records : []
+        const filtered = list.filter((c) => {
+          const cBu = String(c.buId ?? c.bu_id ?? c.BU_ID ?? '').trim()
+          const cBg = String(c.bgId ?? c.bg_id ?? c.BG_ID ?? '').trim()
+          const matchBu = !sessionBuId || cBu === sessionBuId
+          const matchBg = !sessionGroupId || cBg === sessionGroupId
+          const cStatus = String(c.status ?? c.STATUS ?? '1').trim()
+          const isActive = cStatus === '1' || c.status === 1 || c.status == null
+          return matchBu && matchBg && isActive
+        })
+        const opts = filtered.map((c) => {
+          const id = String(c.id ?? c.ID ?? '')
+          const code = String(c.customerCode ?? c.customer_code ?? c.CUSTOMER_CODE ?? '').trim()
+          const name = String(c.customerName ?? c.customer_name ?? c.CUSTOMER_NAME ?? '').trim()
+          const label = code && name ? `${code}: ${name}` : code || name || id
+          return {
+            value: id,
+            label,
+            code,
+            name,
+          }
+        })
+        setCustomerOptions(opts)
+      })
+      .catch(() => {
+        if (active) setCustomerOptions([])
+      })
+
     return () => {
       active = false
     }
   }, [sessionBuId, sessionGroupId, sessionUserId])
 
-  // Filter options as per User Setup
+  // Filter options and date limits as per User Setup
+  const voucherDateLimits = useMemo(() => getVoucherDateLimits(userSetup), [userSetup])
+
   const voucherTypeOptions = useMemo(() => {
     if (!userSetup?.VOUCHER_TYPE || userSetup.VOUCHER_TYPE.length === 0) {
       return rawVoucherTypes
@@ -449,9 +597,11 @@ function VoucherCreate() {
     )
   }, [rawCostCenters, userSetup])
 
-  // 2. Payment Types: depend on selected Voucher Type
+  // 2. Payment Types & Mappings: depend on selected Voucher Type
   useEffect(() => {
     if (!sessionBuId || !values.VOUCHER_TYPE_ID) {
+      setVoucherTypeMappings([])
+      setPaymentTypeOptions([])
       return undefined
     }
     let active = true
@@ -460,6 +610,7 @@ function VoucherCreate() {
       .getByVoucherType(sessionBuId, values.VOUCHER_TYPE_ID, 1)
       .then((rows) => {
         if (!active) return
+        setVoucherTypeMappings(rows || [])
         setPaymentTypeOptions(
           (rows || []).map((r) => ({
             value: String(r.paymentTypeId),
@@ -468,13 +619,30 @@ function VoucherCreate() {
         )
       })
       .catch(() => {
-        if (active) setPaymentTypeOptions([])
+        if (active) {
+          setVoucherTypeMappings([])
+          setPaymentTypeOptions([])
+        }
       })
 
     return () => {
       active = false
     }
   }, [sessionBuId, values.VOUCHER_TYPE_ID])
+
+  const isBankChequeReadOnly = useMemo(() => {
+    if (!values.VOUCHER_TYPE_ID) return false
+    const list = voucherTypeMappings || []
+    if (list.length === 0) return false
+
+    const matched =
+      (values.PAYMENT_TYPE_ID &&
+        list.find((m) => String(m.paymentTypeId) === String(values.PAYMENT_TYPE_ID))) ||
+      list[0]
+
+    if (!matched) return false
+    return String(matched.bankChequeMode || '').trim().toLowerCase() === 'readonly'
+  }, [voucherTypeMappings, values.VOUCHER_TYPE_ID, values.PAYMENT_TYPE_ID])
 
   // 3. Payment Throughs: depend on selected Payment Type
   useEffect(() => {
@@ -777,6 +945,9 @@ function VoucherCreate() {
         attachments={attachments}
         submitting={submitting}
         submitLabel={'Submit'}
+        isBankChequeReadOnly={isBankChequeReadOnly}
+        voucherDateMin={voucherDateLimits.minDate}
+        voucherDateMax={voucherDateLimits.maxDate}
         voucherTypeOptions={voucherTypeOptions}
         paymentTypeOptions={paymentTypeOptions}
         throughOptions={throughOptions}
@@ -785,6 +956,9 @@ function VoucherCreate() {
         coaOptions={coaOptions}
         costCenterOptions={costCenterOptions}
         locationOptions={locationOptions}
+        employeeOptions={employeeOptions}
+        supplierOptions={supplierOptions}
+        customerOptions={customerOptions}
         onChange={handleChange}
         onDetailChange={handleDetailChange}
         onAddDetail={handleAddDetail}
