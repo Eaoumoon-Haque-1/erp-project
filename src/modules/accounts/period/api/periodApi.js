@@ -31,11 +31,12 @@ export const periodApi = {
    * Retrieves open period names from AFM_CALENDAR_MONTH for a given BU and Year.
    * @param {number|string} buId Business Unit ID
    * @param {string} year Calendar Year
+   * @param {number|string} [bgId] Business Group ID
    */
-  getOpenPeriods: (buId, year) =>
+  getOpenPeriods: (buId, year, bgId) =>
     unwrapApiResponse(
       apiClient.get(`${RESOURCE_PATH}/open-periods`, {
-        params: { buId, year },
+        params: { buId, year, ...(bgId ? { bgId } : {}) },
       }),
     ),
 
@@ -45,11 +46,12 @@ export const periodApi = {
    * @param {number|string} buId Business Unit ID
    * @param {string} year Calendar Year
    * @param {string} monthPeriodStatus 'Open' or 'Close'
+   * @param {number|string} [bgId] Business Group ID
    */
-  getCandidateMonths: (buId, year, monthPeriodStatus) =>
+  getCandidateMonths: (buId, year, monthPeriodStatus, bgId) =>
     unwrapApiResponse(
       apiClient.get(`${RESOURCE_PATH}/candidate-months`, {
-        params: { buId, year, monthPeriodStatus },
+        params: { buId, year, monthPeriodStatus, ...(bgId ? { bgId } : {}) },
       }),
     ),
 

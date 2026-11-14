@@ -5,9 +5,12 @@
  */
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { afmLookupApi } from '../../../../api/afmLookup'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { supplierApi } from '../api/supplierApi'
 import SupplierForm from '../components/SupplierForm'
 import { mapSupplierFromApi, mapSupplierToApi } from '../data/supplierApiMapper'
@@ -20,12 +23,54 @@ function SupplierEdit() {
   const listPath = location.pathname.startsWith('/accounts/voucher-setup/supplier')
     ? '/accounts/voucher-setup/supplier'
     : '/accounts/supplier'
+  const { session } = useAuth()
+  const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
 
   const [values, setValues] = useState(initialSupplierValues)
+  const [paymentTermsOptions, setPaymentTermsOptions] = useState([])
   const [auditLog, setAuditLog] = useState(null)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
+  // Fetch Payment Terms lookup values using centralized afmLookupData.paymentTerms
+  useEffect(() => {
+    let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
+    const targetBuId = values.BU_ID || sessionBuId || undefined
+
+    const fetchPaymentTerms = async () => {
+      try {
+        let res = await afmLookupApi
+          .getValuesByTypeCode(typeCode, targetBuId, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, targetBuId, 1))
+
+        if ((!res || res.length === 0) && targetBuId) {
+          res = await afmLookupApi
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
+        }
+
+        if (!active) return
+        const opts = (res || [])
+          .filter((item) => item.status === undefined || item.status === null || Number(item.status) === 1)
+          .map((item) => ({
+            value: item.value || item.valueCode || String(item.id),
+            label: item.value || item.valueCode || String(item.id),
+            code: item.valueCode,
+          }))
+        setPaymentTermsOptions(opts)
+      } catch {
+        // proceed
+      }
+    }
+
+    fetchPaymentTerms()
+    return () => {
+      active = false
+    }
+  }, [values.BU_ID, sessionBuId])
 
   useEffect(() => {
     if (!supplierId) return
@@ -104,6 +149,7 @@ function SupplierEdit() {
     >
       <SupplierForm
         values={values}
+        paymentTermsOptions={paymentTermsOptions}
         errors={errors}
         isEdit={true}
         readOnly={false}

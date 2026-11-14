@@ -129,10 +129,10 @@ export function validateBankChequeMap(values, { isEdit = false } = {}) {
       const from = parseInt(fromStr, 10)
       const to = parseInt(toStr, 10)
 
-      if (to <= from) {
-        errors.CHEQUE_NO_TO = 'To Cheque must be greater than From Cheque.'
+      if (to < from) {
+        errors.CHEQUE_NO_TO = 'To Cheque must be greater than or equal to From Cheque.'
       } else {
-        count = to - from
+        count = (to - from) + 1
         if (count > 500) {
           errors.CHEQUE_NO_TO = 'Maximum allowed range is 500 cheques.'
         }

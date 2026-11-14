@@ -125,8 +125,8 @@ export function validateSupplier(values = {}) {
     errors.PHONE = 'Phone number cannot exceed 50 characters'
   }
 
-  if (!values.ADDRESS || !String(values.ADDRESS).trim()) {
-    errors.ADDRESS = 'Full Address is required'
+  if (values.ADDRESS && String(values.ADDRESS).trim().length > 500) {
+    errors.ADDRESS = 'Full Address cannot exceed 500 characters'
   }
 
   if (values.EMAIL && String(values.EMAIL).trim()) {

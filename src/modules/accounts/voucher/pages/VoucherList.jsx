@@ -9,6 +9,7 @@ import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { showError } from '../../../../components/shared/actionAlerts'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { voucherApi } from '../api/voucherApi'
 import { mapVoucherFromApi } from '../data/voucherApiMapper'
@@ -128,13 +129,16 @@ function VoucherList() {
     }
   }, [sessionBuId])
 
-  // Load Voucher Types from lookup API (VT001)
+  // Load Voucher Types from centralized afmLookupData.voucherType
   useEffect(() => {
     if (!sessionBuId) return undefined
+    const typeCode = afmLookupData.voucherType
+    if (!typeCode) return undefined
     let active = true
 
     afmLookupApi
-      .getValuesByTypeCode('VT001', sessionBuId, 1)
+      .getValuesByTypeCode(typeCode, sessionBuId, 1)
+      .catch(() => afmLookupApi.getValuesByCode(typeCode, sessionBuId, 1))
       .then((data) => {
         if (!active) return
         setLookupTypes(

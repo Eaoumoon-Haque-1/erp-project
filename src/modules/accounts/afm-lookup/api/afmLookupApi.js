@@ -70,7 +70,7 @@ export const afmLookupApi = {
 
   /**
    * Retrieves lookup values by type code using the /values-by-type-code endpoint.
-   * @param {string} typeCode Lookup Type Code (e.g. 'P001', 'PTH001')
+   * @param {string} typeCode Lookup Type Code
    * @param {number|string} [buId] Optional Business Unit ID
    * @param {number} [status] Optional status filter (1 = Active, 0 = Inactive)
    */

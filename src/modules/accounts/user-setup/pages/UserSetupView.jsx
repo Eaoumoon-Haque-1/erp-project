@@ -9,6 +9,7 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError } from '../../../../components/shared/actionAlerts'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankApi } from '../../bank/api/bankApi'
@@ -84,11 +85,12 @@ function UserSetupView() {
   useEffect(() => {
     const buId = values.BU_ID || sessionBusinessUnitId || undefined
     let active = true
+    const typeCode = afmLookupData.voucherType
+    if (!typeCode) return undefined
 
     afmLookupApi
-      .getValuesByTypeCode('VT001', buId, 1)
-      .catch(() => afmLookupApi.getValuesByCode('VT001', buId, 1))
-      .catch(() => afmLookupApi.getValuesByCode('Voucher Type', buId, 1))
+      .getValuesByTypeCode(typeCode, buId, 1)
+      .catch(() => afmLookupApi.getValuesByCode(typeCode, buId, 1))
       .then((data) => {
         if (!active) return
         const opts = (data || []).map((item) => ({

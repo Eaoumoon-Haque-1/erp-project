@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { getApiErrorMessage } from '../../../../api/errors'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { afmLookupApi } from '../../../../api/afmLookup'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { customerApi } from '../api/customerApi'
 import CustomerAgreementModal from './CustomerAgreementModal'
 import {
@@ -224,24 +225,24 @@ function CustomerForm({
     }
   }, [agreements, values.ID, values.FINANCE_STATUS])
 
-  // Fallback to load PTR001 lookup values if paymentTermsOptions not supplied
+  // Fallback to load lookup values using centralized afmLookupData.paymentTerms if paymentTermsOptions not supplied
   useEffect(() => {
     if (paymentTermsOptions && paymentTermsOptions.length > 0) return
     let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
     const buId = values.BU_ID || undefined
 
     const fetchTerms = async () => {
       try {
         let res = await afmLookupApi
-          .getValuesByTypeCode('PTR001', buId, 1)
-          .catch(() => afmLookupApi.getValuesByCode('PTR001', buId, 1))
-          .catch(() => afmLookupApi.getValuesByCode('Payment Terms', buId, 1))
+          .getValuesByTypeCode(typeCode, buId, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, buId, 1))
 
         if ((!res || res.length === 0) && buId) {
           res = await afmLookupApi
-            .getValuesByTypeCode('PTR001', undefined, 1)
-            .catch(() => afmLookupApi.getValuesByCode('PTR001', undefined, 1))
-            .catch(() => afmLookupApi.getValuesByCode('Payment Terms', undefined, 1))
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
         }
 
         if (!active) return
