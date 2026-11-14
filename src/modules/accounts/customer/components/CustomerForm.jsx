@@ -10,7 +10,12 @@
  * Plus Audit Log block on Edit and View screens.
  */
 import { useEffect, useState } from 'react'
+import { getApiErrorMessage } from '../../../../api/errors'
+import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { afmLookupApi } from '../../../../api/afmLookup'
+import { afmLookupData } from '../../../../config/afmLookupData'
+import { customerApi } from '../api/customerApi'
+import CustomerAgreementModal from './CustomerAgreementModal'
 import {
   BALANCE_TYPE_OPTIONS,
   BUSINESS_TYPE_OPTIONS,
@@ -71,6 +76,7 @@ function formatAuditDateTime(value) {
 }
 
 function CustomerForm({
+  customerId = null,
   values,
   errors = {},
   isEdit = false,
@@ -80,31 +86,163 @@ function CustomerForm({
   submitLabel = 'Save Customer',
   editLabel = 'Edit Customer',
   paymentTermsOptions = [],
+  agreements = [],
   onEdit,
   onChange = () => {},
   onSubmit = () => {},
+  onAgreementCreated,
   onCancel,
 }) {
   const [internalTermsOptions, setInternalTermsOptions] = useState([])
+  const [internalAgreements, setInternalAgreements] = useState([])
+  const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false)
+  const [isAgreementSubmitting, setIsAgreementSubmitting] = useState(false)
 
-  // Fallback to load PTR001 lookup values if paymentTermsOptions not supplied
+  const isFinanceApproved = String(values.FINANCE_STATUS || '').toLowerCase() === 'approved'
+  const isSavedApprovedInDb = Boolean(
+    isEdit &&
+    values.ID &&
+    String(auditLog?.FINANCE_STATUS || '').toLowerCase() === 'approved'
+  )
+
+  // 1) 5. Payment & Financial Information fields (Payment Terms, Currency, Limits, Days, Balance, Dates):
+  // - In Create page: when FINANCE_STATUS == 'Approved' -> disabled/readonly instantly!
+  //                   when FINANCE_STATUS == 'Draft' -> enabled/editable.
+  // - In Edit page: when FINANCE_STATUS == 'Approved' (or saved in DB as Approved) -> disabled/readonly!
+  //                 when FINANCE_STATUS == 'Draft' -> enabled/editable.
+  // - In View page: disabled/readonly.
+  const isFinancialTermsReadOnly = readOnly || isFinanceApproved || isSavedApprovedInDb
+
+  // 2) Finance Status field:
+  // - In Create page: ALWAYS enabled/editable (Except Finance Status).
+  // - In Edit page: when FINANCE_STATUS == 'Approved' (or saved in DB as Approved) -> disabled/readonly (including Finance Status)!
+  // - In View page: disabled/readonly.
+  const isFinanceStatusReadOnly = readOnly || Boolean(isEdit && (isFinanceApproved || isSavedApprovedInDb))
+
+  const handleNewAgreementSubmit = async (agreementData) => {
+    const targetId = customerId || values.ID || values.id
+    try {
+      setIsAgreementSubmitting(true)
+      const payload = {
+        paymentTerms: agreementData.PAYMENT_TERMS ? String(agreementData.PAYMENT_TERMS).trim() : null,
+        currencyCode: agreementData.CURRENCY_CODE ? String(agreementData.CURRENCY_CODE).trim() : 'BDT',
+        creditLowerLimit:
+          agreementData.CREDIT_LOWER_LIMIT !== '' && agreementData.CREDIT_LOWER_LIMIT != null
+            ? Number(agreementData.CREDIT_LOWER_LIMIT)
+            : 0,
+        creditUpperLimit:
+          agreementData.CREDIT_UPPER_LIMIT !== '' && agreementData.CREDIT_UPPER_LIMIT != null
+            ? Number(agreementData.CREDIT_UPPER_LIMIT)
+            : 0,
+        creditDays:
+          agreementData.CREDIT_DAYS !== '' && agreementData.CREDIT_DAYS != null
+            ? parseInt(agreementData.CREDIT_DAYS, 10)
+            : 0,
+        openingBalance:
+          agreementData.OPENING_BALANCE !== '' && agreementData.OPENING_BALANCE != null
+            ? Number(agreementData.OPENING_BALANCE)
+            : 0,
+        balanceType: agreementData.BALANCE_TYPE ? String(agreementData.BALANCE_TYPE).trim() : 'Debit',
+        agreementDateFrom: agreementData.AGREEMENT_DATE_FROM || null,
+        agreementDateTo: agreementData.AGREEMENT_DATE_TO || null,
+        financeStatus: 'Approved',
+      }
+
+      if (targetId) {
+        // Customer already exists in database (Edit / View page)
+        const updatedCustomer = await customerApi.createNewAgreement(targetId, payload)
+        showSuccess('New Financial Agreement submitted and approved successfully!')
+        setIsAgreementModalOpen(false)
+
+        const freshAgreements = await customerApi.getFinancialAgreements(targetId).catch(() => [])
+        setInternalAgreements(Array.isArray(freshAgreements) ? freshAgreements : [])
+
+        if (typeof onChange === 'function') {
+          onChange({
+            PAYMENT_TERMS: agreementData.PAYMENT_TERMS,
+            CURRENCY_CODE: agreementData.CURRENCY_CODE,
+            CREDIT_LOWER_LIMIT: String(payload.creditLowerLimit),
+            CREDIT_UPPER_LIMIT: String(payload.creditUpperLimit),
+            CREDIT_DAYS: String(payload.creditDays),
+            OPENING_BALANCE: String(payload.openingBalance),
+            BALANCE_TYPE: agreementData.BALANCE_TYPE,
+            AGREEMENT_DATE_FROM: agreementData.AGREEMENT_DATE_FROM,
+            AGREEMENT_DATE_TO: agreementData.AGREEMENT_DATE_TO,
+            FINANCE_STATUS: 'Approved',
+          })
+        }
+
+        if (typeof onAgreementCreated === 'function') {
+          onAgreementCreated(updatedCustomer)
+        }
+      } else {
+        // Customer does not exist yet (Create page)
+        if (typeof onChange === 'function') {
+          onChange({
+            PAYMENT_TERMS: agreementData.PAYMENT_TERMS,
+            CURRENCY_CODE: agreementData.CURRENCY_CODE,
+            CREDIT_LOWER_LIMIT: String(payload.creditLowerLimit),
+            CREDIT_UPPER_LIMIT: String(payload.creditUpperLimit),
+            CREDIT_DAYS: String(payload.creditDays),
+            OPENING_BALANCE: String(payload.openingBalance),
+            BALANCE_TYPE: agreementData.BALANCE_TYPE,
+            AGREEMENT_DATE_FROM: agreementData.AGREEMENT_DATE_FROM,
+            AGREEMENT_DATE_TO: agreementData.AGREEMENT_DATE_TO,
+            FINANCE_STATUS: 'Approved',
+          })
+        }
+        showSuccess('Financial Agreement details populated. Save customer to create record in database.')
+        setIsAgreementModalOpen(false)
+      }
+    } catch (err) {
+      showError(getApiErrorMessage(err, 'Failed to create financial agreement.'))
+    } finally {
+      setIsAgreementSubmitting(false)
+    }
+  }
+
+  // Load agreements if customer ID exists
+  useEffect(() => {
+    if (agreements && agreements.length > 0) {
+      setInternalAgreements(agreements)
+      return
+    }
+    if (!values.ID) {
+      setInternalAgreements([])
+      return
+    }
+    let active = true
+    customerApi
+      .getFinancialAgreements(values.ID)
+      .then((res) => {
+        if (!active) return
+        setInternalAgreements(Array.isArray(res) ? res : [])
+      })
+      .catch(() => {})
+
+    return () => {
+      active = false
+    }
+  }, [agreements, values.ID, values.FINANCE_STATUS])
+
+  // Fallback to load lookup values using centralized afmLookupData.paymentTerms if paymentTermsOptions not supplied
   useEffect(() => {
     if (paymentTermsOptions && paymentTermsOptions.length > 0) return
     let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
     const buId = values.BU_ID || undefined
 
     const fetchTerms = async () => {
       try {
         let res = await afmLookupApi
-          .getValuesByTypeCode('PTR001', buId, 1)
-          .catch(() => afmLookupApi.getValuesByCode('PTR001', buId, 1))
-          .catch(() => afmLookupApi.getValuesByCode('Payment Terms', buId, 1))
+          .getValuesByTypeCode(typeCode, buId, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, buId, 1))
 
         if ((!res || res.length === 0) && buId) {
           res = await afmLookupApi
-            .getValuesByTypeCode('PTR001', undefined, 1)
-            .catch(() => afmLookupApi.getValuesByCode('PTR001', undefined, 1))
-            .catch(() => afmLookupApi.getValuesByCode('Payment Terms', undefined, 1))
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
         }
 
         if (!active) return
@@ -672,20 +810,42 @@ function CustomerForm({
           {/* SECTION 5: PAYMENT & FINANCIAL INFORMATION                   */}
           {/* ============================================================ */}
           <div className={'space-y-3 pt-2'}>
-            <div className={'flex items-center gap-2 pb-1 border-b border-gray-100'}>
-              <div className={'w-1.5 h-3.5 bg-teal-600 rounded-full'} />
-              <h3 className={'text-xs font-bold text-gray-700 uppercase tracking-wide'}>
-                5. Payment & Financial Information
-              </h3>
+            <div className={'flex items-center justify-between pb-1 border-b border-gray-100'}>
+              <div className={'flex items-center gap-2'}>
+                <div className={'w-1.5 h-3.5 bg-teal-600 rounded-full'} />
+                <h3 className={'text-xs font-bold text-gray-700 uppercase tracking-wide'}>
+                  5. Payment & Financial Information
+                </h3>
+                {(isSavedApprovedInDb || (isEdit && isFinanceApproved)) && (
+                  <span className={'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300'}>
+                    <svg className={'w-3 h-3 text-emerald-600'} fill={'none'} stroke={'currentColor'} viewBox={'0 0 24 24'}>
+                      <path strokeLinecap={'round'} strokeLinejoin={'round'} strokeWidth={2} d={'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'} />
+                    </svg>
+                    Approved (Read Only)
+                  </span>
+                )}
+              </div>
+
+              <button
+                type={'button'}
+                onClick={() => setIsAgreementModalOpen(true)}
+                className={'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded bg-teal-600 hover:bg-teal-700 text-white shadow-2xs transition-colors cursor-pointer'}
+                title={'Open new financial agreement popup form'}
+              >
+                <svg className={'w-3.5 h-3.5'} fill={'none'} stroke={'currentColor'} viewBox={'0 0 24 24'}>
+                  <path strokeLinecap={'round'} strokeLinejoin={'round'} strokeWidth={2} d={'M12 4v16m8-8H4'} />
+                </svg>
+                New Agreement
+              </button>
             </div>
 
             <div className={'grid grid-cols-1 md:grid-cols-2 gap-4 pt-1'}>
               {/* Payment Terms */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Payment Terms
+                  Payment Terms {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
-                {readOnly ? (
+                {isFinancialTermsReadOnly ? (
                   <input
                     type={'text'}
                     value={values.PAYMENT_TERMS || '-'}
@@ -719,7 +879,7 @@ function CustomerForm({
                         name={'PAYMENT_TERMS'}
                         value={values.PAYMENT_TERMS || ''}
                         onChange={handleChange}
-                        className={inputClass(null, false)}
+                        className={inputClass(errors.PAYMENT_TERMS, false)}
                       >
                         <option value={''}>-- Select Payment Terms --</option>
                         {termsList.map((opt) => {
@@ -735,14 +895,15 @@ function CustomerForm({
                     )
                   })()
                 )}
+                <FieldError id={'cust-pterms-err'} message={errors.PAYMENT_TERMS} />
               </div>
 
               {/* Currency */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Currency
+                  Currency {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
-                {readOnly ? (
+                {isFinancialTermsReadOnly ? (
                   <input
                     type={'text'}
                     value={values.CURRENCY_CODE || 'BDT'}
@@ -754,7 +915,7 @@ function CustomerForm({
                     name={'CURRENCY_CODE'}
                     value={values.CURRENCY_CODE || 'BDT'}
                     onChange={handleChange}
-                    className={inputClass(null, false)}
+                    className={inputClass(errors.CURRENCY_CODE, false)}
                   >
                     {CURRENCY_OPTIONS.map((c) => (
                       <option key={c} value={c}>
@@ -763,12 +924,13 @@ function CustomerForm({
                     ))}
                   </select>
                 )}
+                <FieldError id={'cust-curr-err'} message={errors.CURRENCY_CODE} />
               </div>
 
               {/* Credit Lower Limit */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Credit Lower Limit
+                  Credit Lower Limit {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
                 <input
                   type={'number'}
@@ -776,9 +938,9 @@ function CustomerForm({
                   name={'CREDIT_LOWER_LIMIT'}
                   value={values.CREDIT_LOWER_LIMIT !== undefined ? values.CREDIT_LOWER_LIMIT : '0.00'}
                   onChange={handleChange}
-                  readOnly={readOnly}
+                  readOnly={isFinancialTermsReadOnly}
                   placeholder={'0.00'}
-                  className={inputClass(errors.CREDIT_LOWER_LIMIT, readOnly)}
+                  className={inputClass(errors.CREDIT_LOWER_LIMIT, isFinancialTermsReadOnly)}
                 />
                 <FieldError id={'cust-clow-err'} message={errors.CREDIT_LOWER_LIMIT} />
               </div>
@@ -786,7 +948,7 @@ function CustomerForm({
               {/* Credit Upper Limit */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Credit Upper Limit
+                  Credit Upper Limit {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
                 <input
                   type={'number'}
@@ -794,9 +956,9 @@ function CustomerForm({
                   name={'CREDIT_UPPER_LIMIT'}
                   value={values.CREDIT_UPPER_LIMIT !== undefined ? values.CREDIT_UPPER_LIMIT : '0.00'}
                   onChange={handleChange}
-                  readOnly={readOnly}
+                  readOnly={isFinancialTermsReadOnly}
                   placeholder={'0.00'}
-                  className={inputClass(errors.CREDIT_UPPER_LIMIT, readOnly)}
+                  className={inputClass(errors.CREDIT_UPPER_LIMIT, isFinancialTermsReadOnly)}
                 />
                 <FieldError id={'cust-cupp-err'} message={errors.CREDIT_UPPER_LIMIT} />
               </div>
@@ -804,16 +966,16 @@ function CustomerForm({
               {/* Credit Days */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Credit Days
+                  Credit Days {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
                 <input
                   type={'number'}
                   name={'CREDIT_DAYS'}
                   value={values.CREDIT_DAYS !== undefined ? values.CREDIT_DAYS : '0'}
                   onChange={handleChange}
-                  readOnly={readOnly}
+                  readOnly={isFinancialTermsReadOnly}
                   placeholder={'0'}
-                  className={inputClass(errors.CREDIT_DAYS, readOnly)}
+                  className={inputClass(errors.CREDIT_DAYS, isFinancialTermsReadOnly)}
                 />
                 <FieldError id={'cust-cdays-err'} message={errors.CREDIT_DAYS} />
               </div>
@@ -821,7 +983,7 @@ function CustomerForm({
               {/* Opening Balance */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Opening Balance
+                  Opening Balance {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
                 <input
                   type={'number'}
@@ -829,9 +991,9 @@ function CustomerForm({
                   name={'OPENING_BALANCE'}
                   value={values.OPENING_BALANCE !== undefined ? values.OPENING_BALANCE : '0.00'}
                   onChange={handleChange}
-                  readOnly={readOnly}
+                  readOnly={isFinancialTermsReadOnly}
                   placeholder={'0.00'}
-                  className={inputClass(errors.OPENING_BALANCE, readOnly)}
+                  className={inputClass(errors.OPENING_BALANCE, isFinancialTermsReadOnly)}
                 />
                 <FieldError id={'cust-obal-err'} message={errors.OPENING_BALANCE} />
               </div>
@@ -839,9 +1001,9 @@ function CustomerForm({
               {/* Balance Type */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Balance Type
+                  Balance Type {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
-                {readOnly ? (
+                {isFinancialTermsReadOnly ? (
                   <input
                     type={'text'}
                     value={values.BALANCE_TYPE || '-'}
@@ -853,7 +1015,7 @@ function CustomerForm({
                     name={'BALANCE_TYPE'}
                     value={values.BALANCE_TYPE || ''}
                     onChange={handleChange}
-                    className={inputClass(null, false)}
+                    className={inputClass(errors.BALANCE_TYPE, false)}
                   >
                     <option value={''}>-- Select Type --</option>
                     {BALANCE_TYPE_OPTIONS.map((bt) => (
@@ -863,14 +1025,15 @@ function CustomerForm({
                     ))}
                   </select>
                 )}
+                <FieldError id={'cust-btype-err'} message={errors.BALANCE_TYPE} />
               </div>
 
               {/* Agreement Date (From) */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Agreement Date (From)
+                  Agreement Date (From) {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
-                {readOnly ? (
+                {isFinancialTermsReadOnly ? (
                   <input
                     type={'text'}
                     value={values.AGREEMENT_DATE_FROM || '-'}
@@ -892,9 +1055,9 @@ function CustomerForm({
               {/* Agreement Date (To) */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Agreement Date (To)
+                  Agreement Date (To) {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
-                {readOnly ? (
+                {isFinancialTermsReadOnly ? (
                   <input
                     type={'text'}
                     value={values.AGREEMENT_DATE_TO || '-'}
@@ -917,9 +1080,9 @@ function CustomerForm({
               {/* Finance Status (Dropdown, Data = Draft, Approved, default Draft) */}
               <div>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'}>
-                  Finance Status
+                  Finance Status {values.FINANCE_STATUS === 'Approved' && <span className={'text-rose-500'}>*</span>}
                 </label>
-                {readOnly ? (
+                {isFinanceStatusReadOnly ? (
                   <input
                     type={'text'}
                     value={values.FINANCE_STATUS || 'Draft'}
@@ -941,6 +1104,107 @@ function CustomerForm({
                   </select>
                 )}
               </div>
+
+              {/* Informational banner when creating with Approved status */}
+              {!isEdit && !readOnly && values.FINANCE_STATUS === 'Approved' && (
+                <div className={'md:col-span-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 flex items-center gap-2'}>
+                  <svg className={'w-4 h-4 text-emerald-600 shrink-0'} fill={'none'} stroke={'currentColor'} viewBox={'0 0 24 24'}>
+                    <path strokeLinecap={'round'} strokeLinejoin={'round'} strokeWidth={2} d={'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'} />
+                  </svg>
+                  <span>
+                    <strong>Finance Status is Approved:</strong> Saving will automatically create an active agreement record in table <code>AFM_CUST_FIN_AGREEMENT</code> (STATUS = 1).
+                  </span>
+                </div>
+              )}
+
+              {/* Financial Agreements History (Table: AFM_CUST_FIN_AGREEMENT) */}
+              {(isEdit || readOnly || internalAgreements.length > 0) && (
+                <div className={'md:col-span-2 pt-3 border-t border-gray-200 mt-2 space-y-2'}>
+                  <div className={'flex items-center justify-between'}>
+                    <div className={'flex items-center gap-2'}>
+                      <span className={'text-xs font-semibold text-gray-800'}>
+                        Financial Agreement Records
+                      </span>
+                      {values.FINANCE_STATUS === 'Approved' ? (
+                        <span className={'px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300'}>
+                          Approved
+                        </span>
+                      ) : (
+                        <span className={'px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-300'}>
+                          Draft
+                        </span>
+                      )}
+                    </div>
+                    <span className={'text-[11px] text-gray-500'}>
+                      {internalAgreements.filter((a) => Number(a.status) === 1).length} Active Agreement
+                    </span>
+                  </div>
+
+                  {internalAgreements.length > 0 ? (
+                    <div className={'overflow-x-auto border border-gray-200 rounded-md bg-white'}>
+                      <table className={'w-full text-xs text-left divide-y divide-gray-200'}>
+                        <thead className={'bg-gray-50 text-gray-600 text-[11px] uppercase tracking-wider'}>
+                          <tr>
+                            <th className={'px-3 py-2'}>Agr #</th>
+                            <th className={'px-3 py-2'}>Period (From - To)</th>
+                            <th className={'px-3 py-2'}>Credit Limits</th>
+                            <th className={'px-3 py-2'}>Payment Terms</th>
+                            <th className={'px-3 py-2'}>Days</th>
+                            <th className={'px-3 py-2'}>Currency</th>
+                            <th className={'px-3 py-2'}>Finance Status</th>
+                            <th className={'px-3 py-2 text-center'}>Agreement Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className={'divide-y divide-gray-100 text-[11px]'}>
+                          {internalAgreements.map((agr) => {
+                            const isActive = Number(agr.status) === 1
+                            return (
+                              <tr
+                                key={agr.id}
+                                className={isActive ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'bg-white hover:bg-gray-50 text-gray-600'}
+                              >
+                                <td className={'px-3 py-2 font-mono font-medium text-gray-800'}>
+                                  #{agr.id}
+                                </td>
+                                <td className={'px-3 py-2'}>
+                                  {agr.agreementDateFrom || '-'} &rarr; {agr.agreementDateTo || '-'}
+                                </td>
+                                <td className={'px-3 py-2 font-mono'}>
+                                  {agr.creditLowerLimit != null ? Number(agr.creditLowerLimit).toFixed(2) : '0.00'} -{' '}
+                                  {agr.creditUpperLimit != null ? Number(agr.creditUpperLimit).toFixed(2) : '0.00'}
+                                </td>
+                                <td className={'px-3 py-2'}>{agr.paymentTerms || '-'}</td>
+                                <td className={'px-3 py-2'}>{agr.creditDays ?? '-'}</td>
+                                <td className={'px-3 py-2'}>{agr.currencyCode || 'BDT'}</td>
+                                <td className={'px-3 py-2'}>
+                                  <span className={'px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800'}>
+                                    {agr.financeStatus || 'Approved'}
+                                  </span>
+                                </td>
+                                <td className={'px-3 py-2 text-center'}>
+                                  {isActive ? (
+                                    <span className={'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600 text-white'}>
+                                      Active (1)
+                                    </span>
+                                  ) : (
+                                    <span className={'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-700'}>
+                                      Inactive (0)
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className={'p-3 bg-gray-50 border border-dashed border-gray-300 rounded text-center text-xs text-gray-500'}>
+                      No financial agreement records yet. When Finance Status is set to <strong>Approved</strong>, an agreement record is automatically created with STATUS = 1.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1146,6 +1410,20 @@ function CustomerForm({
           </div>
         </div>
       )}
+
+      {/* New Financial Agreement Modal */}
+      <CustomerAgreementModal
+        isOpen={isAgreementModalOpen}
+        onClose={() => setIsAgreementModalOpen(false)}
+        initialData={values}
+        paymentTermsOptions={
+          paymentTermsOptions && paymentTermsOptions.length > 0
+            ? paymentTermsOptions
+            : internalTermsOptions
+        }
+        onSubmit={handleNewAgreementSubmit}
+        submitting={isAgreementSubmitting}
+      />
     </div>
   )
 }

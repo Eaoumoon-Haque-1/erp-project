@@ -7,8 +7,9 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import FormPage from '../../../../components/shared/FormPage'
-import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { confirmAction, showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { afmLookupApi } from '../../../../api/afmLookup'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { customerApi } from '../api/customerApi'
 import CustomerForm from '../components/CustomerForm'
 import { mapCustomerFromApi, mapCustomerToApi } from '../data/customerApiMapper'
@@ -24,28 +25,30 @@ function CustomerEdit() {
 
   const [values, setValues] = useState(initialCustomerValues)
   const [auditLog, setAuditLog] = useState(null)
+  const [initialFinanceStatus, setInitialFinanceStatus] = useState(null)
+  const [agreements, setAgreements] = useState([])
   const [errors, setErrors] = useState({})
   const [paymentTermsOptions, setPaymentTermsOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  // Fetch Payment Terms lookup values where typeCode = 'PTR001'
+  // Fetch Payment Terms lookup values using centralized afmLookupData.paymentTerms
   useEffect(() => {
     let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
     const targetBuId = values.BU_ID || undefined
 
     const fetchPaymentTerms = async () => {
       try {
         let res = await afmLookupApi
-          .getValuesByTypeCode('PTR001', targetBuId, 1)
-          .catch(() => afmLookupApi.getValuesByCode('PTR001', targetBuId, 1))
-          .catch(() => afmLookupApi.getValuesByCode('Payment Terms', targetBuId, 1))
+          .getValuesByTypeCode(typeCode, targetBuId, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, targetBuId, 1))
 
         if ((!res || res.length === 0) && targetBuId) {
           res = await afmLookupApi
-            .getValuesByTypeCode('PTR001', undefined, 1)
-            .catch(() => afmLookupApi.getValuesByCode('PTR001', undefined, 1))
-            .catch(() => afmLookupApi.getValuesByCode('Payment Terms', undefined, 1))
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
         }
 
         if (!active) return
@@ -79,6 +82,7 @@ function CustomerEdit() {
         const mapped = mapCustomerFromApi(data)
         setValues(mapped)
         setAuditLog(mapped.AUDIT_LOG || mapped)
+        setInitialFinanceStatus(mapped.FINANCE_STATUS || data.financeStatus || 'Draft')
       })
       .catch((err) => {
         if (active) showError(getApiErrorMessage(err, 'Unable to load customer details.'))
@@ -86,6 +90,14 @@ function CustomerEdit() {
       .finally(() => {
         if (active) setLoading(false)
       })
+
+    customerApi
+      .getFinancialAgreements(customerId)
+      .then((res) => {
+        if (!active) return
+        setAgreements(Array.isArray(res) ? res : [])
+      })
+      .catch(() => {})
 
     return () => {
       active = false
@@ -137,6 +149,24 @@ function CustomerEdit() {
       return
     }
 
+    const wasAlreadyApproved =
+      String(initialFinanceStatus || auditLog?.FINANCE_STATUS || '').toLowerCase() === 'approved'
+
+    // Only prompt for approval when transitioning from Draft -> Approved
+    // When already Approved in DB, no prompt is needed because financial data cannot be edited
+    if (
+      String(values.FINANCE_STATUS || '').toLowerCase() === 'approved' &&
+      !wasAlreadyApproved
+    ) {
+      const confirmed = await confirmAction({
+        title: 'Approve Financial Agreement?',
+        text: 'Payment & Financial Information can not be editable next time. Do you want to Approved and Insert data?',
+        action: 'update',
+        confirmButtonText: 'Yes, Approve & Insert',
+      })
+      if (!confirmed) return
+    }
+
     setSubmitting(true)
     try {
       const payload = mapCustomerToApi(values)
@@ -174,15 +204,31 @@ function CustomerEdit() {
       hideActions
     >
       <CustomerForm
+        customerId={customerId}
         values={values}
         errors={errors}
         isEdit={true}
         paymentTermsOptions={paymentTermsOptions}
         auditLog={auditLog}
+        agreements={agreements}
         submitting={submitting}
         submitLabel={'Update Customer'}
         onChange={handleChange}
         onSubmit={handleSubmit}
+        onAgreementCreated={(updatedCustomer) => {
+          if (updatedCustomer) {
+            const mapped = mapCustomerFromApi(updatedCustomer)
+            setValues(mapped)
+            setAuditLog(mapped.AUDIT_LOG || mapped)
+            setInitialFinanceStatus(mapped.FINANCE_STATUS)
+          }
+          if (customerId) {
+            customerApi
+              .getFinancialAgreements(customerId)
+              .then((res) => setAgreements(Array.isArray(res) ? res : []))
+              .catch(() => {})
+          }
+        }}
         onCancel={() => navigate(listPath)}
       />
     </FormPage>

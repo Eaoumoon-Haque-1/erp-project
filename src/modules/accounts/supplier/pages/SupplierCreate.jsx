@@ -5,10 +5,12 @@
  */
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { afmLookupApi } from '../../../../api/afmLookup'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { supplierApi } from '../api/supplierApi'
 import SupplierForm from '../components/SupplierForm'
 import { mapSupplierToApi } from '../data/supplierApiMapper'
@@ -29,8 +31,48 @@ function SupplierCreate() {
     BG_ID: sessionGroupId,
     BU_ID: sessionBuId,
   })
+  const [paymentTermsOptions, setPaymentTermsOptions] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+
+  // Fetch Payment Terms lookup values using centralized afmLookupData.paymentTerms
+  useEffect(() => {
+    let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
+    const targetBuId = sessionBuId || undefined
+
+    const fetchPaymentTerms = async () => {
+      try {
+        let res = await afmLookupApi
+          .getValuesByTypeCode(typeCode, targetBuId, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, targetBuId, 1))
+
+        if ((!res || res.length === 0) && targetBuId) {
+          res = await afmLookupApi
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
+        }
+
+        if (!active) return
+        const opts = (res || [])
+          .filter((item) => item.status === undefined || item.status === null || Number(item.status) === 1)
+          .map((item) => ({
+            value: item.value || item.valueCode || String(item.id),
+            label: item.value || item.valueCode || String(item.id),
+            code: item.valueCode,
+          }))
+        setPaymentTermsOptions(opts)
+      } catch {
+        // proceed
+      }
+    }
+
+    fetchPaymentTerms()
+    return () => {
+      active = false
+    }
+  }, [sessionBuId])
 
   // Auto-fetch next supplier code
   useEffect(() => {
@@ -104,6 +146,7 @@ function SupplierCreate() {
     >
       <SupplierForm
         values={values}
+        paymentTermsOptions={paymentTermsOptions}
         errors={errors}
         isEdit={false}
         readOnly={false}

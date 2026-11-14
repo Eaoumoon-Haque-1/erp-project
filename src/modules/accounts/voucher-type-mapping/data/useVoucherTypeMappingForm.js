@@ -4,14 +4,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getApiErrorMessage, normalizeApiError } from '../../../../api/errors'
 import { showError } from '../../../../components/shared/actionAlerts'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import {
   initialVoucherMappingValues,
   validateVoucherTypeMapping,
 } from '../validation/voucherTypeMappingValidation'
 
-export const VOUCHER_TYPE_LOOKUP_CODE = 'VT001'
-export const PAYMENT_TYPE_LOOKUP_CODE = 'PT001'
+export const VOUCHER_TYPE_LOOKUP_CODE = afmLookupData.voucherType
+export const PAYMENT_TYPE_LOOKUP_CODE = afmLookupData.paymentType
 export const PAYMENT_TYPE_FALLBACK_CODE = 'P001'
 
 const focusFirstInvalid = () =>
@@ -28,7 +29,7 @@ export default function useVoucherTypeMappingForm(
     pTypes: [],
   })
 
-  // Fetch Voucher Type (VT001) and Payment Type (PT001 / P001) lookup values strictly for the user's Business Unit
+  // Fetch Voucher Type (afmLookupData.voucherType) and Payment Type (afmLookupData.paymentType) lookup values strictly for the user's Business Unit
   useEffect(() => {
     let active = true
     const buId = values.BU_ID ? String(values.BU_ID).trim() : ''
@@ -123,7 +124,7 @@ export default function useVoucherTypeMappingForm(
         finalPTypes = extractFromBuLookupTypes(PAYMENT_TYPE_LOOKUP_CODE)
       }
 
-      // If PT001 returned empty for this Business Unit, check P001 for the same Business Unit only
+      // If paymentType lookup returned empty for this Business Unit, check fallback for the same Business Unit only
       if (finalPTypes.length === 0) {
         const p001Results = await afmLookupApi
           .getValuesByTypeCode(PAYMENT_TYPE_FALLBACK_CODE, buId, 1)

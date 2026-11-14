@@ -9,6 +9,9 @@
  * 6. Additional Information
  * Plus Audit Log block on Edit and View screens.
  */
+import { useEffect, useState } from 'react'
+import { afmLookupApi } from '../../../../api/afmLookup'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import {
   BALANCE_TYPE_OPTIONS,
   BUSINESS_TYPE_OPTIONS,
@@ -69,6 +72,7 @@ function formatAuditDateTime(value) {
 function SupplierForm({
   values,
   errors = {},
+  paymentTermsOptions = [],
   isEdit = false,
   readOnly = false,
   auditLog = null,
@@ -80,6 +84,48 @@ function SupplierForm({
   onSubmit = () => {},
   onCancel,
 }) {
+  const [internalTermsOptions, setInternalTermsOptions] = useState([])
+
+  // Fallback to load lookup values using centralized afmLookupData.paymentTerms if paymentTermsOptions not supplied
+  useEffect(() => {
+    if (paymentTermsOptions && paymentTermsOptions.length > 0) return
+    let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
+    const buId = values.BU_ID || undefined
+
+    const fetchTerms = async () => {
+      try {
+        let res = await afmLookupApi
+          .getValuesByTypeCode(typeCode, buId, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, buId, 1))
+
+        if ((!res || res.length === 0) && buId) {
+          res = await afmLookupApi
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
+        }
+
+        if (!active) return
+        const opts = (res || [])
+          .filter((item) => item.status === undefined || item.status === null || Number(item.status) === 1)
+          .map((item) => ({
+            value: item.value || item.valueCode || String(item.id),
+            label: item.value || item.valueCode || String(item.id),
+            code: item.valueCode,
+          }))
+        setInternalTermsOptions(opts)
+      } catch {
+        // fallback
+      }
+    }
+
+    fetchTerms()
+    return () => {
+      active = false
+    }
+  }, [paymentTermsOptions, values.BU_ID])
+
   const handleChange = (e) => {
     const { name, value } = e.target
     onChange(name, value)
@@ -430,7 +476,7 @@ function SupplierForm({
               {/* Full Address */}
               <div className={'md:col-span-2'}>
                 <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'ADDRESS'}>
-                  Full Address<span className={'text-rose-500 ml-0.5'}>*</span>
+                  Full Address
                 </label>
                 <textarea
                   id={'ADDRESS'}
@@ -608,21 +654,59 @@ function SupplierForm({
                 <label className={'block text-xs font-medium text-gray-700 mb-1'} htmlFor={'PAYMENT_TERMS'}>
                   Payment Terms
                 </label>
-                <select
-                  id={'PAYMENT_TERMS'}
-                  name={'PAYMENT_TERMS'}
-                  value={values.PAYMENT_TERMS || ''}
-                  disabled={readOnly}
-                  onChange={handleChange}
-                  className={inputClass(errors.PAYMENT_TERMS, readOnly)}
-                >
-                  <option value={''}>Select terms</option>
-                  {PAYMENT_TERMS_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                {readOnly ? (
+                  <input
+                    type={'text'}
+                    value={values.PAYMENT_TERMS || '-'}
+                    readOnly
+                    className={inputClass(null, true)}
+                  />
+                ) : (
+                  (() => {
+                    const availableTerms =
+                      paymentTermsOptions && paymentTermsOptions.length > 0
+                        ? paymentTermsOptions
+                        : internalTermsOptions && internalTermsOptions.length > 0
+                        ? internalTermsOptions
+                        : PAYMENT_TERMS_OPTIONS.map((t) => ({ value: t, label: t }))
+
+                    const termsList = [...availableTerms]
+                    if (
+                      values.PAYMENT_TERMS &&
+                      !termsList.some(
+                        (opt) => (typeof opt === 'object' ? opt.value : opt) === values.PAYMENT_TERMS,
+                      )
+                    ) {
+                      termsList.unshift({
+                        value: values.PAYMENT_TERMS,
+                        label: values.PAYMENT_TERMS,
+                      })
+                    }
+
+                    return (
+                      <select
+                        id={'PAYMENT_TERMS'}
+                        name={'PAYMENT_TERMS'}
+                        value={values.PAYMENT_TERMS || ''}
+                        disabled={readOnly}
+                        onChange={handleChange}
+                        className={inputClass(errors.PAYMENT_TERMS, readOnly)}
+                      >
+                        <option value={''}>-- Select Payment Terms --</option>
+                        {termsList.map((opt) => {
+                          const val = typeof opt === 'object' && opt !== null ? opt.value ?? opt.label : opt
+                          const label = typeof opt === 'object' && opt !== null ? opt.label ?? opt.value : opt
+                          return (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    )
+                  })()
+                )}
+                <FieldError id={'PAYMENT_TERMS-err'} message={errors.PAYMENT_TERMS} />
               </div>
 
               {/* Currency */}

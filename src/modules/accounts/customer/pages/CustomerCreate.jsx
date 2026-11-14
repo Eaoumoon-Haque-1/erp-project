@@ -8,9 +8,10 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { confirmAction, showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
 import { afmLookupApi } from '../../../../api/afmLookup'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { customerApi } from '../api/customerApi'
 import CustomerForm from '../components/CustomerForm'
 import { mapCustomerToApi } from '../data/customerApiMapper'
@@ -45,21 +46,21 @@ function CustomerCreate() {
   const [paymentTermsOptions, setPaymentTermsOptions] = useState([])
   const [submitting, setSubmitting] = useState(false)
 
-  // Fetch Payment Terms lookup values where typeCode = 'PTR001'
+  // Fetch Payment Terms lookup values using centralized afmLookupData.paymentTerms
   useEffect(() => {
     let active = true
+    const typeCode = afmLookupData.paymentTerms
+    if (!typeCode) return undefined
     const fetchPaymentTerms = async () => {
       try {
         let res = await afmLookupApi
-          .getValuesByTypeCode('PTR001', sessionBuId || undefined, 1)
-          .catch(() => afmLookupApi.getValuesByCode('PTR001', sessionBuId || undefined, 1))
-          .catch(() => afmLookupApi.getValuesByCode('Payment Terms', sessionBuId || undefined, 1))
+          .getValuesByTypeCode(typeCode, sessionBuId || undefined, 1)
+          .catch(() => afmLookupApi.getValuesByCode(typeCode, sessionBuId || undefined, 1))
 
         if ((!res || res.length === 0) && sessionBuId) {
           res = await afmLookupApi
-            .getValuesByTypeCode('PTR001', undefined, 1)
-            .catch(() => afmLookupApi.getValuesByCode('PTR001', undefined, 1))
-            .catch(() => afmLookupApi.getValuesByCode('Payment Terms', undefined, 1))
+            .getValuesByTypeCode(typeCode, undefined, 1)
+            .catch(() => afmLookupApi.getValuesByCode(typeCode, undefined, 1))
         }
 
         if (!active) return
@@ -187,6 +188,16 @@ function CustomerCreate() {
       setErrors(validationErrors)
       showError('Please correct the highlighted errors before submitting.')
       return
+    }
+
+    if (String(values.FINANCE_STATUS || '').toLowerCase() === 'approved') {
+      const confirmed = await confirmAction({
+        title: 'Approve Financial Agreement?',
+        text: 'Payment & Financial Information can not be editable next time. Do you want to Approved and Insert data?',
+        action: 'update',
+        confirmButtonText: 'Yes, Approve & Insert',
+      })
+      if (!confirmed) return
     }
 
     setSubmitting(true)

@@ -68,6 +68,7 @@ export function mapCustomerFromApi(record = {}) {
     AGREEMENT_DATE_FROM: record.agreementDateFrom ? String(record.agreementDateFrom).substring(0, 10) : '',
     AGREEMENT_DATE_TO: record.agreementDateTo ? String(record.agreementDateTo).substring(0, 10) : '',
     FINANCE_STATUS: record.financeStatus || record.financialStatus || 'Draft',
+    ACTIVE_AGREEMENT_ID: record.activeAgreementId != null ? String(record.activeAgreementId) : '',
 
     REMARKS: record.remarks || '',
     STATUS: record.status != null ? String(record.status) : '1',
@@ -89,6 +90,7 @@ export function mapCustomerFromApi(record = {}) {
 
     AUDIT_LOG: {
       STATUS: record.status != null ? String(record.status) : '1',
+      FINANCE_STATUS: record.financeStatus || record.financialStatus || 'Draft',
       CREATED_USER_ID: createdUserId,
       CREATED_USER_NAME: record.createdUserName || createdUserId || '-',
       CREATED_EMP_ID: createdEmpId,

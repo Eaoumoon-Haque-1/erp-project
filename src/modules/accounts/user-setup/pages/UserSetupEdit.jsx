@@ -10,6 +10,7 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankApi } from '../../bank/api/bankApi'
@@ -105,15 +106,19 @@ function UserSetupEdit() {
     }
   }, [values.BG_ID, values.BU_ID, sessionGroupId, sessionBusinessUnitId])
 
-  // Load voucher types from lookup (lookup type code 'VT001')
+  // Load voucher types from centralized afmLookupData.voucherType
   useEffect(() => {
     const buId = values.BU_ID || sessionBusinessUnitId || undefined
     let active = true
+    const typeCode = afmLookupData.voucherType
+    if (!typeCode) {
+      setLookupsLoading(false)
+      return undefined
+    }
 
     afmLookupApi
-      .getValuesByTypeCode('VT001', buId, 1)
-      .catch(() => afmLookupApi.getValuesByCode('VT001', buId, 1))
-      .catch(() => afmLookupApi.getValuesByCode('Voucher Type', buId, 1))
+      .getValuesByTypeCode(typeCode, buId, 1)
+      .catch(() => afmLookupApi.getValuesByCode(typeCode, buId, 1))
       .then((data) => {
         if (!active) return
         const opts = (data || []).map((item) => ({

@@ -1,7 +1,7 @@
 /**
  * @file Bank Cheque Mapping Create page.
  * Implements range-batch insertion with confirmation dialog:
- * e.g., If From Cheque 1000 and To Cheque 1005 -> "Five records will be inserted. Do you want to proceed?"
+ * e.g., If From Cheque 6000 and To Cheque 6004 -> "Five records will be inserted. Do you want to proceed?"
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'

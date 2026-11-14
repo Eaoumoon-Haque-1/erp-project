@@ -42,25 +42,52 @@ function ClosePeriodCreate() {
   const [candidateMonths, setCandidateMonths] = useState([])
   const [periodsLoading, setPeriodsLoading] = useState(false)
 
-  // Load available calendar years for the Business Unit from AFM_CALENDAR_MONTH
+  // Load available calendar years for the logged-in user's Business Unit and Business Group
   useEffect(() => {
     if (!sessionBusinessUnitId) return undefined
     let active = true
 
+    const queryParams = {
+      buId: sessionBusinessUnitId,
+      ...(sessionGroupId ? { bgId: sessionGroupId } : {}),
+      status: 1,
+    }
+
     Promise.allSettled([
+      periodApi.list({ ...queryParams, periodStatus: 'Open' }),
+      calendarApi.list(queryParams),
       periodApi.getAvailableYears(sessionBusinessUnitId),
-      calendarApi.list({ buId: sessionBusinessUnitId }),
-    ]).then(([yearsRes, calsRes]) => {
+    ]).then(([openRes, calsRes, yearsRes]) => {
       if (!active) return
-      const yearsFromPeriodApi =
-        yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
+
+      const openPeriods =
+        openRes.status === 'fulfilled' && Array.isArray(openRes.value) ? openRes.value : []
       const cals =
         calsRes.status === 'fulfilled' && Array.isArray(calsRes.value) ? calsRes.value : []
-      const yearsFromMonths = cals
-        .flatMap((c) => (c.calendarMonths || []).map((m) => String(m.calendarYear || '').trim()))
+      const yearsFromPeriodApi =
+        yearsRes.status === 'fulfilled' && Array.isArray(yearsRes.value) ? yearsRes.value : []
+
+      const yearsFromOpen = openPeriods
+        .filter((p) => {
+          const buMatch = String(p.buId ?? p.BU_ID ?? '').trim() === sessionBusinessUnitId
+          const bgMatch = !sessionGroupId || String(p.bgId ?? p.BG_ID ?? '').trim() === sessionGroupId
+          const isOpen = String(p.periodStatus ?? p.PERIOD_STATUS ?? '').trim().toLowerCase() === 'open'
+          const isActive = Number(p.status ?? p.STATUS ?? 1) === 1
+          return buMatch && bgMatch && isOpen && isActive
+        })
+        .map((p) => String(p.periodYear ?? p.PERIOD_YEAR ?? '').trim())
         .filter(Boolean)
 
-      const merged = Array.from(new Set([...yearsFromMonths, ...yearsFromPeriodApi]))
+      const yearsFromMonths = cals
+        .filter((c) => {
+          const buMatch = String(c.buId ?? '').trim() === sessionBusinessUnitId
+          const bgMatch = !sessionGroupId || String(c.bgId ?? '').trim() === sessionGroupId
+          return buMatch && bgMatch
+        })
+        .flatMap((c) => (c.calendarMonths || []).map((m) => String(m.calendarYear || c.calendarYear || '').trim()))
+        .filter(Boolean)
+
+      const merged = Array.from(new Set([...yearsFromOpen, ...yearsFromMonths, ...yearsFromPeriodApi]))
         .filter(Boolean)
         .sort()
 
@@ -70,58 +97,167 @@ function ClosePeriodCreate() {
     return () => {
       active = false
     }
-  }, [sessionBusinessUnitId])
+  }, [sessionBusinessUnitId, sessionGroupId])
 
-  // Load candidate period names where PERIOD_STATUS in AFM_CALENDAR_MONTH is 'Open'
-  // and not yet in AFM_PERIOD
+  // Load all active opened period names of the selected year for the logged-in user's BU and BG
   useEffect(() => {
     if (!sessionBusinessUnitId || !values.PERIOD_YEAR) {
+      setCandidateMonths([])
       return undefined
     }
 
     let active = true
+    setPeriodsLoading(true)
     const selectedYear = String(values.PERIOD_YEAR).trim()
 
-    // Attempt backend candidate-months API first, fallback to client-side filtering if needed
-    periodApi
-      .getCandidateMonths(sessionBusinessUnitId, selectedYear, 'Open')
-      .then((candidates) => {
+    const periodParams = {
+      buId: sessionBusinessUnitId,
+      ...(sessionGroupId ? { bgId: sessionGroupId } : {}),
+      periodYear: selectedYear,
+      status: 1,
+    }
+
+    const calendarParams = {
+      buId: sessionBusinessUnitId,
+      ...(sessionGroupId ? { bgId: sessionGroupId } : {}),
+      status: 1,
+    }
+
+    Promise.allSettled([
+      // 1. All active periods from AFM_PERIOD for user's BU, BG and Year
+      periodApi.list(periodParams),
+      // 2. Candidate months from backend for user's BU, BG and Year
+      periodApi.getCandidateMonths(sessionBusinessUnitId, selectedYear, 'Open', sessionGroupId),
+      // 3. Calendar months for user's BU and BG
+      calendarApi.list(calendarParams),
+    ])
+      .then(([periodsRes, candidatesRes, calsRes]) => {
         if (!active) return
-        if (Array.isArray(candidates)) {
-          setCandidateMonths(candidates)
-        } else {
-          setCandidateMonths([])
-        }
-      })
-      .catch(async () => {
-        // Fallback: load calendar months and existing periods to filter manually
-        try {
-          const [cals, periods] = await Promise.all([
-            calendarApi.list({ buId: sessionBusinessUnitId }).catch(() => []),
-            periodApi.list({ buId: sessionBusinessUnitId, periodYear: selectedYear }).catch(() => []),
-          ])
-          if (!active) return
 
-          const existingNames = new Set(
-            (periods || []).map((p) => String(p.periodName ?? p.PERIOD_NAME ?? '').trim().toLowerCase()),
-          )
+        const allPeriods =
+          periodsRes.status === 'fulfilled' && Array.isArray(periodsRes.value) ? periodsRes.value : []
+        const backendCandidates =
+          candidatesRes.status === 'fulfilled' && Array.isArray(candidatesRes.value) ? candidatesRes.value : []
+        const cals =
+          calsRes.status === 'fulfilled' && Array.isArray(calsRes.value) ? calsRes.value : []
 
-          const months = (cals || []).flatMap((c) => c.calendarMonths || []).filter((m) => {
-            const yr = String(m.calendarYear || '').trim().toLowerCase()
-            const st = String(m.periodStatus || '').trim().toLowerCase()
-            const pName = String(m.periodName || '').trim()
-            return (
-              yr === selectedYear.toLowerCase() &&
-              st === 'open' &&
-              pName &&
-              !existingNames.has(pName.toLowerCase())
-            )
+        // Set of periods explicitly closed in AFM_PERIOD for user's BU/BG/Year
+        const closedPeriodNames = new Set(
+          allPeriods
+            .filter((p) => {
+              const buMatch = String(p.buId ?? p.BU_ID ?? '').trim() === sessionBusinessUnitId
+              const bgMatch = !sessionGroupId || String(p.bgId ?? p.BG_ID ?? '').trim() === sessionGroupId
+              const yrMatch = String(p.periodYear ?? p.PERIOD_YEAR ?? '').trim().toLowerCase() === selectedYear.toLowerCase()
+              const isClosed = String(p.periodStatus ?? p.PERIOD_STATUS ?? '').trim().toLowerCase() === 'close'
+              return buMatch && bgMatch && yrMatch && isClosed
+            })
+            .map((p) => String(p.periodName ?? p.PERIOD_NAME ?? '').trim().toLowerCase()),
+        )
+
+        const resultsMap = new Map()
+
+        // 1. Add active opened periods from AFM_PERIOD table
+        allPeriods
+          .filter((p) => {
+            const buMatch = String(p.buId ?? p.BU_ID ?? '').trim() === sessionBusinessUnitId
+            const bgMatch = !sessionGroupId || String(p.bgId ?? p.BG_ID ?? '').trim() === sessionGroupId
+            const yrMatch = String(p.periodYear ?? p.PERIOD_YEAR ?? '').trim().toLowerCase() === selectedYear.toLowerCase()
+            const isOpen = String(p.periodStatus ?? p.PERIOD_STATUS ?? '').trim().toLowerCase() === 'open'
+            const isActive = Number(p.status ?? p.STATUS ?? 1) === 1
+            return buMatch && bgMatch && yrMatch && isOpen && isActive
+          })
+          .forEach((p) => {
+            const name = String(p.periodName ?? p.PERIOD_NAME ?? '').trim()
+            if (!name) return
+            const key = name.toLowerCase()
+            resultsMap.set(key, {
+              id: p.id,
+              periodId: p.id,
+              afmCalendarMonthId: p.afmCalendarMonthId ?? p.AFM_CALENDAR_MONTH_ID ?? null,
+              periodName: name,
+              periodYear: selectedYear,
+              periodStatus: 'Open',
+              buId: p.buId ?? p.BU_ID,
+              bgId: p.bgId ?? p.BG_ID,
+              status: 1,
+            })
           })
 
-          setCandidateMonths(months)
-        } catch {
-          if (active) setCandidateMonths([])
-        }
+        // 2. Add backend candidate open months
+        backendCandidates.forEach((m) => {
+          const name = String(m.periodName || '').trim()
+          if (!name || closedPeriodNames.has(name.toLowerCase())) return
+          const key = name.toLowerCase()
+          if (!resultsMap.has(key)) {
+            resultsMap.set(key, {
+              id: m.id,
+              periodId: null,
+              afmCalendarMonthId: m.id,
+              periodName: name,
+              periodYear: selectedYear,
+              periodStatus: 'Open',
+              buId: sessionBusinessUnitId,
+              bgId: sessionGroupId,
+              status: 1,
+            })
+          } else {
+            const existing = resultsMap.get(key)
+            if (!existing.afmCalendarMonthId && m.id) {
+              existing.afmCalendarMonthId = m.id
+            }
+          }
+        })
+
+        // 3. Add active open months from AFM_CALENDAR_MONTH for user's BU & BG
+        cals.forEach((c) => {
+          const buMatch = String(c.buId ?? '').trim() === sessionBusinessUnitId
+          const bgMatch = !sessionGroupId || String(c.bgId ?? '').trim() === sessionGroupId
+          if (!buMatch || !bgMatch) return
+
+          ;(c.calendarMonths || []).forEach((m) => {
+            const yr = String(m.calendarYear || c.calendarYear || '').trim().toLowerCase()
+            const st = String(m.periodStatus || '').trim().toLowerCase()
+            const act = Number(m.status ?? 1)
+            const name = String(m.periodName || '').trim()
+
+            if (
+              yr === selectedYear.toLowerCase() &&
+              st === 'open' &&
+              act === 1 &&
+              name &&
+              !closedPeriodNames.has(name.toLowerCase())
+            ) {
+              const key = name.toLowerCase()
+              if (!resultsMap.has(key)) {
+                resultsMap.set(key, {
+                  id: m.id,
+                  periodId: null,
+                  afmCalendarMonthId: m.id,
+                  periodName: name,
+                  periodYear: selectedYear,
+                  periodStatus: 'Open',
+                  buId: sessionBusinessUnitId,
+                  bgId: sessionGroupId,
+                  status: 1,
+                })
+              } else {
+                const existing = resultsMap.get(key)
+                if (!existing.afmCalendarMonthId && m.id) {
+                  existing.afmCalendarMonthId = m.id
+                }
+              }
+            }
+          })
+        })
+
+        const candidates = Array.from(resultsMap.values()).sort((a, b) =>
+          a.periodName.localeCompare(b.periodName, undefined, { numeric: true }),
+        )
+
+        setCandidateMonths(candidates)
+      })
+      .catch(() => {
+        if (active) setCandidateMonths([])
       })
       .finally(() => {
         if (active) setPeriodsLoading(false)
@@ -130,7 +266,7 @@ function ClosePeriodCreate() {
     return () => {
       active = false
     }
-  }, [sessionBusinessUnitId, values.PERIOD_YEAR])
+  }, [sessionBusinessUnitId, sessionGroupId, values.PERIOD_YEAR])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -142,6 +278,7 @@ function ClosePeriodCreate() {
         PERIOD_YEAR: value,
         PERIOD_NAME: '',
         AFM_CALENDAR_MONTH_ID: '',
+        periodId: null,
       }))
       setErrors((prev) => ({ ...prev, PERIOD_YEAR: undefined, PERIOD_NAME: undefined }))
       return
@@ -155,7 +292,10 @@ function ClosePeriodCreate() {
       setValues((prev) => ({
         ...prev,
         PERIOD_NAME: value,
-        AFM_CALENDAR_MONTH_ID: match ? String(match.id) : '',
+        AFM_CALENDAR_MONTH_ID: match
+          ? String(match.afmCalendarMonthId || match.id || '')
+          : '',
+        periodId: match?.periodId || null,
       }))
       setErrors((prev) => ({ ...prev, PERIOD_NAME: undefined }))
       return
@@ -171,6 +311,7 @@ function ClosePeriodCreate() {
       PERIOD_STATUS: 'Close',
       BG_ID: sessionGroupId,
       BU_ID: sessionBusinessUnitId,
+      periodId: null,
     })
     setErrors({})
     setCandidateMonths([])
@@ -208,7 +349,11 @@ function ClosePeriodCreate() {
         PERIOD_STATUS: 'Close',
         STATUS: 1,
       })
-      await periodApi.create(payload)
+      if (values.periodId) {
+        await periodApi.update(values.periodId, payload)
+      } else {
+        await periodApi.create(payload)
+      }
       await showSuccess('Accounting Period closed successfully.')
       navigate(listPath)
     } catch (err) {

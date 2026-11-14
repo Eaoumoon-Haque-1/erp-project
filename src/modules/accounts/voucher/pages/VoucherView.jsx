@@ -11,6 +11,7 @@ import { usersApi } from '../../../super-admin/user/api/userApi'
 import { departmentGroupsApi } from '../../../hris/department-group/api/departmentGroupApi'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankChequeMapApi } from '../../bank-cheque-mapping/api/bankChequeMapApi'
 import { bankApi } from '../../bank/api/bankApi'
@@ -151,20 +152,24 @@ function VoucherView() {
     let active = true
 
     // Voucher Types
-    afmLookupApi
-      .getValuesByTypeCode('VT001', buId, 1)
-      .then((rows) => {
-        if (!active) return
-        setVoucherTypeOptions(
-          (rows || []).map((r) => ({
-            value: String(r.id),
-            label: r.value || r.valueCode,
-          })),
-        )
-      })
-      .catch(() => {
-        if (active) setVoucherTypeOptions([])
-      })
+    const voucherTypeCode = afmLookupData.voucherType
+    if (voucherTypeCode) {
+      afmLookupApi
+        .getValuesByTypeCode(voucherTypeCode, buId, 1)
+        .catch(() => afmLookupApi.getValuesByCode(voucherTypeCode, buId, 1))
+        .then((rows) => {
+          if (!active) return
+          setVoucherTypeOptions(
+            (rows || []).map((r) => ({
+              value: String(r.id),
+              label: r.value || r.valueCode,
+            })),
+          )
+        })
+        .catch(() => {
+          if (active) setVoucherTypeOptions([])
+        })
+    }
 
     // Open Periods
     Promise.allSettled([

@@ -12,6 +12,7 @@ import { departmentGroupsApi } from '../../../hris/department-group/api/departme
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
 import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankChequeMapApi } from '../../bank-cheque-mapping/api/bankChequeMapApi'
 import { bankApi } from '../../bank/api/bankApi'
@@ -343,21 +344,25 @@ function VoucherEdit() {
       })
 
     // Voucher Types
-    afmLookupApi
-      .getValuesByTypeCode('VT001', activeBuId, 1)
-      .then((rows) => {
-        if (!active) return
-        setRawVoucherTypes(
-          (rows || []).map((r) => ({
-            value: String(r.id),
-            label: r.value || r.valueCode,
-            code: r.valueCode,
-          })),
-        )
-      })
-      .catch(() => {
-        if (active) setRawVoucherTypes([])
-      })
+    const voucherTypeCode = afmLookupData.voucherType
+    if (voucherTypeCode) {
+      afmLookupApi
+        .getValuesByTypeCode(voucherTypeCode, activeBuId, 1)
+        .catch(() => afmLookupApi.getValuesByCode(voucherTypeCode, activeBuId, 1))
+        .then((rows) => {
+          if (!active) return
+          setRawVoucherTypes(
+            (rows || []).map((r) => ({
+              value: String(r.id),
+              label: r.value || r.valueCode,
+              code: r.valueCode,
+            })),
+          )
+        })
+        .catch(() => {
+          if (active) setRawVoucherTypes([])
+        })
+    }
 
     // Calendars and Periods
     Promise.allSettled([

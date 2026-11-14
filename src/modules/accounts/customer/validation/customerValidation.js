@@ -186,6 +186,75 @@ export function validateCustomer(values = {}) {
     errors.AGREEMENT_DATE_TO = 'Agreement Date (To) must be on or after Agreement Date (From)'
   }
 
+  // When Finance Status is Approved, all Payment & Financial Information fields are strictly mandatory
+  if (String(values.FINANCE_STATUS || '').toLowerCase() === 'approved') {
+    const finErrors = validateFinancialAgreement(values)
+    Object.assign(errors, finErrors)
+  }
+
+  return errors
+}
+
+export function validateFinancialAgreement(values = {}) {
+  const errors = {}
+
+  if (!values.PAYMENT_TERMS || !String(values.PAYMENT_TERMS).trim()) {
+    errors.PAYMENT_TERMS = 'Payment Terms is required when Finance Status is Approved'
+  }
+
+  if (values.CREDIT_LOWER_LIMIT === undefined || values.CREDIT_LOWER_LIMIT === null || String(values.CREDIT_LOWER_LIMIT).trim() === '') {
+    errors.CREDIT_LOWER_LIMIT = 'Credit Lower Limit is required when Finance Status is Approved'
+  } else if (isNaN(Number(values.CREDIT_LOWER_LIMIT))) {
+    errors.CREDIT_LOWER_LIMIT = 'Credit Lower Limit must be a number'
+  }
+
+  if (values.CREDIT_UPPER_LIMIT === undefined || values.CREDIT_UPPER_LIMIT === null || String(values.CREDIT_UPPER_LIMIT).trim() === '') {
+    errors.CREDIT_UPPER_LIMIT = 'Credit Upper Limit is required when Finance Status is Approved'
+  } else if (isNaN(Number(values.CREDIT_UPPER_LIMIT))) {
+    errors.CREDIT_UPPER_LIMIT = 'Credit Upper Limit must be a number'
+  }
+
+  if (
+    !errors.CREDIT_LOWER_LIMIT &&
+    !errors.CREDIT_UPPER_LIMIT &&
+    Number(values.CREDIT_LOWER_LIMIT) > Number(values.CREDIT_UPPER_LIMIT)
+  ) {
+    errors.CREDIT_UPPER_LIMIT = 'Credit Upper Limit must be greater than or equal to Lower Limit'
+  }
+
+  if (values.CREDIT_DAYS === undefined || values.CREDIT_DAYS === null || String(values.CREDIT_DAYS).trim() === '') {
+    errors.CREDIT_DAYS = 'Credit Days is required when Finance Status is Approved'
+  } else if (isNaN(Number(values.CREDIT_DAYS))) {
+    errors.CREDIT_DAYS = 'Credit Days must be an integer'
+  }
+
+  if (!values.CURRENCY_CODE || !String(values.CURRENCY_CODE).trim()) {
+    errors.CURRENCY_CODE = 'Currency is required when Finance Status is Approved'
+  }
+
+  if (values.OPENING_BALANCE === undefined || values.OPENING_BALANCE === null || String(values.OPENING_BALANCE).trim() === '') {
+    errors.OPENING_BALANCE = 'Opening Balance is required when Finance Status is Approved'
+  } else if (isNaN(Number(values.OPENING_BALANCE))) {
+    errors.OPENING_BALANCE = 'Opening Balance must be a number'
+  }
+
+  if (!values.BALANCE_TYPE || !String(values.BALANCE_TYPE).trim()) {
+    errors.BALANCE_TYPE = 'Balance Type is required when Finance Status is Approved'
+  }
+
+  if (!values.AGREEMENT_DATE_FROM || !String(values.AGREEMENT_DATE_FROM).trim()) {
+    errors.AGREEMENT_DATE_FROM = 'Agreement Date (From) is required when Finance Status is Approved'
+  }
+
+  if (!values.AGREEMENT_DATE_TO || !String(values.AGREEMENT_DATE_TO).trim()) {
+    errors.AGREEMENT_DATE_TO = 'Agreement Date (To) is required when Finance Status is Approved'
+  } else if (
+    values.AGREEMENT_DATE_FROM &&
+    values.AGREEMENT_DATE_TO < values.AGREEMENT_DATE_FROM
+  ) {
+    errors.AGREEMENT_DATE_TO = 'Agreement Date (To) must be on or after Agreement Date (From)'
+  }
+
   return errors
 }
 
