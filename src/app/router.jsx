@@ -12,6 +12,8 @@ import { hrisRoutes } from '../modules/hris/routes'
 import { procureToPayRoutes } from '../modules/procure-to-pay/routes'
 import { salesRoutes } from '../modules/sales/routes'
 import { superAdminRoutes } from '../modules/super-admin/routes'
+import ChangePasswordPage from '../pages/ChangePasswordPage'
+import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import HomePage from '../pages/HomePage'
 import LoginPage from '../pages/LoginPage'
 import NotFoundPage from '../pages/NotFoundPage'
@@ -29,6 +31,10 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
     path: '/',
     element: (
       <RequireAuth>
@@ -37,6 +43,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'change-password', element: <ChangePasswordPage /> },
       ...superAdminRoutes,
       ...hrisRoutes,
       ...assetRoutes,

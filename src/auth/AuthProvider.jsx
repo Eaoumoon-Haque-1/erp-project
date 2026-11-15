@@ -87,6 +87,14 @@ function AuthProvider({ children }) {
         setSession(nextSession)
         return nextSession
       },
+      // change-password returns a NEW token (the old one is invalidated). Store it
+      // with the same saveAuthSession used by login; the previous session supplies
+      // the fields the response lacks (username, role, ids, names, refresh token).
+      replaceAccessToken(response) {
+        const nextSession = saveAuthSession(response, session ?? {})
+        setSession(nextSession)
+        return nextSession
+      },
       async logout() {
         try {
           if (session?.accessToken) await logoutRequest()
