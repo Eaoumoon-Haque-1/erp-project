@@ -23,7 +23,11 @@ export const employeesApi = {
   uploadPhoto: (file) => {
     const body = new FormData()
     body.append('file', file)
-    return unwrap(apiClient.post('/files/employee-photos', body))
+    // The client defaults to application/json, which makes axios turn FormData into JSON
+    // (the file is lost). Overriding it lets the browser send a real multipart body.
+    return unwrap(apiClient.post('/files/employee-photos', body, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }))
   },
   updateStatus: (id, status) => unwrap(apiClient.patch(
     `${employeePath}/${id}/status`,
