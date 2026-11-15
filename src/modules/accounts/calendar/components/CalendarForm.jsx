@@ -9,6 +9,7 @@
  * - Detail table: SL No., Month, Year, Quarter, Date (From), Date (To), Period Name, Period Status, Active, Remove
  * - Action buttons: Save As Draft, Submit
  */
+import { useNavigate } from 'react-router-dom'
 import {
   CALENDAR_TYPE_OPTIONS,
   MONTH_OPTIONS,
@@ -68,6 +69,7 @@ function CalendarForm({
   values,
   errors = {},
   rows = [],
+  isEdit = false,
   auditLog = null,
   submitting = false,
   yearRef,
@@ -77,7 +79,12 @@ function CalendarForm({
   onRemoveRow,
   onAutoGenerate,
   onSaveDraft,
+  onCancel,
+  onCreateNew,
+  listTo = '/accounts/voucher-setup/calendar',
+  createTo = '/accounts/voucher-setup/calendar/create',
 }) {
+  const navigate = useNavigate()
   const availableYears = extractYears(values.CALENDAR_YEAR)
 
   return (

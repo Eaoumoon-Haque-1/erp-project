@@ -197,6 +197,8 @@ function PeriodCreate() {
     <FormPage
       title={'Accounting Period Open'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       tableName={AFM_PERIOD_TABLE}
       submitLabel={'Submit'}
       hideActions
@@ -216,6 +218,8 @@ function PeriodCreate() {
         yearRef={yearRef}
         onChange={handleChange}
         onReset={handleReset}
+        onCancel={() => navigate(listPath)}
+        listTo={listPath}
       />
     </FormPage>
   )

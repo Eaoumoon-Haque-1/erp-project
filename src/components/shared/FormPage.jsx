@@ -3,6 +3,7 @@
  * Sections: reusable helpers, component behavior, accessibility, and rendered UI.
  * Changing this file can affect many features; keep props backward-compatible when possible.
  */
+import { Link } from 'react-router-dom'
 import PageHeader from './PageHeader'
 import {
   getEntityNameFromTitle,
@@ -18,6 +19,13 @@ import {
 function FormPage({
   title,
   listTo,
+  backTo,
+  backLabel,
+  createTo,
+  createLabel = 'Create New',
+  actionLabel,
+  actionTo,
+  actions = [],
   onSubmit,
   onReset,
   children,
@@ -31,7 +39,26 @@ function FormPage({
   afterActions = null,
 }) {
   const entityName = getEntityNameFromTitle(title)
-  const action = submitLabel.toLowerCase().includes('update') ? 'update' : 'create'
+  const isEditPage = submitLabel.toLowerCase().includes('update') || (Boolean(title) && title.toLowerCase().includes('edit'))
+  const isViewPage = Boolean(title) && title.toLowerCase().includes('view')
+  const action = isEditPage ? 'update' : 'create'
+
+  const resolvedBackTo = backTo || listTo || actionTo
+  const resolvedBackLabel = backLabel || (actionLabel && actionLabel !== 'List' ? actionLabel : 'Back to List')
+
+  const resolvedCreateTo = createTo || ((isEditPage || isViewPage) && resolvedBackTo ? `${resolvedBackTo.replace(/\/$/, '')}/create` : null)
+
+  const headerActions = []
+  if ((isEditPage || isViewPage || createTo) && resolvedCreateTo) {
+    headerActions.push({
+      label: createLabel,
+      to: resolvedCreateTo,
+      variant: 'primary',
+    })
+  }
+  if (Array.isArray(actions)) {
+    headerActions.push(...actions)
+  }
 
   const handleSubmit = (event) => {
     if (event?.preventDefault) event.preventDefault()
@@ -54,8 +81,14 @@ function FormPage({
 
   return (
     <div className={'erp-list-page'}>
-      {/* listTo controls the standard List link shown on create/edit pages. */}
-      <PageHeader title={title} actionLabel={'List'} actionTo={listTo} />
+      {/* PageHeader with Back to List and Create New actions */}
+      <PageHeader
+        title={title}
+        actionLabel={resolvedBackTo ? resolvedBackLabel : undefined}
+        actionTo={resolvedBackTo}
+        actionVariant={'secondary'}
+        actions={headerActions}
+      />
       <section className={'erp-form-card'}>
         {/* Feature controls are provided through children; this shell owns only shared actions. */}
         <form data-table={tableName} onSubmit={handleSubmit} onReset={onReset} noValidate method={'post'} action={'#'}>

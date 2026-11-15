@@ -91,7 +91,24 @@ function AfmLookupView() {
   if (loading) {
     return (
       <div className={'erp-list-page'}>
-        <PageHeader title={'Lookup Type Details'} actionLabel={'List'} actionTo={listPath} />
+        <PageHeader
+        title={'Lookup Type Details'}
+        actionLabel={'Back To List'}
+        actionTo={listPath}
+        actionVariant={'secondary'}
+        actions={[
+          {
+            label: 'Create New',
+            to: `${listPath}/create`,
+            variant: 'secondary',
+          },
+          {
+            label: 'Edit',
+            to: `${listPath}/${lookupId}/edit`,
+            variant: 'primary',
+          },
+        ]}
+      />
         <section className={'erp-form-card p-8 text-center text-gray-500'}>
           Loading lookup type details...
         </section>
@@ -103,7 +120,24 @@ function AfmLookupView() {
 
   return (
     <div className={'erp-list-page'}>
-      <PageHeader title={'Lookup Type Details'} actionLabel={'List'} actionTo={listPath} />
+      <PageHeader
+        title={'Lookup Type Details'}
+        actionLabel={'Back To List'}
+        actionTo={listPath}
+        actionVariant={'secondary'}
+        actions={[
+          {
+            label: 'Create New',
+            to: `${listPath}/create`,
+            variant: 'secondary',
+          },
+          {
+            label: 'Edit',
+            to: `${listPath}/${lookupId}/edit`,
+            variant: 'primary',
+          },
+        ]}
+      />
 
       <section className={'erp-form-card space-y-6'}>
         {/* Master Lookup Type Card */}

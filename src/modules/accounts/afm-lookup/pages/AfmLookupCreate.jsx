@@ -73,6 +73,8 @@ function AfmLookupCreate() {
     <FormPage
       title={'Lookup Type'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back To List'}
       tableName={AFM_LOOKUP_TYPE_TABLE}
       submitLabel={'Save'}
       onSubmit={handleSubmit}

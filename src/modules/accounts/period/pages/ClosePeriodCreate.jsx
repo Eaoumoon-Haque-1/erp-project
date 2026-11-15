@@ -369,8 +369,10 @@ function ClosePeriodCreate() {
     <FormPage
       title={'New Accounting Period Close'}
       tableName={AFM_PERIOD_TABLE}
+      listTo={listPath}
       backTo={listPath}
       backLabel={'Back to List'}
+      hideActions
       onSubmit={handleSubmit}
     >
       <PeriodForm
@@ -385,6 +387,8 @@ function ClosePeriodCreate() {
         yearRef={yearRef}
         onChange={handleChange}
         onReset={handleReset}
+        onCancel={() => navigate(listPath)}
+        listTo={listPath}
       />
     </FormPage>
   )

@@ -36,6 +36,7 @@ import {
 } from '../validation/voucherValidation'
 
 const listPath = '/accounts/voucher'
+const createPath = '/accounts/voucher/create'
 
 function getTodayIso() {
   const d = new Date()
@@ -440,13 +441,22 @@ function VoucherEdit() {
       .list({ buId: activeBuId, status: 1 })
       .then((rows) => {
         if (!active) return
+        const isAllAllowed = !userSetup || String(userSetup.IS_ALL_ACC_HEAD_ALLOWED) === '1'
+        const allowedSet = new Set(
+          (userSetup?.ALLOWED_ACCOUNTS || [])
+            .filter((a) => String(a.STATUS) === '1' && a.ACCOUNT_HEAD_ID)
+            .map((a) => String(a.ACCOUNT_HEAD_ID)),
+        )
+
         const filtered = (rows || []).filter((r) => {
           const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
           const isActive = String(r.status ?? r.STATUS ?? '').trim()
-          return (
+          const isLedgerActive =
             ledgerHead === 'active account' &&
             (isActive === '1' || isActive === 'true' || isActive === '')
-          )
+          if (!isLedgerActive) return false
+          if (isAllAllowed) return true
+          return allowedSet.has(String(r.id))
         })
         const mappedCoa = filtered.map((r) => ({
           value: String(r.id),
@@ -1004,6 +1014,10 @@ function VoucherEdit() {
     <FormPage
       title={`Edit Account Voucher: ${values.VOUCHER_NO || ''}`}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
       hideActions
     >
       <VoucherForm
@@ -1039,6 +1053,7 @@ function VoucherEdit() {
         onRemoveAttachment={handleRemoveAttachment}
         onSubmit={handleSubmit}
         onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
       />
     </FormPage>
   )

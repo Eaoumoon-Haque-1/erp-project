@@ -339,6 +339,8 @@ function CalendarCreate() {
     <FormPage
       title={'Add New Accounting Calendar'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       tableName={AFM_CALENDAR_TABLE}
       submitLabel={'Submit'}
       hideActions
@@ -359,6 +361,8 @@ function CalendarCreate() {
         onRemoveRow={handleRemoveRow}
         onAutoGenerate={handleAutoGenerateClick}
         onSaveDraft={handleSaveDraft}
+        onCancel={() => navigate(listPath)}
+        listTo={listPath}
       />
     </FormPage>
   )

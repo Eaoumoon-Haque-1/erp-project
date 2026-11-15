@@ -19,6 +19,7 @@ import {
 } from '../validation/userLocationValidation'
 
 const listPath = '/accounts/voucher-setup/user-location'
+const createPath = '/accounts/voucher-setup/user-location/create'
 
 function UserLocationEdit() {
   const { locationId } = useParams()
@@ -174,6 +175,10 @@ function UserLocationEdit() {
     <FormPage
       title={`Edit User Location: ${values.LOCATION || ''}`}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
       submitLabel={'Update'}
       hideActions
       onSubmit={handleSubmit}
@@ -190,6 +195,7 @@ function UserLocationEdit() {
         onSubmit={handleSubmit}
         onReset={handleReset}
         onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
       />
     </FormPage>
   )

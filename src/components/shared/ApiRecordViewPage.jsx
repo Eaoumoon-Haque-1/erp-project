@@ -38,7 +38,7 @@ function FieldValue({ field, record }) {
   return <span>{displayValue(value)}</span>
 }
 
-function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields }) {
+function ApiRecordViewPage({ title, param, listTo, createTo, editTo, loader, fields }) {
   const params = useParams()
   const id = params[param]
   const loadRecord = useCallback(() => loader(id), [id, loader])
@@ -46,6 +46,13 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const editPath = editTo && record ? editTo(id, record) : ''
+  const resolvedCreateTo = createTo || (listTo ? `${listTo.replace(/\/$/, '')}/create` : '')
+
+  const viewActions = [
+    ...(listTo ? [{ label: 'Back to List', to: listTo, variant: 'secondary' }] : []),
+    ...(resolvedCreateTo ? [{ label: 'Create New', to: resolvedCreateTo, variant: 'secondary' }] : []),
+    ...(editPath ? [{ label: 'Edit', to: editPath, variant: 'primary' }] : []),
+  ]
 
   useEffect(() => {
     let active = true
@@ -68,9 +75,7 @@ function ApiRecordViewPage({ title, param, listTo, editTo, loader, fields }) {
     <div className={'erp-list-page'}>
       <PageHeader
         title={title}
-        actionLabel={'List'}
-        actionTo={listTo}
-        actions={editPath ? [{ label: 'Edit', to: editPath, variant: 'secondary' }] : []}
+        actions={viewActions}
       />
       <section className={'erp-form-card'}>
         {loading && <p className={'erp-record-view-message'}>Loading...</p>}

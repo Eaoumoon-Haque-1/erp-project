@@ -67,11 +67,13 @@ function UserSetupForm({
   locationOptions = [],
   bankAccountOptions = [],
   costCenterOptions = [],
+  chartOfAccountOptions = [],
   usersLoading = false,
   lookupsLoading = false,
   locationsLoading = false,
   bankAccountsLoading = false,
   costCentersLoading = false,
+  coaLoading = false,
   isEdit = false,
   readOnly = false,
   auditLog = null,
@@ -83,6 +85,7 @@ function UserSetupForm({
   onReset,
   onEdit,
   onCancel,
+  onCreateNew,
 }) {
   // Filtered options for default fields based on selected multi-selects
   const defaultVoucherTypeOptions = useMemo(() => {
@@ -133,6 +136,53 @@ function UserSetupForm({
     }
   }
 
+  const allowedAccountsList = values.ALLOWED_ACCOUNTS || []
+  const displayAllowedAccounts =
+    allowedAccountsList.length > 0
+      ? allowedAccountsList
+      : !readOnly
+      ? [{ _rowKey: 'initial_row', ID: '', ACCOUNT_HEAD_ID: '', STATUS: '1' }]
+      : []
+
+  const handleAddAccountRow = () => {
+    const base =
+      allowedAccountsList.length > 0
+        ? allowedAccountsList
+        : [{ _rowKey: 'initial_row', ID: '', ACCOUNT_HEAD_ID: '', STATUS: '1' }]
+    const updated = [
+      ...base,
+      {
+        _rowKey: `row_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        ID: '',
+        ACCOUNT_HEAD_ID: '',
+        STATUS: '1',
+      },
+    ]
+    if (onChange) {
+      onChange({ target: { name: 'ALLOWED_ACCOUNTS', value: updated } })
+    }
+  }
+
+  const handleAccountRowChange = (index, field, val) => {
+    const base =
+      allowedAccountsList.length > 0
+        ? [...allowedAccountsList]
+        : [{ _rowKey: 'initial_row', ID: '', ACCOUNT_HEAD_ID: '', STATUS: '1' }]
+    const row = { ...(base[index] || {}), [field]: val }
+    if (field === 'ACCOUNT_HEAD_ID') {
+      const selected = chartOfAccountOptions.find((o) => String(o.value) === String(val))
+      if (selected) {
+        row.ACCOUNT_CODE = selected.code || ''
+        row.ACCOUNT_HEAD_NAME = selected.name || ''
+        row.ACCOUNT_DISPLAY_LABEL = selected.label || ''
+      }
+    }
+    base[index] = row
+    if (onChange) {
+      onChange({ target: { name: 'ALLOWED_ACCOUNTS', value: base } })
+    }
+  }
+
   return (
     <div className={'space-y-4 text-xs sm:text-sm'}>
       <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>
@@ -140,7 +190,7 @@ function UserSetupForm({
           {/* 1. User Name (Drop Down with write option / searchable) */}
           <div>
             <label
-              className={'block text-xs font-medium text-gray-700 mb-1'}
+              className={'erp-field-label'}
               htmlFor={'USER_ID'}
             >
               User Name<span className={'text-rose-500 ml-0.5'}>*</span>
@@ -209,7 +259,7 @@ function UserSetupForm({
 
             <div>
               <label
-                className={'block text-xs font-medium text-gray-700 mb-1'}
+                className={'erp-field-label'}
                 htmlFor={'VOUCHER_TYPE_DEFAULT'}
               >
                 Default Voucher Type
@@ -256,7 +306,7 @@ function UserSetupForm({
 
             <div>
               <label
-                className={'block text-xs font-medium text-gray-700 mb-1'}
+                className={'erp-field-label'}
                 htmlFor={'LOCATION_DEFAULT'}
               >
                 Default Location
@@ -300,7 +350,7 @@ function UserSetupForm({
 
             <div>
               <label
-                className={'block text-xs font-medium text-gray-700 mb-1'}
+                className={'erp-field-label'}
                 htmlFor={'BANK_ACCOUNT_DEFAULT'}
               >
                 Default Bank Account
@@ -353,7 +403,7 @@ function UserSetupForm({
 
             <div>
               <label
-                className={'block text-xs font-medium text-gray-700 mb-1'}
+                className={'erp-field-label'}
                 htmlFor={'COST_CENTER_DEFAULT'}
               >
                 Default Cost Center
@@ -380,60 +430,231 @@ function UserSetupForm({
             </div>
           </div>
 
-          {/* 7. Status */}
-          <div>
-            <label
-              className={'block text-xs font-medium text-gray-700 mb-1'}
-              htmlFor={'STATUS'}
-            >
-              Status
-            </label>
-            <select
-              id={'STATUS'}
-              name={'STATUS'}
-              className={inputClass(false, readOnly)}
-              value={values.STATUS || '1'}
-              disabled={readOnly}
-              onChange={(e) => handleSimpleChange('STATUS', e.target.value)}
-            >
-              {USER_SETUP_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          {/* 7. Is All Accounts Head Allowed & 8. Status */}
+          <div className={'grid grid-cols-1 md:grid-cols-2 gap-3'}>
+            <div>
+              <label
+                className={'erp-field-label'}
+                htmlFor={'IS_ALL_ACC_HEAD_ALLOWED'}
+              >
+                Is All Accounts Head Allowed ?
+              </label>
+              {readOnly ? (
+                <input
+                  id={'IS_ALL_ACC_HEAD_ALLOWED'}
+                  name={'IS_ALL_ACC_HEAD_ALLOWED'}
+                  type={'text'}
+                  readOnly
+                  className={inputClass(false, true)}
+                  value={String(values.IS_ALL_ACC_HEAD_ALLOWED) === '1' ? 'Allowed' : 'Not Allowed'}
+                />
+              ) : (
+                <div className={'flex items-center h-8'}>
+                  <label className={'erp-switch-field cursor-pointer !h-8 !w-auto !text-xs gap-2 flex items-center'}>
+                    <input
+                      id={'IS_ALL_ACC_HEAD_ALLOWED'}
+                      className={'erp-switch-control cursor-pointer'}
+                      type={'checkbox'}
+                      role={'switch'}
+                      name={'IS_ALL_ACC_HEAD_ALLOWED'}
+                      checked={String(values.IS_ALL_ACC_HEAD_ALLOWED ?? '1') === '1'}
+                      onChange={(e) => {
+                        const val = e.target.checked ? '1' : '0'
+                        handleSimpleChange('IS_ALL_ACC_HEAD_ALLOWED', val)
+                      }}
+                    />
+                    <span className={'text-xs font-medium text-gray-700 select-none'}>
+                      {String(values.IS_ALL_ACC_HEAD_ALLOWED ?? '1') === '1' ? 'Allowed' : 'Not Allowed'}
+                    </span>
+                  </label>
+                </div>
+              )}
+              <FieldError
+                id={'IS_ALL_ACC_HEAD_ALLOWED-error'}
+                message={errors.IS_ALL_ACC_HEAD_ALLOWED}
+              />
+            </div>
+
+            <div>
+              <label
+                className={'erp-field-label'}
+                htmlFor={'STATUS'}
+              >
+                Status
+              </label>
+              {readOnly ? (
+                <input
+                  id={'STATUS'}
+                  name={'STATUS'}
+                  type={'text'}
+                  readOnly
+                  className={inputClass(false, true)}
+                  value={String(values.STATUS) === '1' ? 'Active' : 'Inactive'}
+                />
+              ) : (
+                <div className={'flex items-center h-8'}>
+                  <label className={'erp-switch-field cursor-pointer !h-8 !w-auto !text-xs gap-2 flex items-center'}>
+                    <input
+                      id={'STATUS'}
+                      className={'erp-switch-control cursor-pointer'}
+                      type={'checkbox'}
+                      role={'switch'}
+                      name={'STATUS'}
+                      checked={String(values.STATUS ?? '1') === '1'}
+                      onChange={(e) => {
+                        const val = e.target.checked ? '1' : '0'
+                        handleSimpleChange('STATUS', val)
+                      }}
+                    />
+                    <span className={'text-xs font-medium text-gray-700 select-none'}>
+                      {String(values.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
+                    </span>
+                  </label>
+                </div>
+              )}
+              <FieldError id={'STATUS-error'} message={errors.STATUS} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. User Allowed Accounts Head block (shown when IS_ALL_ACC_HEAD_ALLOWED is Not Allowed '0') */}
+      {String(values.IS_ALL_ACC_HEAD_ALLOWED ?? '0') === '0' && (
+        <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>
+          <div className={'flex items-center justify-between pb-2 mb-3 border-b border-gray-100'}>
+            <div className={'flex items-center gap-2'}>
+              <div className={'w-1.5 h-4 bg-[#038b8d] rounded-full'} />
+              <h3 className={'text-xs sm:text-sm font-semibold text-gray-800 tracking-tight'}>
+                User Allowed Accounts Head
+              </h3>
+            </div>
           </div>
 
-          {/* Actions / Buttons - placed above Audit Log */}
-          {readOnly && (
-            <div className={'flex items-center gap-2 pt-2'}>
-              {onCancel && (
-                <button
-                  type={'button'}
-                  onClick={onCancel}
-                  className={
-                    'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-xs transition-colors'
-                  }
-                >
-                  Back to List
-                </button>
-              )}
-              {onEdit && (
-                <button
-                  type={'button'}
-                  onClick={onEdit}
-                  className={
-                    'inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded bg-[#038b8d] hover:bg-[#027577] text-white shadow-xs focus:outline-none transition-colors'
-                  }
-                >
-                  Edit
-                </button>
-              )}
+          <div className={'overflow-x-auto'}>
+            <table className={'w-full text-xs text-left border-collapse max-w-3xl'}>
+              <thead>
+                <tr className={'bg-gray-50 border-b border-gray-200 text-gray-700 font-semibold'}>
+                  <th className={'py-2 px-3 w-10 text-center'}>#</th>
+                  <th className={'py-2 px-3 min-w-[280px]'}>
+                    Accounts Name<span className={'text-rose-500 ml-0.5'}>*</span>
+                  </th>
+                  <th className={'py-2 px-3 w-36 text-center'}>Is Active ?</th>
+                </tr>
+              </thead>
+              <tbody className={'divide-y divide-gray-100'}>
+                {displayAllowedAccounts.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className={'py-3 text-center text-gray-400 italic'}>
+                      No accounts mapped yet.
+                    </td>
+                  </tr>
+                ) : (
+                  displayAllowedAccounts.map((row, index) => {
+                    const otherSelectedIds = new Set(
+                      displayAllowedAccounts
+                        .filter((_, i) => i !== index)
+                        .map((r) => (r.ACCOUNT_HEAD_ID != null ? String(r.ACCOUNT_HEAD_ID).trim() : ''))
+                        .filter(Boolean),
+                    )
+                    let rowAccountOptions = chartOfAccountOptions.filter(
+                      (opt) => !otherSelectedIds.has(String(opt.value).trim()),
+                    )
+                    if (
+                      row.ACCOUNT_HEAD_ID &&
+                      !rowAccountOptions.some((opt) => String(opt.value) === String(row.ACCOUNT_HEAD_ID))
+                    ) {
+                      rowAccountOptions = [
+                        {
+                          value: String(row.ACCOUNT_HEAD_ID),
+                          label: row.ACCOUNT_DISPLAY_LABEL || row.ACCOUNT_HEAD_NAME || String(row.ACCOUNT_HEAD_ID),
+                          code: row.ACCOUNT_CODE,
+                          name: row.ACCOUNT_HEAD_NAME,
+                        },
+                        ...rowAccountOptions,
+                      ]
+                    }
+
+                    return (
+                      <tr key={row._rowKey || row.ID || index} className={'hover:bg-gray-50/50'}>
+                        <td className={'py-2 px-3 text-center text-gray-500 font-medium'}>
+                          {index + 1}
+                        </td>
+                        <td className={'py-2 px-3'}>
+                          {readOnly ? (
+                            <input
+                              type={'text'}
+                              readOnly
+                              className={inputClass(false, true)}
+                              value={row.ACCOUNT_DISPLAY_LABEL || row.ACCOUNT_HEAD_NAME || ''}
+                            />
+                          ) : (
+                            <SearchableSelect
+                              id={`account-head-${index}`}
+                              placeholder={coaLoading ? 'Loading accounts...' : '--Select/Write Account Head--'}
+                              options={rowAccountOptions}
+                              value={row.ACCOUNT_HEAD_ID != null ? String(row.ACCOUNT_HEAD_ID) : ''}
+                              fallbackDisplay={row.ACCOUNT_DISPLAY_LABEL || row.ACCOUNT_HEAD_NAME || ''}
+                              onChange={(selectedVal) => handleAccountRowChange(index, 'ACCOUNT_HEAD_ID', selectedVal)}
+                              disabled={readOnly || coaLoading}
+                            />
+                          )}
+                        </td>
+                        <td className={'py-2 px-3 text-center'}>
+                          <div className={'flex items-center justify-center'}>
+                            <label className={'erp-switch-field cursor-pointer !h-8 !w-auto !text-xs gap-2 flex items-center justify-center'}>
+                              <input
+                                type={'checkbox'}
+                                className={'erp-switch-control cursor-pointer'}
+                                role={'switch'}
+                                checked={String(row.STATUS ?? '1') === '1'}
+                                disabled={readOnly}
+                                onChange={(e) => {
+                                  const val = e.target.checked ? '1' : '0'
+                                  handleAccountRowChange(index, 'STATUS', val)
+                                }}
+                              />
+                              <span className={'text-xs font-medium text-gray-700 select-none'}>
+                                {String(row.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
+                              </span>
+                            </label>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {!readOnly && (
+            <div className={'mt-3 pt-2 border-t border-gray-100 max-w-3xl flex justify-start'}>
+              <button
+                type={'button'}
+                onClick={handleAddAccountRow}
+                className={'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded transition-colors shadow-2xs'}
+              >
+                <svg className={'w-3.5 h-3.5'} fill={'none'} stroke={'currentColor'} viewBox={'0 0 24 24'}>
+                  <path strokeLinecap={'round'} strokeLinejoin={'round'} strokeWidth={2} d={'M12 4v16m8-8H4'} />
+                </svg>
+                Add More
+              </button>
             </div>
           )}
 
-          {!readOnly && isEdit && (
-            <div className={'flex items-center gap-2 pt-2'}>
+          {errors.ALLOWED_ACCOUNTS && (
+            <div className={'mt-2 p-2 bg-rose-50 border border-rose-200 rounded text-rose-600 text-xs font-medium max-w-3xl'}>
+              {errors.ALLOWED_ACCOUNTS}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Actions / Buttons */}
+      {!readOnly && (
+        <div className={'bg-white p-3 rounded border border-gray-200 shadow-xs flex items-center gap-2'}>
+          {isEdit && (
+            <>
               {onReset && (
                 <button
                   type={'button'}
@@ -456,11 +677,11 @@ function UserSetupForm({
               >
                 {submitting ? 'Updating...' : 'Update'}
               </button>
-            </div>
+            </>
           )}
 
-          {!readOnly && !isEdit && (
-            <div className={'flex items-center gap-2 pt-2'}>
+          {!isEdit && (
+            <>
               {onReset && (
                 <button
                   type={'button'}
@@ -483,10 +704,10 @@ function UserSetupForm({
               >
                 {submitting ? 'Submitting...' : submitLabel || 'Save'}
               </button>
-            </div>
+            </>
           )}
         </div>
-      </div>
+      )}
 
       {/* Audit Log on View & Edit (exact style from BankChequeMapForm) */}
       {auditLog && (

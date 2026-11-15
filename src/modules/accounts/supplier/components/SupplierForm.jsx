@@ -83,6 +83,7 @@ function SupplierForm({
   onChange = () => {},
   onSubmit = () => {},
   onCancel,
+  onCreateNew,
 }) {
   const [internalTermsOptions, setInternalTermsOptions] = useState([])
 
@@ -839,17 +840,6 @@ function SupplierForm({
           {/* Action Buttons */}
           {readOnly && (
             <div className={'pt-4 border-t border-gray-100 flex items-center justify-start gap-2'}>
-              {onCancel && (
-                <button
-                  type={'button'}
-                  onClick={onCancel}
-                  className={
-                    'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-xs transition-colors'
-                  }
-                >
-                  Back to List
-                </button>
-              )}
               {onEdit && (
                 <button
                   type={'button'}
@@ -866,18 +856,6 @@ function SupplierForm({
 
           {!readOnly && (
             <div className={'pt-4 border-t border-gray-100 flex items-center justify-end gap-3'}>
-              {onCancel && (
-                <button
-                  type={'button'}
-                  onClick={onCancel}
-                  disabled={submitting}
-                  className={
-                    'px-4 py-2 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition-colors'
-                  }
-                >
-                  Cancel
-                </button>
-              )}
               <button
                 type={'button'}
                 disabled={submitting}

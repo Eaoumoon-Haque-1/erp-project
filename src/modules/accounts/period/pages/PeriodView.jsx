@@ -13,6 +13,7 @@ import { periodApi } from '../api/periodApi'
 import { mapPeriodFromApi } from '../data/periodApiMapper'
 
 const listPath = '/accounts/voucher-setup/period'
+const openCreatePath = '/accounts/voucher-setup/period/open/create'
 
 function formatAuditDateTime(value) {
   if (!value) return '-'
@@ -98,9 +99,14 @@ function PeriodView() {
     return (
       <div className={'p-6 text-center'}>
         <p className={'text-sm text-gray-500 mb-3'}>Accounting Period not found.</p>
-        <Link to={listPath} className={'primary-button inline-flex'}>
-          Back to List
-        </Link>
+        <div className={'flex items-center justify-center gap-2'}>
+          <Link to={listPath} className={'secondary-button inline-flex'}>
+            Back to List
+          </Link>
+          <Link to={openCreatePath} className={'primary-button inline-flex'}>
+            Create New
+          </Link>
+        </div>
       </div>
     )
   }
@@ -123,6 +129,13 @@ function PeriodView() {
               onClick={() => navigate(listPath)}
             >
               Back to List
+            </button>
+            <button
+              type={'button'}
+              className={'secondary-button'}
+              onClick={() => navigate(openCreatePath)}
+            >
+              Create New
             </button>
             <button
               type={'button'}

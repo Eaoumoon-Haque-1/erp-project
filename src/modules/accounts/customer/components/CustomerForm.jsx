@@ -75,26 +75,30 @@ function formatAuditDateTime(value) {
   return `${day}/${month}/${year} ${time}`
 }
 
+const EMPTY_ARRAY = []
+const EMPTY_OBJECT = {}
+
 function CustomerForm({
   customerId = null,
   values,
-  errors = {},
+  errors = EMPTY_OBJECT,
   isEdit = false,
   readOnly = false,
   auditLog = null,
   submitting = false,
   submitLabel = 'Save Customer',
   editLabel = 'Edit Customer',
-  paymentTermsOptions = [],
-  agreements = [],
+  paymentTermsOptions = EMPTY_ARRAY,
+  agreements = EMPTY_ARRAY,
   onEdit,
   onChange = () => {},
   onSubmit = () => {},
   onAgreementCreated,
   onCancel,
+  onCreateNew,
 }) {
   const [internalTermsOptions, setInternalTermsOptions] = useState([])
-  const [internalAgreements, setInternalAgreements] = useState([])
+  const [internalAgreements, setInternalAgreements] = useState(agreements || EMPTY_ARRAY)
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false)
   const [isAgreementSubmitting, setIsAgreementSubmitting] = useState(false)
 
@@ -207,8 +211,8 @@ function CustomerForm({
       setInternalAgreements(agreements)
       return
     }
-    if (!values.ID) {
-      setInternalAgreements([])
+    if (!values?.ID) {
+      setInternalAgreements((prev) => (prev.length === 0 ? prev : EMPTY_ARRAY))
       return
     }
     let active = true
@@ -216,14 +220,14 @@ function CustomerForm({
       .getFinancialAgreements(values.ID)
       .then((res) => {
         if (!active) return
-        setInternalAgreements(Array.isArray(res) ? res : [])
+        setInternalAgreements(Array.isArray(res) ? res : EMPTY_ARRAY)
       })
       .catch(() => {})
 
     return () => {
       active = false
     }
-  }, [agreements, values.ID, values.FINANCE_STATUS])
+  }, [agreements, values?.ID, values?.FINANCE_STATUS])
 
   // Fallback to load lookup values using centralized afmLookupData.paymentTerms if paymentTermsOptions not supplied
   useEffect(() => {
@@ -231,7 +235,7 @@ function CustomerForm({
     let active = true
     const typeCode = afmLookupData.paymentTerms
     if (!typeCode) return undefined
-    const buId = values.BU_ID || undefined
+    const buId = values?.BU_ID || undefined
 
     const fetchTerms = async () => {
       try {
@@ -263,7 +267,7 @@ function CustomerForm({
     return () => {
       active = false
     }
-  }, [paymentTermsOptions, values.BU_ID])
+  }, [paymentTermsOptions, values?.BU_ID])
   const [sameAsBilling, setSameAsBilling] = useState(() => {
     return Boolean(
       values.ADDRESS &&
@@ -1272,18 +1276,6 @@ function CustomerForm({
 
           {/* Action Buttons */}
           <div className={'flex items-center justify-end gap-3 pt-4 border-t border-gray-100'}>
-            {onCancel && (
-              <button
-                type={'button'}
-                onClick={onCancel}
-                className={
-                  'px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition-colors'
-                }
-              >
-                {readOnly ? 'Back to List' : 'Cancel'}
-              </button>
-            )}
-
             {readOnly ? (
               onEdit && (
                 <button

@@ -12,6 +12,7 @@ import { bankChequeMapApi } from '../api/bankChequeMapApi'
 import { mapChequeMapToForm } from '../data/bankChequeMapApiMapper'
 
 const listPath = '/accounts/voucher-setup/bank-cheque-mapping'
+const createPath = '/accounts/voucher-setup/bank-cheque-mapping/create'
 
 function formatAuditDateTime(value) {
   if (!value) return '-'
@@ -94,7 +95,12 @@ function BankChequeMapView() {
   if (loading) {
     return (
       <div className={'erp-list-page'}>
-        <PageHeader title={'Bank Cheque Mapping Details'} actionLabel={'List'} actionTo={listPath} />
+        <PageHeader
+          title={'Bank Cheque Mapping Details'}
+          actionLabel={'Back to List'}
+          actionTo={listPath}
+          actionVariant={'secondary'}
+        />
         <section className={'erp-form-card p-6 text-xs text-gray-500'}>
           Loading Bank Cheque Mapping...
         </section>
@@ -105,12 +111,22 @@ function BankChequeMapView() {
   if (!record) {
     return (
       <div className={'erp-list-page'}>
-        <PageHeader title={'Bank Cheque Mapping Details'} actionLabel={'List'} actionTo={listPath} />
+        <PageHeader
+          title={'Bank Cheque Mapping Details'}
+          actionLabel={'Back to List'}
+          actionTo={listPath}
+          actionVariant={'secondary'}
+        />
         <section className={'erp-form-card p-6 text-center'}>
           <p className={'text-sm text-gray-500 mb-3'}>Bank Cheque Mapping not found.</p>
-          <Link to={listPath} className={'primary-button inline-flex'}>
-            Back to List
-          </Link>
+          <div className={'flex items-center justify-center gap-2'}>
+            <Link to={listPath} className={'secondary-button inline-flex'}>
+              Back to List
+            </Link>
+            <Link to={createPath} className={'primary-button inline-flex'}>
+              Create New
+            </Link>
+          </div>
         </section>
       </div>
     )
@@ -120,8 +136,11 @@ function BankChequeMapView() {
     <div className={'erp-list-page space-y-4'}>
       <PageHeader
         title={'Bank Cheque Mapping Details'}
-        actionLabel={'List'}
-        actionTo={listPath}
+        actions={[
+          { label: 'Back to List', to: listPath, variant: 'secondary' },
+          { label: 'Create New', to: createPath, variant: 'secondary' },
+          { label: 'Edit Mapping', to: `${listPath}/${record.ID}/edit`, variant: 'primary' },
+        ]}
       />
 
       <section className={'erp-form-card space-y-4'}>
@@ -172,15 +191,7 @@ function BankChequeMapView() {
           </div>
         </div>
 
-        {/* Bottom Actions */}
-        <div className={'flex items-center justify-end gap-3 pt-2'}>
-          <Link to={listPath} className={'secondary-button'}>
-            Back to List
-          </Link>
-          <Link to={`${listPath}/${record.ID}/edit`} className={'primary-button'}>
-            Edit Mapping
-          </Link>
-        </div>
+
 
         {/* Audit Log Block */}
         <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>

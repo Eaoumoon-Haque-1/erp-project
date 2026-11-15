@@ -21,6 +21,7 @@ import {
 } from '../validation/calendarValidation'
 
 const listPath = '/accounts/voucher-setup/calendar'
+const createPath = '/accounts/voucher-setup/calendar/create'
 
 function CalendarEdit() {
   const { calendarId } = useParams()
@@ -398,6 +399,10 @@ function CalendarEdit() {
     <FormPage
       title={'Edit Accounting Calendar'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
       tableName={AFM_CALENDAR_TABLE}
       submitLabel={'Update'}
       hideActions
@@ -419,6 +424,10 @@ function CalendarEdit() {
         onRemoveRow={handleRemoveRow}
         onAutoGenerate={handleAutoGenerateClick}
         onSaveDraft={handleSaveDraft}
+        onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
+        listTo={listPath}
+        createTo={createPath}
       />
     </FormPage>
   )
