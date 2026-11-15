@@ -24,7 +24,9 @@ export const initialUserSetupValues = {
   BANK_ACCOUNT_DEFAULT: '',
   COST_CENTER: [],
   COST_CENTER_DEFAULT: '',
+  IS_ALL_ACC_HEAD_ALLOWED: '1',
   STATUS: '1',
+  ALLOWED_ACCOUNTS: [],
 }
 
 /**
@@ -37,6 +39,34 @@ export function validateUserSetup(values = {}) {
 
   if (!values.USER_ID || !String(values.USER_ID).trim()) {
     errors.USER_ID = 'User is required'
+  }
+
+  // When IS_ALL_ACC_HEAD_ALLOWED is Not Allowed ('0'), validate ALLOWED_ACCOUNTS
+  if (String(values.IS_ALL_ACC_HEAD_ALLOWED ?? '1') === '0') {
+    const rawList = values.ALLOWED_ACCOUNTS || []
+    const filledList = rawList.filter(
+      (item) => item && item.ACCOUNT_HEAD_ID != null && String(item.ACCOUNT_HEAD_ID).trim() !== '',
+    )
+
+    if (filledList.length === 0) {
+      errors.ALLOWED_ACCOUNTS =
+        'At least one Accounts Name must be selected when All Accounts Head is Not Allowed.'
+    } else {
+      const seen = new Set()
+      const duplicates = []
+      for (const item of filledList) {
+        const id = String(item.ACCOUNT_HEAD_ID).trim()
+        if (seen.has(id)) {
+          const name = item.ACCOUNT_DISPLAY_LABEL || item.ACCOUNT_HEAD_NAME || `ID: ${id}`
+          duplicates.push(name)
+        } else {
+          seen.add(id)
+        }
+      }
+      if (duplicates.length > 0) {
+        errors.ALLOWED_ACCOUNTS = `Same Accounts Name is not allowed to be submitted against one user (${duplicates.join(', ')}).`
+      }
+    }
   }
 
   return errors

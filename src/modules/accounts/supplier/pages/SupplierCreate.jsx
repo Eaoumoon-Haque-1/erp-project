@@ -140,8 +140,9 @@ function SupplierCreate() {
   return (
     <FormPage
       title={'Create Supplier'}
+      listTo={listPath}
       backTo={listPath}
-      backLabel={'Back to Supplier List'}
+      backLabel={'Back To List'}
       hideActions
     >
       <SupplierForm
@@ -154,7 +155,6 @@ function SupplierCreate() {
         submitLabel={'Save Supplier'}
         onChange={handleChange}
         onSubmit={handleSubmit}
-        onCancel={() => navigate(listPath)}
       />
     </FormPage>
   )

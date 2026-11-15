@@ -8,6 +8,7 @@
  * - Cheque Status (Not Use / Void / Used)
  * - Submit Button
  */
+import { useNavigate } from 'react-router-dom'
 import { CHEQUE_STATUS_OPTIONS } from '../validation/bankChequeMapValidation'
 
 function FieldError({ id, message }) {
@@ -60,7 +61,12 @@ function BankChequeMapForm({
   bankRef,
   onChange,
   onReset,
+  onCancel,
+  onCreateNew,
+  listTo = '/accounts/voucher-setup/bank-cheque-mapping',
+  createTo = '/accounts/voucher-setup/bank-cheque-mapping/create',
 }) {
+  const navigate = useNavigate()
   return (
     <div className={'space-y-4 text-xs sm:text-sm'}>
       <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>

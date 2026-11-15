@@ -20,6 +20,7 @@ import {
 } from '../validation/periodValidation'
 
 const listPath = '/accounts/voucher-setup/period'
+const openCreatePath = '/accounts/voucher-setup/period/open/create'
 
 function PeriodEdit() {
   const { periodId } = useParams()
@@ -241,6 +242,10 @@ function PeriodEdit() {
     <FormPage
       title={'Edit Acc. Period Open/Close'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={openCreatePath}
+      createLabel={'Create New'}
       tableName={AFM_PERIOD_TABLE}
       submitLabel={'Update'}
       hideActions
@@ -261,6 +266,10 @@ function PeriodEdit() {
         yearRef={yearRef}
         onChange={handleChange}
         onReset={handleReset}
+        onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(openCreatePath)}
+        listTo={listPath}
+        createTo={openCreatePath}
       />
     </FormPage>
   )

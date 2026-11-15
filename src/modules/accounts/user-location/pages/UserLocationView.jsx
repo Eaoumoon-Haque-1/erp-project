@@ -14,6 +14,7 @@ import { mapUserLocationFromApi } from '../data/userLocationApiMapper'
 import { initialUserLocationValues } from '../validation/userLocationValidation'
 
 const listPath = '/accounts/voucher-setup/user-location'
+const createPath = '/accounts/voucher-setup/user-location/create'
 
 function UserLocationView() {
   const { locationId } = useParams()
@@ -86,6 +87,17 @@ function UserLocationView() {
     <FormPage
       title={`User Location: ${values.LOCATION || ''}`}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
+      actions={[
+        {
+          label: 'Edit',
+          to: `${listPath}/${locationId}/edit`,
+          variant: 'primary',
+        },
+      ]}
       hideActions
     >
       <UserLocationForm
@@ -94,6 +106,7 @@ function UserLocationView() {
         readOnly={true}
         onEdit={() => navigate(`/accounts/voucher-setup/user-location/${locationId}/edit`)}
         onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
       />
     </FormPage>
   )

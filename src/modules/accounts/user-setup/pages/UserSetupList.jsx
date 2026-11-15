@@ -72,6 +72,20 @@ const columns = [
     ),
   },
   {
+    key: 'IS_ALL_ACC_HEAD_ALLOWED',
+    label: 'All Acc Head Allowed',
+    render: (value) => (
+      <span
+        className={[
+          'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none',
+          String(value) === '1' ? 'bg-teal-600 text-white' : 'bg-gray-400 text-white',
+        ].join(' ')}
+      >
+        {String(value) === '1' ? 'Allowed' : 'Not Allowed'}
+      </span>
+    ),
+  },
+  {
     key: 'STATUS',
     label: 'Status',
     render: (value) => (

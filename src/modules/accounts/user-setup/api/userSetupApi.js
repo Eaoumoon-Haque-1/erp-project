@@ -31,11 +31,12 @@ export const userSetupApi = {
    * Retrieves available users with employee mapping for dropdown.
    * @param {number|string} bgId
    * @param {number|string} buId
+   * @param {number|string} [currentUserId]
    */
-  getAvailableUsers: (bgId, buId) =>
+  getAvailableUsers: (bgId, buId, currentUserId) =>
     unwrapApiResponse(
       apiClient.get(`${RESOURCE_PATH}/available-users`, {
-        params: { bgId, buId },
+        params: { bgId, buId, currentUserId },
       }),
     ),
 }

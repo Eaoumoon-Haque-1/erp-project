@@ -20,6 +20,7 @@ import {
 } from '../validation/bankChequeMapValidation'
 
 const listPath = '/accounts/voucher-setup/bank-cheque-mapping'
+const createPath = '/accounts/voucher-setup/bank-cheque-mapping/create'
 
 function BankChequeMapEdit() {
   const { mappingId } = useParams()
@@ -233,6 +234,10 @@ function BankChequeMapEdit() {
     <FormPage
       title={'Bank Cheque Mapping'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
       tableName={AFM_BANK_CHEQUE_MAP_TABLE}
       submitLabel={'Update'}
       hideActions
@@ -251,6 +256,10 @@ function BankChequeMapEdit() {
         submitLabel={'Update'}
         submitting={submitting}
         onChange={handleChange}
+        onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
+        listTo={listPath}
+        createTo={createPath}
       />
     </FormPage>
   )

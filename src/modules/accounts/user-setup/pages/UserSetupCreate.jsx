@@ -11,6 +11,7 @@ import FormPage from '../../../../components/shared/FormPage'
 import { showError, showSuccess } from '../../../../components/shared/actionAlerts'
 import { afmLookupData } from '../../../../config/afmLookupData'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
+import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankApi } from '../../bank/api/bankApi'
 import { userLocationApi } from '../../user-location/api/userLocationApi'
@@ -41,28 +42,37 @@ function UserSetupCreate() {
   const [locationOptions, setLocationOptions] = useState([])
   const [bankAccountOptions, setBankAccountOptions] = useState([])
   const [costCenterOptions, setCostCenterOptions] = useState([])
+  const [chartOfAccountOptions, setChartOfAccountOptions] = useState([])
 
   const [usersLoading, setUsersLoading] = useState(Boolean(sessionBusinessUnitId))
   const [lookupsLoading, setLookupsLoading] = useState(Boolean(sessionBusinessUnitId))
   const [locationsLoading, setLocationsLoading] = useState(Boolean(sessionBusinessUnitId))
   const [bankAccountsLoading, setBankAccountsLoading] = useState(Boolean(sessionBusinessUnitId))
   const [costCentersLoading, setCostCentersLoading] = useState(Boolean(sessionGroupId))
+  const [coaLoading, setCoaLoading] = useState(false)
 
-  // Load available users
+  // Load available users (already entered users in AFM_USER_SETUP must not appear here)
   useEffect(() => {
     if (!sessionBusinessUnitId) return undefined
     let active = true
 
-    userSetupApi
-      .getAvailableUsers(sessionGroupId, sessionBusinessUnitId)
-      .then((data) => {
+    Promise.all([
+      userSetupApi.getAvailableUsers(sessionGroupId, sessionBusinessUnitId),
+      userSetupApi.list({ buId: sessionBusinessUnitId }).catch(() => []),
+    ])
+      .then(([users, setups]) => {
         if (!active) return
-        const opts = (data || []).map((u) => ({
-          value: String(u.userId),
-          label: u.displayLabel || `${u.userName} : ${u.employeeCode || '-'} : ${u.employeeName || '-'}`,
-          userName: u.userName,
-          code: u.employeeCode,
-        }))
+        const existingUserIds = new Set(
+          (setups || []).map((s) => String(s.userId || s.USER_ID || '')),
+        )
+        const opts = (users || [])
+          .filter((u) => !existingUserIds.has(String(u.userId)))
+          .map((u) => ({
+            value: String(u.userId),
+            label: u.displayLabel || `${u.userName} : ${u.employeeCode || '-'} : ${u.employeeName || '-'}`,
+            userName: u.userName,
+            code: u.employeeCode,
+          }))
         setUserOptions(opts)
       })
       .catch((err) => {
@@ -198,6 +208,47 @@ function UserSetupCreate() {
     }
   }, [sessionGroupId])
 
+  // Load chart of accounts (Active Accounts, status = 1, BG & BU wise)
+  useEffect(() => {
+    const buId = values.BU_ID || sessionBusinessUnitId
+    const bgId = values.BG_ID || sessionGroupId
+    if (!buId && !bgId) return undefined
+    let active = true
+    setCoaLoading(true)
+
+    afmChartOfAccountsApi
+      .list({ bgId: bgId || undefined, buId: buId || undefined, status: 1 })
+      .then((rows) => {
+        if (!active) return
+        const filtered = (rows || []).filter((r) => {
+          const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
+          const isActive = String(r.status ?? r.STATUS ?? '').trim()
+          return (
+            ledgerHead === 'active account' &&
+            (isActive === '1' || isActive === 'true' || isActive === '')
+          )
+        })
+        setChartOfAccountOptions(
+          filtered.map((r) => ({
+            value: String(r.id),
+            label: `${r.accountCode} - ${r.accountHeadName}`,
+            code: r.accountCode,
+            name: r.accountHeadName,
+          })),
+        )
+      })
+      .catch(() => {
+        if (active) setChartOfAccountOptions([])
+      })
+      .finally(() => {
+        if (active) setCoaLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [values.BU_ID, values.BG_ID, sessionBusinessUnitId, sessionGroupId])
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setValues((prev) => ({ ...prev, [name]: value }))
@@ -217,7 +268,7 @@ function UserSetupCreate() {
     const validationErrors = validateUserSetup(values)
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
-      showError('Please correct validation errors before submitting.')
+      showError(validationErrors.ALLOWED_ACCOUNTS || validationErrors.USER_ID || 'Please correct validation errors before submitting.')
       return
     }
 
@@ -251,8 +302,9 @@ function UserSetupCreate() {
   return (
     <FormPage
       title={'Add New User Setup'}
+      listTo={listPath}
       backTo={listPath}
-      backLabel={'Back to User Setup'}
+      backLabel={'Back to List'}
       hideActions
     >
       <UserSetupForm
@@ -263,11 +315,13 @@ function UserSetupCreate() {
         locationOptions={locationOptions}
         bankAccountOptions={bankAccountOptions}
         costCenterOptions={costCenterOptions}
+        chartOfAccountOptions={chartOfAccountOptions}
         usersLoading={usersLoading}
         lookupsLoading={lookupsLoading}
         locationsLoading={locationsLoading}
         bankAccountsLoading={bankAccountsLoading}
         costCentersLoading={costCentersLoading}
+        coaLoading={coaLoading}
         isEdit={false}
         readOnly={false}
         submitLabel={'Submit'}
@@ -276,6 +330,7 @@ function UserSetupCreate() {
         onMultiSelectChange={handleMultiSelectChange}
         onSubmit={handleSubmit}
         onReset={handleReset}
+        onCancel={() => navigate(listPath)}
       />
     </FormPage>
   )

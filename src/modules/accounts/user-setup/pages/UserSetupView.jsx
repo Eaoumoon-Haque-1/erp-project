@@ -11,6 +11,7 @@ import FormPage from '../../../../components/shared/FormPage'
 import { showError } from '../../../../components/shared/actionAlerts'
 import { afmLookupData } from '../../../../config/afmLookupData'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
+import { afmChartOfAccountsApi } from '../../afm-chart-of-accounts/api/afmChartOfAccountsApi'
 import { afmLookupApi } from '../../afm-lookup/api/afmLookupApi'
 import { bankApi } from '../../bank/api/bankApi'
 import { userLocationApi } from '../../user-location/api/userLocationApi'
@@ -21,6 +22,7 @@ import { mapUserSetupFromApi } from '../data/userSetupApiMapper'
 import { initialUserSetupValues } from '../validation/userSetupValidation'
 
 const listPath = '/accounts/voucher-setup/user-setup'
+const createPath = '/accounts/voucher-setup/user-setup/create'
 
 function UserSetupView() {
   const { setupId } = useParams()
@@ -38,6 +40,7 @@ function UserSetupView() {
   const [locationOptions, setLocationOptions] = useState([])
   const [bankAccountOptions, setBankAccountOptions] = useState([])
   const [costCenterOptions, setCostCenterOptions] = useState([])
+  const [chartOfAccountOptions, setChartOfAccountOptions] = useState([])
 
   useEffect(() => {
     let active = true
@@ -171,6 +174,42 @@ function UserSetupView() {
     }
   }, [values.BG_ID, sessionGroupId])
 
+  useEffect(() => {
+    const buId = values.BU_ID || sessionBusinessUnitId
+    const bgId = values.BG_ID || sessionGroupId
+    if (!buId && !bgId) return undefined
+    let active = true
+
+    afmChartOfAccountsApi
+      .list({ bgId: bgId || undefined, buId: buId || undefined, status: 1 })
+      .then((rows) => {
+        if (!active) return
+        const filtered = (rows || []).filter((r) => {
+          const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
+          const isActive = String(r.status ?? r.STATUS ?? '').trim()
+          return (
+            ledgerHead === 'active account' &&
+            (isActive === '1' || isActive === 'true' || isActive === '')
+          )
+        })
+        setChartOfAccountOptions(
+          filtered.map((r) => ({
+            value: String(r.id),
+            label: `${r.accountCode} - ${r.accountHeadName}`,
+            code: r.accountCode,
+            name: r.accountHeadName,
+          })),
+        )
+      })
+      .catch(() => {
+        if (active) setChartOfAccountOptions([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [values.BU_ID, values.BG_ID, sessionBusinessUnitId, sessionGroupId])
+
   if (loading) {
     return (
       <FormPage
@@ -190,6 +229,17 @@ function UserSetupView() {
     <FormPage
       title={'View User Setup'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
+      actions={[
+        {
+          label: 'Edit',
+          to: `${listPath}/${setupId}/edit`,
+          variant: 'primary',
+        },
+      ]}
       hideActions
     >
       <UserSetupForm
@@ -200,10 +250,12 @@ function UserSetupView() {
         locationOptions={locationOptions}
         bankAccountOptions={bankAccountOptions}
         costCenterOptions={costCenterOptions}
+        chartOfAccountOptions={chartOfAccountOptions}
         isEdit={true}
         readOnly={true}
         auditLog={auditLog}
         onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
         onEdit={() => navigate(`${listPath}/${setupId}/edit`)}
       />
     </FormPage>

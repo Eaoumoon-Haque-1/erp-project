@@ -56,7 +56,17 @@ export function mapUserSetupFromApi(record = {}) {
     COST_CENTER_DEFAULT: record.costCenterDefault != null ? String(record.costCenterDefault) : '',
     COST_CENTER_DEFAULT_NAME: record.costCenterDefaultName || '',
 
+    IS_ALL_ACC_HEAD_ALLOWED: record.isAllAccHeadAllowed != null ? String(record.isAllAccHeadAllowed) : '1',
     STATUS: record.status != null ? String(record.status) : '1',
+
+    ALLOWED_ACCOUNTS: (record.allowedAccounts || []).map((m) => ({
+      ID: m.id != null ? String(m.id) : '',
+      ACCOUNT_HEAD_ID: m.accountHeadId != null ? String(m.accountHeadId) : '',
+      ACCOUNT_CODE: m.accountCode || '',
+      ACCOUNT_HEAD_NAME: m.accountHeadName || '',
+      ACCOUNT_DISPLAY_LABEL: m.accountDisplayLabel || (m.accountCode ? `${m.accountCode} - ${m.accountHeadName}` : ''),
+      STATUS: m.status != null ? String(m.status) : '1',
+    })),
 
     // Audit details matching BankChequeMapForm audit schema
     CREATED_USER_ID: record.createdUserId != null ? String(record.createdUserId) : '',
@@ -89,7 +99,21 @@ export function mapUserSetupToApi(values = {}) {
     bankAccountDefault: values.BANK_ACCOUNT_DEFAULT ? String(values.BANK_ACCOUNT_DEFAULT).trim() : null,
     costCenter: arrayToCsv(values.COST_CENTER),
     costCenterDefault: values.COST_CENTER_DEFAULT ? String(values.COST_CENTER_DEFAULT).trim() : null,
+    isAllAccHeadAllowed:
+      values.IS_ALL_ACC_HEAD_ALLOWED !== undefined && values.IS_ALL_ACC_HEAD_ALLOWED !== ''
+        ? Number(values.IS_ALL_ACC_HEAD_ALLOWED)
+        : 0,
     status: values.STATUS !== undefined && values.STATUS !== '' ? Number(values.STATUS) : 1,
+    allowedAccounts: (values.ALLOWED_ACCOUNTS || [])
+      .filter((r) => r.ACCOUNT_HEAD_ID)
+      .map((r) => ({
+        id: r.ID || r.id ? Number(r.ID || r.id) : null,
+        bgId: values.BG_ID ? Number(values.BG_ID) : null,
+        buId: values.BU_ID ? Number(values.BU_ID) : null,
+        userId: values.USER_ID ? Number(values.USER_ID) : null,
+        accountHeadId: Number(r.ACCOUNT_HEAD_ID),
+        status: r.STATUS !== undefined && r.STATUS !== '' ? Number(r.STATUS) : 1,
+      })),
   }
 }
 

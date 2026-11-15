@@ -140,9 +140,12 @@ function AfmLookupEdit() {
     <FormPage
       title={'Lookup Type Edit'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back To List'}
+      createTo={`${listPath}/create`}
+      createLabel={'Create New'}
       tableName={AFM_LOOKUP_TYPE_TABLE}
       submitLabel={'Update'}
-      hideActions
       onSubmit={handleSubmit}
       onValidate={() => form.validate({
         BG_ID: sessionGroupId || form.values.BG_ID,

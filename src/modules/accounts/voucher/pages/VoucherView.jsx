@@ -28,6 +28,7 @@ import { mapVoucherFromApi } from '../data/voucherApiMapper'
 import { initialVoucherValues } from '../validation/voucherValidation'
 
 const listPath = '/accounts/voucher'
+const createPath = '/accounts/voucher/create'
 
 function VoucherView() {
   const { voucherId } = useParams()
@@ -444,6 +445,17 @@ function VoucherView() {
     <FormPage
       title={`Account Voucher: ${values.VOUCHER_NO || ''}`}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={createPath}
+      createLabel={'Create New'}
+      actions={[
+        {
+          label: 'Edit',
+          to: `${listPath}/${voucherId}/edit`,
+          variant: 'primary',
+        },
+      ]}
       hideActions
     >
       <VoucherForm
@@ -466,6 +478,7 @@ function VoucherView() {
         customerOptions={customerOptions}
         onEdit={() => navigate(`/accounts/voucher/${voucherId}/edit`)}
         onCancel={() => navigate(listPath)}
+        onCreateNew={() => navigate(createPath)}
       />
     </FormPage>
   )

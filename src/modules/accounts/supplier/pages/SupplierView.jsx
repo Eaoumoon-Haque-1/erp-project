@@ -19,6 +19,7 @@ function SupplierView() {
   const listPath = location.pathname.startsWith('/accounts/voucher-setup/supplier')
     ? '/accounts/voucher-setup/supplier'
     : '/accounts/supplier'
+  const createPath = `${listPath}/create`
 
   const [values, setValues] = useState(initialSupplierValues)
   const [auditLog, setAuditLog] = useState(null)
@@ -53,7 +54,7 @@ function SupplierView() {
       <FormPage
         title={'View Supplier'}
         backTo={listPath}
-        backLabel={'Back to Supplier List'}
+        backLabel={'Back To List'}
         hideActions
       >
         <div className={'p-8 text-center text-xs text-gray-500'}>
@@ -66,8 +67,18 @@ function SupplierView() {
   return (
     <FormPage
       title={`Supplier Information: ${values.SUPPLIER_NAME || values.SUPPLIER_CODE || ''}`}
+      listTo={listPath}
       backTo={listPath}
-      backLabel={'Back to Supplier List'}
+      backLabel={'Back To List'}
+      createTo={createPath}
+      createLabel={'Create New'}
+      actions={[
+        {
+          label: 'Edit',
+          to: `${listPath}/${supplierId}/edit`,
+          variant: 'primary',
+        },
+      ]}
       hideActions
     >
       <SupplierForm
@@ -78,7 +89,6 @@ function SupplierView() {
         auditLog={auditLog}
         editLabel={'Edit Supplier'}
         onEdit={() => navigate(`${listPath}/${supplierId}/edit`)}
-        onCancel={() => navigate(listPath)}
       />
     </FormPage>
   )

@@ -15,6 +15,7 @@
  *     - Period Status: Dropdown (Open / Close) showing database inserted data, changeable and saveable
  * - Group Name, Business Unit, and "is active ?" are excluded from the form.
  */
+import { useNavigate } from 'react-router-dom'
 import { PERIOD_STATUS_OPTIONS } from '../validation/periodValidation'
 
 function FieldError({ id, message }) {
@@ -67,7 +68,12 @@ function PeriodForm({
   yearRef,
   onChange,
   onReset,
+  onCancel,
+  onCreateNew,
+  listTo = '/accounts/voucher-setup/period',
+  createTo = '/accounts/voucher-setup/period/open/create',
 }) {
+  const navigate = useNavigate()
   const isEditMode = isEdit || mode === 'edit'
   const isOpenCreate = mode === 'open-create'
   const isCloseCreate = mode === 'close-create'

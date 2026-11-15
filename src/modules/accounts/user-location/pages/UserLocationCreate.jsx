@@ -128,6 +128,8 @@ function UserLocationCreate() {
     <FormPage
       title={'New User Location'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       submitLabel={'Save'}
       hideActions
       onSubmit={handleSubmit}

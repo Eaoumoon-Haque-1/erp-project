@@ -23,6 +23,7 @@ function SupplierEdit() {
   const listPath = location.pathname.startsWith('/accounts/voucher-setup/supplier')
     ? '/accounts/voucher-setup/supplier'
     : '/accounts/supplier'
+  const createPath = `${listPath}/create`
   const { session } = useAuth()
   const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
 
@@ -130,7 +131,7 @@ function SupplierEdit() {
       <FormPage
         title={'Edit Supplier Information'}
         backTo={listPath}
-        backLabel={'Back to Supplier List'}
+        backLabel={'Back To List'}
         hideActions
       >
         <div className={'p-8 text-center text-xs text-gray-500'}>
@@ -143,8 +144,11 @@ function SupplierEdit() {
   return (
     <FormPage
       title={`Edit Supplier Information: ${values.SUPPLIER_NAME || values.SUPPLIER_CODE || ''}`}
+      listTo={listPath}
       backTo={listPath}
-      backLabel={'Back to Supplier List'}
+      backLabel={'Back To List'}
+      createTo={createPath}
+      createLabel={'Create New'}
       hideActions
     >
       <SupplierForm
@@ -158,7 +162,6 @@ function SupplierEdit() {
         submitLabel={'Update Supplier'}
         onChange={handleChange}
         onSubmit={handleSubmit}
-        onCancel={() => navigate(listPath)}
       />
     </FormPage>
   )

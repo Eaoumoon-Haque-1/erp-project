@@ -17,12 +17,14 @@ import CustomerForm from '../components/CustomerForm'
 import { mapCustomerToApi } from '../data/customerApiMapper'
 import { initialCustomerValues, validateCustomer } from '../validation/customerValidation'
 
+const EMPTY_ARRAY = []
+
 function CustomerCreate() {
   const navigate = useNavigate()
   const location = useLocation()
-  const listPath = location.pathname.startsWith('/accounts/voucher-setup/customer')
+  const listPath = location.pathname.includes('/voucher-setup/customer')
     ? '/accounts/voucher-setup/customer'
-    : '/accounts/customer'
+    : (location.pathname.includes('/customer-info') ? '/accounts/customer-info' : '/accounts/customer')
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()
   const sessionBuId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
@@ -107,10 +109,13 @@ function CustomerCreate() {
       .then((res) => {
         if (!active) return
         if (res?.customerCode) {
-          setValues((prev) => ({
-            ...prev,
-            CUSTOMER_CODE: prev.CUSTOMER_CODE || res.customerCode,
-          }))
+          setValues((prev) => {
+            if (prev.CUSTOMER_CODE) return prev
+            return {
+              ...prev,
+              CUSTOMER_CODE: res.customerCode,
+            }
+          })
         }
       })
       .catch(() => {
@@ -124,21 +129,32 @@ function CustomerCreate() {
 
   // Update session IDs and resolve BG_ID from BU if needed
   useEffect(() => {
-    setValues((prev) => ({
-      ...prev,
-      BG_ID: sessionGroupId || prev.BG_ID,
-      BU_ID: sessionBuId || prev.BU_ID,
-    }))
+    setValues((prev) => {
+      const nextBg = sessionGroupId || prev.BG_ID
+      const nextBu = sessionBuId || prev.BU_ID
+      if (prev.BG_ID === nextBg && prev.BU_ID === nextBu) {
+        return prev
+      }
+      return {
+        ...prev,
+        BG_ID: nextBg,
+        BU_ID: nextBu,
+      }
+    })
 
     if (!sessionGroupId && sessionBuId) {
       businessUnitsApi
         .get(sessionBuId)
         .then((bu) => {
           if (bu?.bgId) {
-            setValues((prev) => ({
-              ...prev,
-              BG_ID: String(bu.bgId),
-            }))
+            setValues((prev) => {
+              const strBg = String(bu.bgId)
+              if (prev.BG_ID === strBg) return prev
+              return {
+                ...prev,
+                BG_ID: strBg,
+              }
+            })
           }
         })
         .catch(() => {})
@@ -249,14 +265,16 @@ function CustomerCreate() {
   return (
     <FormPage
       title={'Create Customer'}
+      listTo={listPath}
       backTo={listPath}
-      backLabel={'Back to Customer List'}
+      backLabel={'Back To List'}
       hideActions
     >
       <CustomerForm
         values={values}
         errors={errors}
         paymentTermsOptions={paymentTermsOptions}
+        agreements={EMPTY_ARRAY}
         submitting={submitting}
         submitLabel={'Save Customer'}
         onChange={handleChange}

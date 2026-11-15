@@ -5,7 +5,16 @@
  */
 import { Link } from "react-router-dom";
 
-function PageHeader({ title, subtitle, actionLabel, actionTo, actions = [] }) {
+function PageHeader({
+  title,
+  subtitle,
+  actionLabel,
+  actionTo,
+  actionVariant = "primary",
+  actions = [],
+}) {
+  const displayActionLabel = actionLabel === "List" ? "Back to List" : actionLabel;
+
   return (
     <header className={"erp-form-header"}>
       <div>
@@ -15,8 +24,15 @@ function PageHeader({ title, subtitle, actionLabel, actionTo, actions = [] }) {
 
       <div className={"erp-header-actions flex items-center gap-3"}>
         {actionLabel && actionTo && (
-          <Link className={"primary-button"} to={actionTo}>
-            {actionLabel}
+          <Link
+            className={
+              actionVariant === "secondary"
+                ? "secondary-button"
+                : "primary-button"
+            }
+            to={actionTo}
+          >
+            {displayActionLabel}
           </Link>
         )}
 
@@ -33,6 +49,7 @@ function PageHeader({ title, subtitle, actionLabel, actionTo, actions = [] }) {
                         : "primary-button"
                     }
                     to={action.to}
+                    onClick={action.onClick}
                   >
                     {action.label}
                   </Link>

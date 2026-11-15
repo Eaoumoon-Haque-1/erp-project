@@ -201,6 +201,8 @@ function BankChequeMapCreate() {
     <FormPage
       title={'Bank Cheque Mapping'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       tableName={AFM_BANK_CHEQUE_MAP_TABLE}
       submitLabel={'Submit'}
       hideActions
@@ -221,6 +223,8 @@ function BankChequeMapCreate() {
         bankRef={bankRef}
         onChange={handleChange}
         onReset={handleReset}
+        onCancel={() => navigate(listPath)}
+        listTo={listPath}
       />
     </FormPage>
   )

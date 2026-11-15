@@ -19,9 +19,10 @@ function CustomerEdit() {
   const { customerId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const listPath = location.pathname.startsWith('/accounts/voucher-setup/customer')
+  const listPath = location.pathname.includes('/voucher-setup/customer')
     ? '/accounts/voucher-setup/customer'
-    : '/accounts/customer'
+    : (location.pathname.includes('/customer-info') ? '/accounts/customer-info' : '/accounts/customer')
+  const createPath = `${listPath}/create`
 
   const [values, setValues] = useState(initialCustomerValues)
   const [auditLog, setAuditLog] = useState(null)
@@ -199,8 +200,11 @@ function CustomerEdit() {
   return (
     <FormPage
       title={`Edit Customer Information: ${values.CUSTOMER_NAME || values.CUSTOMER_CODE || ''}`}
+      listTo={listPath}
       backTo={listPath}
-      backLabel={'Back to Customer List'}
+      backLabel={'Back To List'}
+      createTo={createPath}
+      createLabel={'Create New'}
       hideActions
     >
       <CustomerForm
@@ -229,7 +233,6 @@ function CustomerEdit() {
               .catch(() => {})
           }
         }}
-        onCancel={() => navigate(listPath)}
       />
     </FormPage>
   )

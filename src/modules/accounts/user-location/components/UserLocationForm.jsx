@@ -59,6 +59,7 @@ function UserLocationForm({
   onReset,
   onEdit,
   onCancel,
+  onCreateNew,
 }) {
   const formId = useId()
 
@@ -142,33 +143,6 @@ function UserLocationForm({
         </div>
 
         {/* Buttons / Actions placed above Audit Log */}
-        {readOnly && (
-          <div className={'flex items-center gap-2 pt-2'}>
-            {onCancel && (
-              <button
-                type={'button'}
-                onClick={onCancel}
-                className={
-                  'px-4 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded shadow-xs transition-colors'
-                }
-              >
-                Back to List
-              </button>
-            )}
-            {onEdit && (
-              <button
-                type={'button'}
-                onClick={onEdit}
-                className={
-                  'inline-flex items-center px-4 py-1.5 text-xs font-semibold rounded bg-[#038b8d] hover:bg-[#027577] text-white shadow-xs focus:outline-none transition-colors'
-                }
-              >
-                Edit Location
-              </button>
-            )}
-          </div>
-        )}
-
         {!readOnly && isEdit && (
           <div className={'flex items-center gap-2 pt-2'}>
             {onReset && (

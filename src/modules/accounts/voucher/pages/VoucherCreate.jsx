@@ -217,7 +217,7 @@ function VoucherCreate() {
 
   const [paymentTypeOptions, setPaymentTypeOptions] = useState([])
   const [throughOptions, setThroughOptions] = useState([])
-  const [coaOptions, setCoaOptions] = useState([])
+  const [rawCoaList, setRawCoaList] = useState([])
   const [employeeOptions, setEmployeeOptions] = useState([])
   const [supplierOptions, setSupplierOptions] = useState([])
   const [customerOptions, setCustomerOptions] = useState([])
@@ -380,27 +380,10 @@ function VoucherCreate() {
       .list({ buId: sessionBuId, status: 1 })
       .then((rows) => {
         if (!active) return
-        const filtered = (rows || []).filter((r) => {
-          const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
-          const isActive = String(r.status ?? r.STATUS ?? '').trim()
-          return (
-            ledgerHead === 'active account' &&
-            (isActive === '1' || isActive === 'true' || isActive === '')
-          )
-        })
-        setCoaOptions(
-          filtered.map((r) => ({
-            value: String(r.id),
-            label: `${r.accountCode} - ${r.accountHeadName}`,
-            code: r.accountCode,
-            name: r.accountHeadName,
-            source: r.accountsSource || r.source || 'None',
-            accountsSource: r.accountsSource || r.source || 'None',
-          })),
-        )
+        setRawCoaList(rows || [])
       })
       .catch(() => {
-        if (active) setCoaOptions([])
+        if (active) setRawCoaList([])
       })
 
     // Bank Accounts: only active
@@ -551,6 +534,35 @@ function VoucherCreate() {
 
   // Filter options and date limits as per User Setup
   const voucherDateLimits = useMemo(() => getVoucherDateLimits(userSetup), [userSetup])
+
+  const coaOptions = useMemo(() => {
+    const isAllAllowed = !userSetup || String(userSetup.IS_ALL_ACC_HEAD_ALLOWED) === '1'
+    const allowedSet = new Set(
+      (userSetup?.ALLOWED_ACCOUNTS || [])
+        .filter((a) => String(a.STATUS) === '1' && a.ACCOUNT_HEAD_ID)
+        .map((a) => String(a.ACCOUNT_HEAD_ID)),
+    )
+
+    const filtered = (rawCoaList || []).filter((r) => {
+      const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
+      const isActive = String(r.status ?? r.STATUS ?? '').trim()
+      const isLedgerActive =
+        ledgerHead === 'active account' &&
+        (isActive === '1' || isActive === 'true' || isActive === '')
+      if (!isLedgerActive) return false
+      if (isAllAllowed) return true
+      return allowedSet.has(String(r.id))
+    })
+
+    return filtered.map((r) => ({
+      value: String(r.id),
+      label: `${r.accountCode} - ${r.accountHeadName}`,
+      code: r.accountCode,
+      name: r.accountHeadName,
+      source: r.accountsSource || r.source || 'None',
+      accountsSource: r.accountsSource || r.source || 'None',
+    }))
+  }, [rawCoaList, userSetup])
 
   const voucherTypeOptions = useMemo(() => {
     if (!userSetup?.VOUCHER_TYPE || userSetup.VOUCHER_TYPE.length === 0) {
@@ -936,6 +948,8 @@ function VoucherCreate() {
     <FormPage
       title={'New Account Voucher'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       submitLabel={'Submit'}
       hideActions
       onSubmit={handleSubmit}
