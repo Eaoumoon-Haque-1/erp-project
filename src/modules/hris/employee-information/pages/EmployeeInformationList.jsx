@@ -9,10 +9,16 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { employeesApi } from '../api/employeeApi'
+import EmployeeAvatar from '../components/EmployeeAvatar'
 import { mapEmployeeListFromApi } from '../data/employeeApiMapper'
 import { createEmployeeReferenceNames, loadEmployeeReferences } from '../data/employeeReferences'
 
 const columns = [
+  {
+    key: 'PHOTO_CELL',
+    label: 'Photo',
+    render: (_value, row) => <EmployeeAvatar name={row.EMPLOYEE_NAME} photo={row.PHOTO} />,
+  },
   { key: 'EMPLOYEE_ID', label: 'Employee ID' },
   { key: 'EMPLOYEE_NAME', label: 'Employee Name' },
   { key: 'DEPARTMENT_NAME', label: 'Department' },

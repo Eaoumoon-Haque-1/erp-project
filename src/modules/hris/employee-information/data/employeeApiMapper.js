@@ -103,6 +103,10 @@ export function mapEmployeeListFromApi(record = {}, names = {}) {
     ID: text(record.id),
     EMPLOYEE_ID: record.employeeCode ?? '',
     EMPLOYEE_NAME: record.employeeName ?? '',
+    PHOTO: record.photo ?? null,
+    // Empty on purpose: the Photo column renders from PHOTO, and an empty value
+    // keeps the photo URL out of the list search.
+    PHOTO_CELL: '',
     BUSINESS_UNIT_ID: text(record.buId),
     BUSINESS_UNIT_NAME: names.businessUnits?.get(text(record.buId)) || '',
     DEPARTMENT_ID: text(record.deptId),

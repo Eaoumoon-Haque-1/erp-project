@@ -3,12 +3,18 @@
  * Sections: local display/interaction helpers and the exported controlled component.
  * Keep page navigation and API persistence in the owning page unless this component is the workflow boundary.
  */
+import { useState } from 'react'
+
 function EmployeePhotoField({ previewUrl, error, inputRef, onChange, readOnly = false }) {
+  // A URL that fails to load falls back to the placeholder instead of a broken image.
+  const [failedUrl, setFailedUrl] = useState('')
+  const showImage = previewUrl && failedUrl !== previewUrl
+
   return (
     <div className={'erp-employee-photo-field'}>
       <span className={'erp-field-label'}>Employee's Photo</span>
       <div className={'erp-employee-photo-preview'}>
-        {previewUrl ? <img src={previewUrl} alt={'Selected employee'} /> : (
+        {showImage ? <img src={previewUrl} alt={'Selected employee'} onError={() => setFailedUrl(previewUrl)} /> : (
           <div className={'erp-photo-placeholder'} aria-label={'No employee photo selected'}>
             <svg viewBox={'0 0 64 64'} aria-hidden={'true'}>
               <rect x={'11'} y={'9'} width={'42'} height={'46'} rx={'4'} />
