@@ -1,6 +1,10 @@
+import { API_BASE_URL } from '../api/client'
+
 /**
  * Shared helpers for image fields backed by JSON string columns.
  * New files are sent as data URLs; existing API strings pass through unchanged.
+ * Employee photos are different: they are uploaded and stored as a relative
+ * /uploads/... URL, which getImageSource resolves against the API server.
  */
 export const IMAGE_FILE_ACCEPT =
   '.jpg,.jpeg,.png,.svg,image/jpeg,image/png,image/svg+xml'
@@ -33,6 +37,15 @@ export function getImageSource(value) {
   if (!source) return ''
 
   if (/^(data:image\/|https?:\/\/|blob:)/i.test(source)) return source
+
+  // Uploaded files are served by the backend, not by the frontend host.
+  if (source.startsWith('/uploads/')) {
+    try {
+      return `${new URL(API_BASE_URL).origin}${source}`
+    } catch {
+      return source
+    }
+  }
 
   const compactSource = source.replace(/\s/g, '')
   if (/^[A-Za-z0-9+/]+={0,2}$/.test(compactSource) && compactSource.length >= 32) {

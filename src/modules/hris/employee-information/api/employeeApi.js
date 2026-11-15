@@ -19,6 +19,12 @@ export const employeesApi = {
   create: (payload) => unwrap(apiClient.post(employeePath, payload)),
   update: (id, payload) => unwrap(apiClient.put(`${employeePath}/${id}`, payload)),
   remove: (id) => unwrap(apiClient.delete(`${employeePath}/${id}`)),
+  // Uploads the image file; the response is { url }, the only thing stored on the employee.
+  uploadPhoto: (file) => {
+    const body = new FormData()
+    body.append('file', file)
+    return unwrap(apiClient.post('/files/employee-photos', body))
+  },
   updateStatus: (id, status) => unwrap(apiClient.patch(
     `${employeePath}/${id}/status`,
     null,

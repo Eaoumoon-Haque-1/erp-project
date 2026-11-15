@@ -1,5 +1,5 @@
 /** @file Maps the existing Employee Information UI to the live Employee/Profile API contracts. */
-import { fileToDataUrl } from '../../../../utils/imageDataUrl'
+import { employeesApi } from '../api/employeeApi'
 import {
   createCertificationRow,
   createEducationRow,
@@ -114,6 +114,16 @@ export function mapEmployeeListFromApi(record = {}, names = {}) {
   }
 }
 
+// A newly selected File is uploaded first and replaced by its stored URL; an
+// existing URL (edit without changing the photo) is sent back unchanged.
+async function photoToApi(photo) {
+  if (photo instanceof File) {
+    const { url } = await employeesApi.uploadPhoto(photo)
+    return url
+  }
+  return photo || null
+}
+
 export async function mapEmployeeToApi(values, businessUnits = []) {
   const unit = businessUnits.find((item) => String(item.id) === String(values.BUSINESS_UNIT_ID))
   return {
@@ -121,7 +131,7 @@ export async function mapEmployeeToApi(values, businessUnits = []) {
     buId: numberOrNull(values.BUSINESS_UNIT_ID),
     employeeName: values.EMPLOYEE_NAME,
     employeeCode: values.EMPLOYEE_ID,
-    photo: await fileToDataUrl(values.PHOTO),
+    photo: await photoToApi(values.PHOTO),
     deptId: numberOrNull(values.DEPARTMENT_ID),
     desigId: numberOrNull(values.DESIGNATION_ID),
     employmentTypeId: numberOrNull(values.EMPLOYMENT_TYPE_ID),
