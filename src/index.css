@@ -1953,6 +1953,26 @@
     text-align: center;
   }
 
+  .erp-employee-avatar {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-app-border);
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+  }
+
+  .erp-employee-avatar-fallback {
+    background: var(--color-pagination-surface);
+    color: var(--color-app-muted);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
   .erp-photo-placeholder svg {
     width: 92px;
     height: 92px;
