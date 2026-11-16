@@ -850,6 +850,11 @@ function VoucherForm({
                               options={coaOptions}
                               placeholder={'-- Select or Write Account --'}
                               error={Boolean(rowErr.coaId)}
+                              fallbackDisplay={
+                                row.accountCode && row.accountHeadName
+                                  ? `${row.accountCode} - ${row.accountHeadName}`
+                                  : row.accountHeadName || row.accountCode || ''
+                              }
                               onChange={(val, opt) => {
                                 onDetailChange(index, 'coaId', val)
                                 if (opt?.name) {

@@ -204,9 +204,9 @@ function VoucherEdit() {
   const [rawBankAccounts, setRawBankAccounts] = useState([])
   const [rawCostCenters, setRawCostCenters] = useState([])
 
+  const [rawCoaList, setRawCoaList] = useState([])
   const [paymentTypeOptions, setPaymentTypeOptions] = useState([])
   const [throughOptions, setThroughOptions] = useState([])
-  const [coaOptions, setCoaOptions] = useState([])
   const [employeeOptions, setEmployeeOptions] = useState([])
   const [supplierOptions, setSupplierOptions] = useState([])
   const [customerOptions, setCustomerOptions] = useState([])
@@ -441,51 +441,10 @@ function VoucherEdit() {
       .list({ buId: activeBuId, status: 1 })
       .then((rows) => {
         if (!active) return
-        const isAllAllowed = !userSetup || String(userSetup.IS_ALL_ACC_HEAD_ALLOWED) === '1'
-        const allowedSet = new Set(
-          (userSetup?.ALLOWED_ACCOUNTS || [])
-            .filter((a) => String(a.STATUS) === '1' && a.ACCOUNT_HEAD_ID)
-            .map((a) => String(a.ACCOUNT_HEAD_ID)),
-        )
-
-        const filtered = (rows || []).filter((r) => {
-          const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
-          const isActive = String(r.status ?? r.STATUS ?? '').trim()
-          const isLedgerActive =
-            ledgerHead === 'active account' &&
-            (isActive === '1' || isActive === 'true' || isActive === '')
-          if (!isLedgerActive) return false
-          if (isAllAllowed) return true
-          return allowedSet.has(String(r.id))
-        })
-        const mappedCoa = filtered.map((r) => ({
-          value: String(r.id),
-          label: `${r.accountCode} - ${r.accountHeadName}`,
-          code: r.accountCode,
-          name: r.accountHeadName,
-          source: r.accountsSource || r.source || 'None',
-          accountsSource: r.accountsSource || r.source || 'None',
-        }))
-        setCoaOptions(mappedCoa)
-
-        setDetails((prev) =>
-          prev.map((row) => {
-            if (!row.coaSourceType || row.coaSourceType === 'None') {
-              const matched = mappedCoa.find((c) => String(c.value) === String(row.coaId))
-              if (matched) {
-                return {
-                  ...row,
-                  coaSourceType: matched.source,
-                  accountsSource: matched.source,
-                }
-              }
-            }
-            return row
-          }),
-        )
+        setRawCoaList(rows || [])
       })
       .catch(() => {
-        if (active) setCoaOptions([])
+        if (active) setRawCoaList([])
       })
 
     // Bank Accounts: active
@@ -701,6 +660,56 @@ function VoucherEdit() {
         existingDeptIds.has(String(cc.value)),
     )
   }, [rawCostCenters, userSetup, details])
+
+  const coaOptions = useMemo(() => {
+    const isAllAllowed = !userSetup || String(userSetup.IS_ALL_ACC_HEAD_ALLOWED) === '1'
+    const allowedSet = new Set(
+      (userSetup?.ALLOWED_ACCOUNTS || [])
+        .filter((a) => String(a.STATUS) === '1' && a.ACCOUNT_HEAD_ID)
+        .map((a) => String(a.ACCOUNT_HEAD_ID)),
+    )
+
+    const filtered = (rawCoaList || []).filter((r) => {
+      const ledgerHead = String(r.ledgerHead || r.LEDGER_HEAD || '').trim().toLowerCase()
+      const isActive = String(r.status ?? r.STATUS ?? '').trim()
+      const isLedgerActive =
+        ledgerHead === 'active account' &&
+        (isActive === '1' || isActive === 'true' || isActive === '')
+      if (!isLedgerActive) return false
+      if (isAllAllowed) return true
+      return allowedSet.has(String(r.id))
+    })
+
+    return filtered.map((r) => ({
+      value: String(r.id),
+      label: `${r.accountCode} - ${r.accountHeadName}`,
+      code: r.accountCode,
+      name: r.accountHeadName,
+      source: r.accountsSource || r.source || 'None',
+      accountsSource: r.accountsSource || r.source || 'None',
+    }))
+  }, [rawCoaList, userSetup])
+
+  // Sync detail row sources when rawCoaList becomes available
+  useEffect(() => {
+    if (!rawCoaList || rawCoaList.length === 0) return
+    setDetails((prev) =>
+      prev.map((row) => {
+        if (!row.coaSourceType || row.coaSourceType === 'None') {
+          const matched = rawCoaList.find((c) => String(c.id) === String(row.coaId))
+          if (matched) {
+            const src = matched.accountsSource || matched.source || 'None'
+            return {
+              ...row,
+              coaSourceType: src,
+              accountsSource: src,
+            }
+          }
+        }
+        return row
+      }),
+    )
+  }, [rawCoaList])
 
   // Payment Types & Mappings: depend on selected Voucher Type
   useEffect(() => {

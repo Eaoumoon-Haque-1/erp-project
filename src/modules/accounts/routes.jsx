@@ -36,6 +36,10 @@ import VoucherList from './voucher/pages/VoucherList'
 import VoucherCreate from './voucher/pages/VoucherCreate'
 import VoucherEdit from './voucher/pages/VoucherEdit'
 import VoucherView from './voucher/pages/VoucherView'
+import LedgerList from './ledger/pages/LedgerList'
+import LedgerCreate from './ledger/pages/LedgerCreate'
+import LedgerEdit from './ledger/pages/LedgerEdit'
+import LedgerView from './ledger/pages/LedgerView'
 import UserLocationCreate from './user-location/pages/UserLocationCreate'
 import UserLocationEdit from './user-location/pages/UserLocationEdit'
 import UserLocationList from './user-location/pages/UserLocationList'
@@ -254,4 +258,14 @@ export const accountsRoutes = [
   { path: 'accounts/voucher-setup/voucher/create', element: <VoucherCreate /> },
   { path: 'accounts/voucher-setup/voucher/:voucherId/edit', element: <VoucherEdit /> },
   { path: 'accounts/voucher-setup/voucher/:voucherId/view', element: <VoucherView /> },
+
+  // Accounts Ledger (AFM_LEDGER, AFM_LEDGER_DETAIL, AFM_LEDGER_ATTACH)
+  { path: 'accounts/ledger', element: <LedgerList /> },
+  { path: 'accounts/ledger/create', element: <LedgerCreate /> },
+  { path: 'accounts/ledger/:ledgerId/edit', element: <LedgerEdit /> },
+  { path: 'accounts/ledger/:ledgerId/view', element: <LedgerView /> },
+  { path: 'accounts/ledgers', element: <LedgerList /> },
+  { path: 'accounts/ledgers/create', element: <LedgerCreate /> },
+  { path: 'accounts/ledgers/:ledgerId/edit', element: <LedgerEdit /> },
+  { path: 'accounts/ledgers/:ledgerId/view', element: <LedgerView /> },
 ]

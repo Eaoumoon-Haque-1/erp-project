@@ -4,6 +4,7 @@ export const accountsMenu = [{
   key: 'accounts',
   children: [
     { label: 'Account Voucher', key: 'afm-voucher', path: '/accounts/voucher' },
+    { label: 'Accounts Ledger', key: 'afm-ledger', path: '/accounts/ledger' },
     {
       label: 'Voucher Setup',
       key: 'voucher-setup',
