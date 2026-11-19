@@ -3,4 +3,5 @@ export const afmLookupData = {
     voucherType: "VT001",
     paymentThrough: "PTH001",
     paymentType: "PT001",
+    depreciationMethod: "DM001",
 };

@@ -111,13 +111,25 @@ function AssetItemInformationCreate() {
     <FormPage
       title={'Asset Item Information Create'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       tableName={ASSET_ITEM_TABLE}
+      submitLabel={'Save'}
+      hideActions
       onSubmit={handleSubmit}
       onReset={handleReset}
       message={message}
       submitting={submitting}
     >
-      <AssetItemInformationForm values={values} errors={errors} references={references} itemNameRef={itemNameRef} onChange={handleChange} />
+      <AssetItemInformationForm
+        values={values}
+        errors={errors}
+        references={references}
+        submitLabel={'Save'}
+        submitting={submitting}
+        itemNameRef={itemNameRef}
+        onChange={handleChange}
+      />
     </FormPage>
   )
 }

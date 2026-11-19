@@ -14,11 +14,6 @@ export const assetMenu = [
             path: '/asset/asset-lookup-type',
           },
           {
-            label: 'Asset Lookup Value',
-            key: 'asset-lookup-value',
-            path: '/asset/asset-lookup-value',
-          },
-          {
             label: 'Asset Group',
             key: 'asset-group',
             path: '/asset/asset-group',

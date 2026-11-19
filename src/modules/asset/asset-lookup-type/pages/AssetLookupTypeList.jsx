@@ -1,51 +1,55 @@
-/** @file API-backed list controller for Asset Lookup Type records. */
-import { useEffect, useState } from 'react'
+/**
+ * @file Asset Lookup Type List page.
+ * Displays lookup types of the logged-in user's Business Unit with search filters, lookup value counts, and row actions.
+ * Matches AFM Lookup Type List page design and UX.
+ */
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
+import { failActiveAction } from '../../../../components/shared/actionAlerts'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
 import { assetLookupTypesApi } from '../api/assetLookupTypeApi'
-import {
-  mapAssetLookupTypeFromApi,
-  mapAssetLookupTypeToApi,
-} from '../data/assetLookupTypeApiMapper'
+import { mapAssetLookupTypeFromApi, mapAssetLookupTypeToApi } from '../data/assetLookupTypeApiMapper'
 
-const filters = [
-  {
-    key: 'TYPE_NAME',
-    label: 'Search by Lookup Type Name',
-    placeholder: '--Search by Lookup Type Name--',
-    matches: (row, value) => String(row.TYPE_NAME ?? '').toLowerCase().includes(value.toLowerCase()),
-  },
-  {
-    key: 'CODE',
-    label: 'Search by Lookup Type Code',
-    placeholder: '--Search by Lookup Type Code--',
-    matches: (row, value) => String(row.CODE ?? '').toLowerCase().includes(value.toLowerCase()),
-  },
-  {
-    key: 'STATUS',
-    label: 'Search by Status',
-    placeholder: '--Search by Status--',
-    options: [
-      { label: 'Active', value: '1' },
-      { label: 'Inactive', value: '0' },
-    ],
-  },
-]
+const listPath = '/asset/asset-lookup-type'
+const createPath = '/asset/asset-lookup-type/create'
 
 const columns = [
-  { key: 'TYPE_NAME', label: 'Lookup Type Name' },
-  { key: 'CODE', label: 'Lookup Type Code', render: (value) => value || 'N/A' },
+  { key: 'TYPE_NAME', label: 'Lookup Type' },
+  {
+    key: 'TYPE_CODE',
+    label: 'Lookup Code',
+    render: (value) => (
+      <span className={'font-mono text-xs font-semibold text-gray-700'}>
+        {value || '-'}
+      </span>
+    ),
+  },
+  { key: 'BUSINESS_UNIT', label: 'Business Unit' },
+  {
+    key: 'ACTIVE_VALUE_COUNT',
+    label: 'Lookup Values',
+    render: (value, row) => (
+      <span className={'inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700'}>
+        <span className={'w-1.5 h-1.5 rounded-full bg-teal-500'} />
+        {value || 0} active / {row.VALUE_COUNT || 0} total
+      </span>
+    ),
+  },
   {
     key: 'STATUS',
     label: 'Status',
     render: (value) => (
-      <span className={[
-        'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
-        String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
-      ].join(' ')}>
+      <span
+        className={[
+          'inline-flex rounded-[5px] px-[6px] py-[3px] text-xs font-bold leading-none text-white shadow-xs',
+          String(value) === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
+        ].join(' ')}
+      >
         {String(value) === '1' ? 'Active' : 'Inactive'}
       </span>
     ),
@@ -55,67 +59,151 @@ const columns = [
 function AssetLookupTypeList() {
   const navigate = useNavigate()
   const { session } = useAuth()
-  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const sessionGroupId = String(session?.bgId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? '').trim()
   const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(Boolean(sessionBusinessUnitId))
 
   useEffect(() => {
+    if (!sessionBusinessUnitId) return undefined
+
     let active = true
-    assetLookupTypesApi.list(sessionBusinessUnitId)
-      .then((records) => {
-        if (active) setRows(records.map(mapAssetLookupTypeFromApi))
+
+    Promise.all([
+      assetLookupTypesApi.list(sessionBusinessUnitId),
+      businessGroupsApi.list().catch(() => []),
+      businessUnitsApi.list().catch(() => []),
+    ])
+      .then(([types, groups, units]) => {
+        if (!active) return
+        const groupMap = new Map(groups.map((g) => [String(g.id), g.groupName]))
+        const unitMap = new Map(units.map((u) => [String(u.id), u.businessUnit]))
+        const scopedTypes = (types || []).filter((type) => {
+          if (String(type.buId ?? type.BU_ID ?? '') !== sessionBusinessUnitId) return false
+          const typeBgId = String(type.bgId ?? type.BG_ID ?? '')
+          if (sessionGroupId && typeBgId && typeBgId !== sessionGroupId) return false
+          return true
+        })
+        setRows(scopedTypes.map((type) => mapAssetLookupTypeFromApi(type, groupMap, unitMap)))
       })
       .catch((error) => {
-        if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Lookup Types.'))
+        if (active) getApiErrorMessage(error, 'Unable to load Asset Lookup Type records.')
       })
       .finally(() => {
         if (active) setLoading(false)
       })
-    return () => { active = false }
-  }, [sessionBusinessUnitId])
+
+    return () => {
+      active = false
+    }
+  }, [sessionBusinessUnitId, sessionGroupId])
+
+  // Distinct Lookup Type names for the searchable dropdown filter
+  const lookupTypeOptions = useMemo(() => {
+    const map = new Map()
+    rows.forEach((row) => {
+      const name = String(row.TYPE_NAME ?? '').trim()
+      if (name && !map.has(name.toLowerCase())) {
+        map.set(name.toLowerCase(), { value: name, label: name })
+      }
+    })
+    return Array.from(map.values())
+  }, [rows])
+
+  const filters = useMemo(
+    () => [
+      {
+        key: 'TYPE_NAME',
+        label: 'Search by Lookup Type',
+        placeholder: '--Search by Lookup Type--',
+        options: lookupTypeOptions,
+        searchable: true,
+        matches: (row, value) => {
+          const query = String(value ?? '').trim().toLowerCase()
+          if (!query) return true
+          return String(row.TYPE_NAME ?? '').toLowerCase().includes(query)
+        },
+      },
+      {
+        key: 'TYPE_CODE',
+        label: 'Search by Lookup Code',
+        placeholder: 'Search by Lookup Code',
+        matches: (row, value) => {
+          const query = String(value ?? '').trim().toLowerCase()
+          if (!query) return true
+          return String(row.TYPE_CODE ?? '').toLowerCase().includes(query)
+        },
+      },
+      {
+        key: 'STATUS',
+        label: 'Search by Status',
+        placeholder: '--Search by Status--',
+        options: [
+          { label: 'Active', value: '1' },
+          { label: 'Inactive', value: '0' },
+        ],
+      },
+    ],
+    [lookupTypeOptions],
+  )
 
   const handleDelete = async (row) => {
+    if (row.HAS_IN_USE_VALUES) {
+      const msg = 'Cannot delete this Lookup Type because one or more of its Lookup Values are already in use.'
+      failActiveAction(msg)
+      return false
+    }
     try {
       await assetLookupTypesApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to delete Asset Lookup Type.'))
+      const msg = getApiErrorMessage(error, 'Unable to delete Asset Lookup Type.')
+      failActiveAction(msg)
+      return false
     }
   }
 
   const handleStatusChange = async (row) => {
     try {
+      const current = mapAssetLookupTypeFromApi(await assetLookupTypesApi.get(row.ID))
+      const nextStatus = current.STATUS === '1' ? '0' : '1'
       const updated = await assetLookupTypesApi.update(
         row.ID,
-        mapAssetLookupTypeToApi({
-          ...row,
-          STATUS: row.STATUS === '1' ? '0' : '1',
-        }),
+        mapAssetLookupTypeToApi(
+          { ...current, STATUS: nextStatus },
+          current.LOOKUP_VALUES,
+          {
+            bgId: sessionGroupId || current.BG_ID,
+            buId: sessionBusinessUnitId || current.BU_ID,
+          },
+        ),
       )
-      setRows((current) => current.map((item) => (
-        item.ID === row.ID ? mapAssetLookupTypeFromApi(updated) : item
-      )))
+      setRows((items) =>
+        items.map((item) =>
+          item.ID === row.ID
+            ? { ...item, STATUS: String(updated.status ?? nextStatus) }
+            : item,
+        ),
+      )
     } catch (error) {
-      setMessage(getApiErrorMessage(error, 'Unable to update Asset Lookup Type status.'))
+      getApiErrorMessage(error, 'Unable to update Asset Lookup Type status.')
     }
   }
 
   return (
     <ListPage
-      title={'Asset Lookup Type List'}
-      createLabel={'New'}
-      createTo={'/asset/asset-lookup-type/create'}
+      title={'Lookup Type List'}
+      createLabel={'New Lookup Type'}
+      createTo={createPath}
       filters={filters}
       columns={columns}
       rows={rows}
       loading={loading}
-      message={message}
       renderActions={(row) => (
         <ListRowActions
           row={row}
-          onView={() => navigate(`/asset/asset-lookup-type/${row.ID}/view`)}
-          onEdit={() => navigate(`/asset/asset-lookup-type/${row.ID}/edit`)}
+          onView={() => navigate(`${listPath}/${row.ID}/view`)}
+          onEdit={() => navigate(`${listPath}/${row.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}
         />
@@ -125,4 +213,3 @@ function AssetLookupTypeList() {
 }
 
 export default AssetLookupTypeList
-

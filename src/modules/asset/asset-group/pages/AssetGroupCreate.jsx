@@ -99,13 +99,25 @@ function AssetGroupCreate() {
     <FormPage
       title={'Asset Group Create'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
       tableName={ASSET_GROUP_TABLE}
+      submitLabel={'Save'}
+      hideActions
       onSubmit={handleSubmit}
       onReset={handleReset}
       message={message}
       submitting={submitting}
     >
-      <AssetGroupForm values={values} errors={errors} departmentOptions={departmentOptions} assetGroupRef={assetGroupRef} onChange={handleChange} />
+      <AssetGroupForm
+        values={values}
+        errors={errors}
+        departmentOptions={departmentOptions}
+        submitLabel={'Save'}
+        submitting={submitting}
+        assetGroupRef={assetGroupRef}
+        onChange={handleChange}
+      />
     </FormPage>
   )
 }

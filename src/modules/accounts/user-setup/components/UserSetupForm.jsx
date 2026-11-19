@@ -43,6 +43,17 @@ function inputClass(error, readOnly = false, extraClasses = '') {
     .join(' ')
 }
 
+function selectClass(error, readOnly = false, extraClasses = '') {
+  return [
+    'erp-form-control text-xs sm:text-sm',
+    readOnly ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white',
+    error ? 'erp-form-control-invalid !border-rose-500 !bg-rose-50/20' : '',
+    extraClasses,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
 function formatAuditDateTime(value) {
   if (!value) return '-'
   const date = new Date(value)
@@ -267,7 +278,7 @@ function UserSetupForm({
               <select
                 id={'VOUCHER_TYPE_DEFAULT'}
                 name={'VOUCHER_TYPE_DEFAULT'}
-                className={inputClass(errors.VOUCHER_TYPE_DEFAULT, readOnly || lookupsLoading)}
+                className={selectClass(errors.VOUCHER_TYPE_DEFAULT, readOnly || lookupsLoading)}
                 value={values.VOUCHER_TYPE_DEFAULT || ''}
                 disabled={readOnly || lookupsLoading}
                 onChange={(e) => handleSimpleChange('VOUCHER_TYPE_DEFAULT', e.target.value)}
@@ -314,7 +325,7 @@ function UserSetupForm({
               <select
                 id={'LOCATION_DEFAULT'}
                 name={'LOCATION_DEFAULT'}
-                className={inputClass(errors.LOCATION_DEFAULT, readOnly || locationsLoading)}
+                className={selectClass(errors.LOCATION_DEFAULT, readOnly || locationsLoading)}
                 value={values.LOCATION_DEFAULT || ''}
                 disabled={readOnly || locationsLoading}
                 onChange={(e) => handleSimpleChange('LOCATION_DEFAULT', e.target.value)}
@@ -358,7 +369,7 @@ function UserSetupForm({
               <select
                 id={'BANK_ACCOUNT_DEFAULT'}
                 name={'BANK_ACCOUNT_DEFAULT'}
-                className={inputClass(errors.BANK_ACCOUNT_DEFAULT, readOnly || bankAccountsLoading)}
+                className={selectClass(errors.BANK_ACCOUNT_DEFAULT, readOnly || bankAccountsLoading)}
                 value={values.BANK_ACCOUNT_DEFAULT || ''}
                 disabled={readOnly || bankAccountsLoading}
                 onChange={(e) => handleSimpleChange('BANK_ACCOUNT_DEFAULT', e.target.value)}
@@ -411,7 +422,7 @@ function UserSetupForm({
               <select
                 id={'COST_CENTER_DEFAULT'}
                 name={'COST_CENTER_DEFAULT'}
-                className={inputClass(errors.COST_CENTER_DEFAULT, readOnly || costCentersLoading)}
+                className={selectClass(errors.COST_CENTER_DEFAULT, readOnly || costCentersLoading)}
                 value={values.COST_CENTER_DEFAULT || ''}
                 disabled={readOnly || costCentersLoading}
                 onChange={(e) => handleSimpleChange('COST_CENTER_DEFAULT', e.target.value)}

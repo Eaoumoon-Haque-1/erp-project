@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
+import { usersApi } from '../../../super-admin/user/api/userApi'
 import { assetItemsApi } from '../api/assetItemApi'
 import AssetItemInformationForm from '../components/AssetItemInformationForm'
 import { mapAssetItemFromApi, mapAssetItemToApi } from '../data/assetItemApiMapper'
@@ -37,6 +39,7 @@ function AssetItemInformationEdit() {
   const itemNameRef = useRef(null)
   const [values, setValues] = useState(initialAssetItemInformationValues)
   const [originalValues, setOriginalValues] = useState(initialAssetItemInformationValues)
+  const [auditLog, setAuditLog] = useState(null)
   const [errors, setErrors] = useState({})
   const [references, setReferences] = useState(() => getAssetItemReferences())
   const [existingRecords, setExistingRecords] = useState([])
@@ -49,16 +52,55 @@ function AssetItemInformationEdit() {
       loadAssetItemReferences(sessionBusinessUnitId, sessionGroupId),
       assetItemsApi.get(assetItemId),
       assetItemsApi.list(sessionBusinessUnitId),
+      usersApi.list().catch(() => []),
+      employeesApi.list().catch(() => []),
     ])
-      .then(([loadedReferences, record, records]) => {
+      .then(([loadedReferences, record, records, users, employees]) => {
         if (!active) return
-        const mapped = mapAssetItemFromApi(record, loadedReferences)
+
+        const userMap = new Map(
+          (users || []).map((u) => {
+            const id = String(u.id ?? u.ID ?? '')
+            const userName = u.userName ?? u.user_name ?? u.USER_NAME ?? id
+            return [id, userName]
+          }),
+        )
+        const empMap = new Map(
+          (employees || []).map((e) => {
+            const id = String(e.id ?? e.ID ?? '')
+            const code = String(
+              e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
+            ).trim()
+            const name = String(
+              e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
+            ).trim()
+            const display = code && name ? `${code}: ${name}` : code || name || id
+            return [id, display]
+          }),
+        )
+
+        const mapped = mapAssetItemFromApi(record, loadedReferences, userMap, empMap)
         setReferences(loadedReferences)
         setValues(mapped)
         setOriginalValues(mapped)
+        setAuditLog({
+          CREATED_USER_ID: mapped.CREATED_USER_ID,
+          CREATED_USER_NAME: mapped.CREATED_USER_NAME,
+          CREATED_EMP_ID: mapped.CREATED_EMP_ID,
+          CREATED_EMP_NAME: mapped.CREATED_EMP_NAME,
+          CREATED_DATETIME: mapped.CREATED_DATETIME,
+          CREATED_APP: mapped.CREATED_APP,
+          UPDATED_USER_ID: mapped.UPDATED_USER_ID,
+          UPDATED_USER_NAME: mapped.UPDATED_USER_NAME,
+          UPDATED_EMP_ID: mapped.UPDATED_EMP_ID,
+          UPDATED_EMP_NAME: mapped.UPDATED_EMP_NAME,
+          UPDATED_DATETIME: mapped.UPDATED_DATETIME,
+          UPDATED_APP: mapped.UPDATED_APP,
+          STATUS: mapped.STATUS,
+        })
         setExistingRecords(records
           .filter((item) => String(item.id) !== String(assetItemId))
-          .map((item) => mapAssetItemFromApi(item, loadedReferences)))
+          .map((item) => mapAssetItemFromApi(item, loadedReferences, userMap, empMap)))
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Item.'))
@@ -119,14 +161,28 @@ function AssetItemInformationEdit() {
     <FormPage
       title={'Asset Item Information Edit'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={`${listPath}/create`}
+      createLabel={'Create New'}
       tableName={ASSET_ITEM_TABLE}
       submitLabel={'Update'}
+      hideActions
       onSubmit={handleSubmit}
       onReset={handleReset}
       message={message}
       submitting={submitting}
     >
-      <AssetItemInformationForm values={values} errors={errors} references={references} itemNameRef={itemNameRef} onChange={handleChange} />
+      <AssetItemInformationForm
+        values={values}
+        errors={errors}
+        references={references}
+        auditLog={auditLog}
+        submitLabel={'Update'}
+        submitting={submitting}
+        itemNameRef={itemNameRef}
+        onChange={handleChange}
+      />
     </FormPage>
   )
 }

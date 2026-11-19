@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
+import { usersApi } from '../../../super-admin/user/api/userApi'
 import { depreciationCategoriesApi } from '../api/depreciationCategoryApi'
 import DepreciationCategoryForm from '../components/DepreciationCategoryForm'
 import { mapDepreciationCategoryFromApi, mapDepreciationCategoryToApi } from '../data/depreciationCategoryApiMapper'
@@ -26,6 +28,7 @@ function DepreciationCategoryEdit() {
   const categoryRef = useRef(null)
   const [values, setValues] = useState(initialDepreciationCategoryValues)
   const [originalValues, setOriginalValues] = useState(initialDepreciationCategoryValues)
+  const [auditLog, setAuditLog] = useState(null)
   const [errors, setErrors] = useState({})
   const [references, setReferences] = useState(emptyReferences)
   const [existingRecords, setExistingRecords] = useState([])
@@ -38,16 +41,55 @@ function DepreciationCategoryEdit() {
       loadDepreciationCategoryReferences(sessionBusinessUnitId, sessionGroupId),
       depreciationCategoriesApi.get(depreciationCategoryId),
       depreciationCategoriesApi.list(sessionBusinessUnitId),
+      usersApi.list().catch(() => []),
+      employeesApi.list().catch(() => []),
     ])
-      .then(([loadedReferences, record, records]) => {
+      .then(([loadedReferences, record, records, users, employees]) => {
         if (!active) return
-        const mapped = mapDepreciationCategoryFromApi(record, loadedReferences)
+
+        const userMap = new Map(
+          (users || []).map((u) => {
+            const id = String(u.id ?? u.ID ?? '')
+            const userName = u.userName ?? u.user_name ?? u.USER_NAME ?? id
+            return [id, userName]
+          }),
+        )
+        const empMap = new Map(
+          (employees || []).map((e) => {
+            const id = String(e.id ?? e.ID ?? '')
+            const code = String(
+              e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
+            ).trim()
+            const name = String(
+              e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
+            ).trim()
+            const display = code && name ? `${code}: ${name}` : code || name || id
+            return [id, display]
+          }),
+        )
+
+        const mapped = mapDepreciationCategoryFromApi(record, loadedReferences, userMap, empMap)
         setReferences(loadedReferences)
         setValues(mapped)
         setOriginalValues(mapped)
+        setAuditLog({
+          CREATED_USER_ID: mapped.CREATED_USER_ID,
+          CREATED_USER_NAME: mapped.CREATED_USER_NAME,
+          CREATED_EMP_ID: mapped.CREATED_EMP_ID,
+          CREATED_EMP_NAME: mapped.CREATED_EMP_NAME,
+          CREATED_DATETIME: mapped.CREATED_DATETIME,
+          CREATED_APP: mapped.CREATED_APP,
+          UPDATED_USER_ID: mapped.UPDATED_USER_ID,
+          UPDATED_USER_NAME: mapped.UPDATED_USER_NAME,
+          UPDATED_EMP_ID: mapped.UPDATED_EMP_ID,
+          UPDATED_EMP_NAME: mapped.UPDATED_EMP_NAME,
+          UPDATED_DATETIME: mapped.UPDATED_DATETIME,
+          UPDATED_APP: mapped.UPDATED_APP,
+          STATUS: mapped.STATUS,
+        })
         setExistingRecords(records
           .filter((item) => String(item.id) !== String(depreciationCategoryId))
-          .map((item) => mapDepreciationCategoryFromApi(item, loadedReferences)))
+          .map((item) => mapDepreciationCategoryFromApi(item, loadedReferences, userMap, empMap)))
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load Depreciation Category.'))
@@ -99,8 +141,33 @@ function DepreciationCategoryEdit() {
   }
 
   return (
-    <FormPage title={'Depreciation Category Edit'} listTo={listPath} tableName={DEPRECIATION_CATEGORY_TABLE} submitLabel={'Update'} onSubmit={handleSubmit} onReset={handleReset} message={message} submitting={submitting}>
-      <DepreciationCategoryForm values={values} errors={errors} methodOptions={references.methodOptions} assetTypeOptions={references.assetTypeOptions} departmentOptions={references.departmentOptions} categoryRef={categoryRef} onChange={handleChange} />
+    <FormPage
+      title={'Depreciation Category Edit'}
+      listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={`${listPath}/create`}
+      createLabel={'Create New'}
+      tableName={DEPRECIATION_CATEGORY_TABLE}
+      submitLabel={'Update'}
+      hideActions
+      onSubmit={handleSubmit}
+      onReset={handleReset}
+      message={message}
+      submitting={submitting}
+    >
+      <DepreciationCategoryForm
+        values={values}
+        errors={errors}
+        methodOptions={references.methodOptions}
+        assetTypeOptions={references.assetTypeOptions}
+        departmentOptions={references.departmentOptions}
+        auditLog={auditLog}
+        submitLabel={'Update'}
+        submitting={submitting}
+        categoryRef={categoryRef}
+        onChange={handleChange}
+      />
     </FormPage>
   )
 }

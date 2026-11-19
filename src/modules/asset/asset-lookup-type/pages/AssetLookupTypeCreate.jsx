@@ -1,93 +1,71 @@
-/** @file API-backed create controller for Asset Lookup Type. */
+/**
+ * @file Asset Lookup Type Create page.
+ * Manages lookup type master creation and repeatable lookup value detail rows.
+ */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { applyApiFormErrors, getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { assetLookupTypesApi } from '../api/assetLookupTypeApi'
 import AssetLookupTypeForm from '../components/AssetLookupTypeForm'
 import { mapAssetLookupTypeToApi } from '../data/assetLookupTypeApiMapper'
+import useAssetLookupTypeForm from '../data/useAssetLookupTypeForm'
 import {
   ASSET_LOOKUP_TYPE_TABLE,
+  createInitialAssetLookupValueRow,
   initialAssetLookupTypeValues,
-  validateAssetLookupType,
 } from '../validation/assetLookupTypeValidation'
 
 const listPath = '/asset/asset-lookup-type'
-const fieldMap = { typeName: 'TYPE_NAME', typeCode: 'CODE', status: 'STATUS' }
 
 function AssetLookupTypeCreate() {
   const navigate = useNavigate()
+  const typeNameRef = useRef(null)
+  const [submitting, setSubmitting] = useState(false)
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
   const sessionBusinessUnitId = String(session?.buId ?? '')
-  const typeNameRef = useRef(null)
-  const [values, setValues] = useState(initialAssetLookupTypeValues)
-  const [errors, setErrors] = useState({})
-  const [existingRecords, setExistingRecords] = useState([])
-  const [message, setMessage] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const sessionValues = { BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId }
+  const form = useAssetLookupTypeForm(
+    { ...initialAssetLookupTypeValues, ...sessionValues },
+    [createInitialAssetLookupValueRow({}, 1)],
+  )
+  const { setValues } = form
 
+  // Group Name (BG_ID) and Business Unit (BU_ID) come from the logged-in session
   useEffect(() => {
-    let active = true
-    assetLookupTypesApi.list(sessionBusinessUnitId)
-      .then((records) => {
-        if (active) setExistingRecords(records)
-      })
-      .catch((error) => {
-        if (active) setMessage(getApiErrorMessage(error, 'Unable to load existing Asset Lookup Types.'))
-      })
-    return () => { active = false }
-  }, [sessionBusinessUnitId])
-
-  const handleChange = (event) => {
-    const { name, type, value, checked } = event.target
-    setValues((current) => ({
-      ...current,
-      [name]: type === 'checkbox' ? (checked ? '1' : '0') : value,
-    }))
-    setErrors((current) => ({ ...current, [name]: undefined }))
-  }
+    setValues((current) => {
+      const nextBgId = sessionGroupId || current.BG_ID
+      const nextBuId = sessionBusinessUnitId || current.BU_ID
+      if (current.BG_ID === nextBgId && current.BU_ID === nextBuId) return current
+      return { ...current, BG_ID: nextBgId, BU_ID: nextBuId }
+    })
+  }, [sessionBusinessUnitId, sessionGroupId, setValues])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAssetLookupType(
-      values,
-      existingRecords.map((record) => record.typeName),
-      existingRecords.map((record) => record.typeCode).filter(Boolean),
-    )
-    setValues(result.values)
-    setErrors(result.errors)
-
-    if (!result.isValid) {
-      requestAnimationFrame(() => document.querySelector('[aria-invalid="true"]')?.focus())
-      return
-    }
+    const result = form.validate(sessionValues)
+    if (!result.isValid) return
 
     setSubmitting(true)
-    setMessage('')
     try {
-      await assetLookupTypesApi.create(mapAssetLookupTypeToApi(result.values, {
-        bgId: sessionGroupId,
-        buId: sessionBusinessUnitId,
-      }))
+      await assetLookupTypesApi.create(mapAssetLookupTypeToApi(result.values, result.rows, sessionValues))
       navigate(listPath)
     } catch (error) {
-      setMessage(applyApiFormErrors(
-        error,
-        setErrors,
-        'Unable to create Asset Lookup Type.',
-        fieldMap,
-      ))
+      await form.failWithApiError(error, 'Unable to create Asset Lookup Type.')
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleReset = () => {
-    setValues(initialAssetLookupTypeValues)
-    setErrors({})
-    setMessage('')
+    form.reset(
+      {
+        ...initialAssetLookupTypeValues,
+        ...sessionValues,
+      },
+      [createInitialAssetLookupValueRow({}, 1)],
+    )
     requestAnimationFrame(() => typeNameRef.current?.focus())
   }
 
@@ -95,16 +73,27 @@ function AssetLookupTypeCreate() {
     <FormPage
       title={'Asset Lookup Type Create'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back To List'}
       tableName={ASSET_LOOKUP_TYPE_TABLE}
+      submitLabel={'Save'}
       onSubmit={handleSubmit}
+      onValidate={() => form.validate(sessionValues).isValid}
       onReset={handleReset}
-      message={message}
       submitting={submitting}
     >
-      <AssetLookupTypeForm values={values} errors={errors} typeNameRef={typeNameRef} onChange={handleChange} />
+      <AssetLookupTypeForm
+        values={form.values}
+        errors={form.errors}
+        rows={form.rows}
+        typeNameRef={typeNameRef}
+        onChange={form.handleChange}
+        onRowChange={form.handleRowChange}
+        onAddRow={form.handleAddRow}
+        onRemoveRow={form.handleRemoveRow}
+      />
     </FormPage>
   )
 }
 
 export default AssetLookupTypeCreate
-

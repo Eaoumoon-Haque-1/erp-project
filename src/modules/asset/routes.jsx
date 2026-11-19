@@ -123,6 +123,7 @@ export const assetRoutes = [
   { path: 'asset/location-master/:locationMasterId/edit', element: <LocationMasterEdit /> },
   { path: 'asset/asset-lookup-type', element: <AssetLookupTypeList /> },
   { path: 'asset/asset-lookup-type/create', element: <AssetLookupTypeCreate /> },
+  { path: 'asset/asset-lookup-type/:assetLookupTypeId', element: <AssetLookupTypeView /> },
   { path: 'asset/asset-lookup-type/:assetLookupTypeId/view', element: <AssetLookupTypeView /> },
   { path: 'asset/asset-lookup-type/:assetLookupTypeId/edit', element: <AssetLookupTypeEdit /> },
   { path: 'asset/asset-lookup-value', element: <AssetLookupValueList /> },

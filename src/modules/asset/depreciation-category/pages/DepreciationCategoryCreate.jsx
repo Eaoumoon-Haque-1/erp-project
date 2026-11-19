@@ -99,8 +99,30 @@ function DepreciationCategoryCreate() {
   }
 
   return (
-    <FormPage title={'Depreciation Category Create'} listTo={listPath} tableName={DEPRECIATION_CATEGORY_TABLE} onSubmit={handleSubmit} onReset={handleReset} message={message} submitting={submitting}>
-      <DepreciationCategoryForm values={values} errors={errors} methodOptions={references.methodOptions} assetTypeOptions={references.assetTypeOptions} departmentOptions={references.departmentOptions} categoryRef={categoryRef} onChange={handleChange} />
+    <FormPage
+      title={'Depreciation Category Create'}
+      listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      tableName={DEPRECIATION_CATEGORY_TABLE}
+      submitLabel={'Save'}
+      hideActions
+      onSubmit={handleSubmit}
+      onReset={handleReset}
+      message={message}
+      submitting={submitting}
+    >
+      <DepreciationCategoryForm
+        values={values}
+        errors={errors}
+        methodOptions={references.methodOptions}
+        assetTypeOptions={references.assetTypeOptions}
+        departmentOptions={references.departmentOptions}
+        submitLabel={'Save'}
+        submitting={submitting}
+        categoryRef={categoryRef}
+        onChange={handleChange}
+      />
     </FormPage>
   )
 }

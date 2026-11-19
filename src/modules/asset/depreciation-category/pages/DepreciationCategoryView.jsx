@@ -1,56 +1,354 @@
-/** @file Read-only Depreciation Category details loaded from the API. */
-import ApiRecordViewPage from '../../../../components/shared/ApiRecordViewPage'
+/**
+ * @file Depreciation Category View page.
+ * Displays read-only depreciation category details and audit log block.
+ */
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { getApiErrorMessage } from '../../../../api/errors'
+import PageHeader from '../../../../components/shared/PageHeader'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
+import { businessGroupsApi } from '../../../super-admin/business-group/api/businessGroupApi'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { usersApi } from '../../../super-admin/user/api/userApi'
 import { depreciationCategoriesApi } from '../api/depreciationCategoryApi'
 import { mapDepreciationCategoryFromApi } from '../data/depreciationCategoryApiMapper'
 import { loadDepreciationCategoryReferences } from '../data/depreciationCategoryOptions'
 
-const basePath = '/asset/depreciation-category'
+const listPath = '/asset/depreciation-category'
 
 function formatAuditDateTime(value) {
-  if (!value) return 'N/A'
+  if (!value) return '-'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  const time = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
   })
-}
-
-async function loadDepreciationCategory(id) {
-  const record = await depreciationCategoriesApi.get(id)
-  const references = await loadDepreciationCategoryReferences(record.buId, record.bgId)
-  return { ...record, ...mapDepreciationCategoryFromApi(record, references) }
-}
-
-const viewConfig = {
-  title: 'Depreciation Category View',
-  param: 'depreciationCategoryId',
-  listTo: basePath,
-  editTo: (id) => `${basePath}/${id}/edit`,
-  loader: loadDepreciationCategory,
-  fields: [
-    { label: 'Depreciation Category', key: 'DEPRI_CATEGORY' },
-    { label: 'Depreciation Method', key: 'DEPRI_METHOD_NAME' },
-    { label: 'Asset Type', key: 'ASSET_TYPE_NAME' },
-    { label: 'Depreciation Life (Months)', key: 'DEPRI_LIFE' },
-    { label: 'Depreciation Percentage', key: 'DEPRI_PERCENTAGE' },
-    { label: 'Asset Owner', key: 'ASSET_OWNER_NAME' },
-    { label: 'Status', key: 'STATUS', type: 'status' },
-  ],
-  auditFields: [
-    { label: 'Created User ID', key: 'CREATED_BY' },
-    { label: 'Created Employee ID', key: 'CREATED_EMP_ID' },
-    { label: 'Created At', value: (record) => formatAuditDateTime(record.CREATED_AT) },
-    { label: 'Created App', key: 'CREATED_APP' },
-    { label: 'Updated User ID', key: 'UPDATED_BY' },
-    { label: 'Updated Employee ID', key: 'UPDATED_EMP_ID' },
-    { label: 'Updated At', value: (record) => formatAuditDateTime(record.UPDATED_AT) },
-    { label: 'Updated App', key: 'UPDATED_APP' },
-  ],
+  return `${day}/${month}/${year} ${time}`
 }
 
 function DepreciationCategoryView() {
-  return <ApiRecordViewPage {...viewConfig} />
+  const { depreciationCategoryId } = useParams()
+  const navigate = useNavigate()
+  const [record, setRecord] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    Promise.all([
+      depreciationCategoriesApi.get(depreciationCategoryId),
+      businessGroupsApi.list().catch(() => []),
+      businessUnitsApi.list().catch(() => []),
+      usersApi.list().catch(() => []),
+      employeesApi.list().catch(() => []),
+    ])
+      .then(async ([item, groups, units, users, employees]) => {
+        if (!active) return
+
+        const groupMap = new Map(groups.map((g) => [String(g.id), g.groupName]))
+        const unitMap = new Map(units.map((u) => [String(u.id), u.businessUnit]))
+        const userMap = new Map(
+          (users || []).map((u) => {
+            const id = String(u.id ?? u.ID ?? '')
+            const userName = u.userName ?? u.user_name ?? u.USER_NAME ?? id
+            return [id, userName]
+          }),
+        )
+        const empMap = new Map(
+          (employees || []).map((e) => {
+            const id = String(e.id ?? e.ID ?? '')
+            const code = String(
+              e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
+            ).trim()
+            const name = String(
+              e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
+            ).trim()
+            const display = code && name ? `${code}: ${name}` : code || name || id
+            return [id, display]
+          }),
+        )
+
+        const references = await loadDepreciationCategoryReferences(
+          item.buId,
+          item.bgId,
+        ).catch(() => ({}))
+
+        if (!active) return
+        setRecord(
+          mapDepreciationCategoryFromApi(
+            item,
+            references,
+            userMap,
+            empMap,
+            groupMap,
+            unitMap,
+          ),
+        )
+      })
+      .catch((error) => {
+        if (!active) return
+        getApiErrorMessage(error, 'Unable to load Depreciation Category.')
+        navigate(listPath, { replace: true })
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [depreciationCategoryId, navigate])
+
+  if (loading) {
+    return (
+      <div className={'erp-list-page'}>
+        <PageHeader
+          title={'Depreciation Category Details'}
+          actionLabel={'Back to List'}
+          actionTo={listPath}
+          actionVariant={'secondary'}
+        />
+        <section className={'erp-form-card p-8 text-center text-gray-500'}>
+          Loading depreciation category details...
+        </section>
+      </div>
+    )
+  }
+
+  if (!record) return null
+
+  return (
+    <div className={'erp-list-page'}>
+      <PageHeader
+        title={'Depreciation Category Details'}
+        actionLabel={'Back to List'}
+        actionTo={listPath}
+        actionVariant={'secondary'}
+        actions={[
+          {
+            label: 'Create New',
+            to: `${listPath}/create`,
+            variant: 'secondary',
+          },
+          {
+            label: 'Edit',
+            to: `${listPath}/${depreciationCategoryId}/edit`,
+            variant: 'primary',
+          },
+        ]}
+      />
+
+      <section className={'erp-form-card space-y-6'}>
+        {/* Main Details Card */}
+        <div className={'bg-white p-4 rounded border border-gray-200'}>
+          <div className={'flex items-center justify-between pb-2 mb-3 border-b border-gray-100'}>
+            <div className={'flex items-center gap-2'}>
+              <div className={'w-1.5 h-4 bg-[#038b8d] rounded-full'} />
+              <h2 className={'text-sm font-semibold text-gray-800'}>
+                Depreciation Category Details
+              </h2>
+            </div>
+            <span
+              className={[
+                'inline-flex rounded-[4px] px-[6px] py-[2px] text-[11px] font-bold leading-none text-white',
+                record.STATUS === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
+              ].join(' ')}
+            >
+              {record.STATUS === '1' ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+
+          <div className={'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs'}>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Group Name</span>
+              <span className={'font-semibold text-gray-800'}>{record.GROUP_NAME || '-'}</span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Business Unit</span>
+              <span className={'font-semibold text-gray-800'}>{record.BUSINESS_UNIT || '-'}</span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Status</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.STATUS === '1' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Depreciation Category</span>
+              <div className={'mt-0.5'}>
+                <span className={'font-semibold text-teal-800 text-sm'}>
+                  {record.DEPRI_CATEGORY || '-'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Depreciation Method</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.DEPRI_METHOD_NAME || '-'}
+              </span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Asset Type</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.ASSET_TYPE_NAME || '-'}
+              </span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Depreciation Life (Months)</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.DEPRI_LIFE ? `${record.DEPRI_LIFE} Months` : '-'}
+              </span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Depreciation (%)</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.DEPRI_PERCENTAGE ? `${record.DEPRI_PERCENTAGE}%` : '-'}
+              </span>
+            </div>
+            <div>
+              <span className={'block text-gray-400 font-medium'}>Asset Owner</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.ASSET_OWNER_NAME || '-'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Audit Log Block */}
+        <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
+          <div className={'flex items-center justify-between pb-2 mb-3 border-b border-gray-100'}>
+            <div className={'flex items-center gap-2'}>
+              <div className={'w-1.5 h-4 bg-[#038b8d] rounded-full'} />
+              <h3 className={'text-sm font-semibold text-gray-800 tracking-tight'}>
+                Audit Log :
+              </h3>
+            </div>
+            <span
+              data-column={'STATUS'}
+              className={[
+                'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none text-white',
+                String(record.STATUS ?? '1') === '1'
+                  ? 'bg-[#32c497]'
+                  : 'bg-[#fa5c70]',
+              ].join(' ')}
+            >
+              {String(record.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+
+          <div className={'space-y-3 text-xs'}>
+            {/* Row 1: Created Audit Info */}
+            <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'}>
+              <div
+                data-column={'CREATED_USER_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created By (User):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {record.CREATED_USER_NAME || record.CREATED_USER_ID || record.CREATED_BY || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'CREATED_EMP_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created By (Employee):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {record.CREATED_EMP_NAME || record.CREATED_EMP_ID || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'CREATED_DATETIME'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created At:
+                </span>
+                <span className={'font-semibold text-gray-800'}>
+                  {formatAuditDateTime(record.CREATED_DATETIME || record.CREATED_AT)}
+                </span>
+              </div>
+
+              <div
+                data-column={'CREATED_APP'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Created From:
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {record.CREATED_APP || '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* Row 2: Updated Audit Info */}
+            <div className={'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'}>
+              <div
+                data-column={'UPDATED_USER_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated By (User):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {record.UPDATED_USER_NAME || record.UPDATED_USER_ID || record.UPDATED_BY || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'UPDATED_EMP_ID'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated By (Employee):
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {record.UPDATED_EMP_NAME || record.UPDATED_EMP_ID || '-'}
+                </span>
+              </div>
+
+              <div
+                data-column={'UPDATED_DATETIME'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated At:
+                </span>
+                <span className={'font-semibold text-gray-800'}>
+                  {formatAuditDateTime(record.UPDATED_DATETIME || record.UPDATED_AT)}
+                </span>
+              </div>
+
+              <div
+                data-column={'UPDATED_APP'}
+                className={'p-2.5 rounded border border-gray-100 bg-gray-50/70'}
+              >
+                <span className={'block text-[11px] font-medium text-gray-500 mb-0.5'}>
+                  Updated From:
+                </span>
+                <span className={'font-semibold text-gray-800 break-words'}>
+                  {record.UPDATED_APP || '-'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
 }
 
 export default DepreciationCategoryView

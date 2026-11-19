@@ -1,53 +1,83 @@
 /** @file Builds Depreciation Category dropdowns from active master data. */
+import { afmLookupData } from '../../../../config/afmLookupData'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
 import { departmentGroupsApi } from '../../../hris/department-group/api/departmentGroupApi'
 import { assetLookupTypesApi } from '../../asset-lookup-type/api/assetLookupTypeApi'
 import { assetLookupValuesApi } from '../../asset-lookup-value/api/assetLookupValueApi'
-function valuesForTypeCodes(lookupValues, typeCodes) {
-  const acceptedCodes = new Set(typeCodes.map((code) => code.toUpperCase()))
-  return lookupValues
-    .filter((record) => (
-      record.STATUS === '1'
-      && acceptedCodes.has(record.TYPE_CODE.trim().toUpperCase())
+
+export const ASSET_TYPE_OPTIONS = [
+  { value: '1', label: 'Transible' },
+  { value: '2', label: 'Intransible' },
+]
+
+export function getAssetTypeOptions() {
+  return ASSET_TYPE_OPTIONS
+}
+
+export async function getDepreciationMethodOptions(businessUnitId) {
+  if (!businessUnitId) return []
+  const targetCode = String(afmLookupData?.depreciationMethod || 'DM001').trim().toUpperCase()
+
+  // 1. Fetch lookup types for the logged-in user's business unit only
+  const types = await assetLookupTypesApi.list(businessUnitId).catch(() => [])
+
+  // 2. Find the lookup type matching the parameter (DM001) for this BU
+  const targetType = (types || []).find((t) => (
+    String(t.buId) === String(businessUnitId)
+    && (
+      String(t.typeCode || '').trim().toUpperCase() === targetCode
+      || String(t.typeName || '').trim().toLowerCase() === 'depreciation method'
+    )
+    && Number(t.status) === 1
+  ))
+
+  if (!targetType?.id) return []
+
+  // 3. Fetch lookup values from LookupValue for this BU and targetType.id
+  let rawValues = []
+  try {
+    rawValues = await assetLookupValuesApi.list({
+      businessUnitId,
+      typeId: targetType.id,
+    })
+  } catch {
+    rawValues = targetType.lookupValues || []
+  }
+
+  if (!rawValues || rawValues.length === 0) {
+    rawValues = targetType.lookupValues || []
+  }
+
+  // 4. Ensure values strictly belong to the logged-in BU and are active
+  return (rawValues || [])
+    .filter((v) => (
+      String(v.status ?? 1) === '1'
+      && (v.buId == null || String(v.buId) === String(businessUnitId))
     ))
-    .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0))
-    .map((record) => ({ value: record.ID, label: record.VALUE }))
-}
-
-export function getDepreciationMethodOptions(lookupValues = []) {
-  return valuesForTypeCodes(lookupValues, ['DM', 'DEPRI_METHOD'])
-}
-
-export function getAssetTypeOptions(lookupValues = []) {
-  return valuesForTypeCodes(lookupValues, ['AT', 'ASSET_TYPE'])
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+    .map((v) => ({
+      value: String(v.id),
+      label: v.valueCode ? `${v.value} (${v.valueCode})` : v.value,
+      name: v.value,
+      code: v.valueCode,
+    }))
 }
 
 export async function loadDepreciationCategoryReferences(businessUnitId, businessGroupId) {
-  const [types, values, departments, departmentGroups] = await Promise.all([
-    assetLookupTypesApi.list(businessUnitId),
-    assetLookupValuesApi.list({ businessUnitId }),
-    departmentsApi.listByGroup(businessGroupId),
-    departmentGroupsApi.list(),
+  const [methodOptions, departments, departmentGroups] = await Promise.all([
+    getDepreciationMethodOptions(businessUnitId),
+    departmentsApi.listByGroup(businessGroupId).catch(() => []),
+    departmentGroupsApi.list().catch(() => []),
   ])
-  const typeNames = new Map(types.map((type) => [String(type.id), type.typeName]))
-  const typeCodes = new Map(types.map((type) => [String(type.id), type.typeCode]))
-  const lookupValues = values.map((record) => ({
-    ID: String(record.id ?? ''),
-    TYPE_NAME: typeNames.get(String(record.typeId)) || '',
-    TYPE_CODE: record.typeCode || typeCodes.get(String(record.typeId)) || '',
-    VALUE: record.value ?? '',
-    SORT_ORDER: record.sortOrder == null ? '' : String(record.sortOrder),
-    STATUS: String(record.status ?? 1),
-  }))
 
   return {
-    methodOptions: getDepreciationMethodOptions(lookupValues),
-    assetTypeOptions: getAssetTypeOptions(lookupValues),
+    methodOptions,
+    assetTypeOptions: ASSET_TYPE_OPTIONS,
     // Asset owners are departments actively mapped to the logged-in BU.
-    departmentOptions: departments
+    departmentOptions: (departments || [])
       .filter((department) => (
         String(department.status ?? 1) === '1'
-        && departmentGroups.some((mapping) => (
+        && (departmentGroups || []).some((mapping) => (
           String(mapping.buId) === String(businessUnitId)
           && String(mapping.deptId) === String(department.id)
           && String(mapping.status ?? 1) === '1'
