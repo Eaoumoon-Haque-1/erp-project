@@ -1,17 +1,23 @@
-/** @file Edit-page controller for Custodian and its Sub Custodian rows. */
+/**
+ * @file Edit-page controller for Custodian and its Sub Custodian rows.
+ * Note: Group Name (bgId) and Business Unit (buId) are hidden from the UI
+ * and automatically retrieved from the logged-in user's session data.
+ */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { custodiansApi } from '../../../../api/custodian'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
+import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
+import { usersApi } from '../../../super-admin/user/api/userApi'
 import CustodianForm from '../components/CustodianForm'
 import {
   createSubCustodianRow,
   mapCustodianFromApi,
   mapCustodianToApi,
 } from '../data/custodianApiMapper'
-import { custodianBusinessGroup } from '../data/custodianScope'
 import useCustodianForm from '../data/useCustodianForm'
 import { ASSET_CUSTODIAN_TABLE, createInitialCustodianValues } from '../validation/custodianValidation'
 
@@ -20,25 +26,69 @@ const listPath = '/asset/custodian'
 function CustodianEdit() {
   const { custodianId } = useParams()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionGroupId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()
+  const sessionBusinessUnitId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
+
   const custodianNameRef = useRef(null)
   const [submitting, setSubmitting] = useState(false)
   const [original, setOriginal] = useState(null)
+  const [auditLog, setAuditLog] = useState(null)
+  const [resolvedGroupId, setResolvedGroupId] = useState(sessionGroupId)
   const form = useCustodianForm(createInitialCustodianValues())
   const { reset } = form
-  const { businessUnitOptions, unitsLoading } = useBusinessOptions(custodianBusinessGroup.ID, {
-    preserveUnitId: form.values.BU_ID,
-  })
+
+  // Resolve BG_ID if only buId is in the session
+  useEffect(() => {
+    if (!sessionGroupId && sessionBusinessUnitId) {
+      businessUnitsApi
+        .get(sessionBusinessUnitId)
+        .then((bu) => {
+          if (bu?.bgId) {
+            setResolvedGroupId(String(bu.bgId))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [sessionGroupId, sessionBusinessUnitId])
 
   useEffect(() => {
     let active = true
-    custodiansApi.get(custodianId)
-      .then((record) => {
+
+    Promise.all([
+      custodiansApi.get(custodianId),
+      usersApi.list().catch(() => []),
+      employeesApi.list().catch(() => []),
+    ])
+      .then(([record, users, employees]) => {
         if (!active) return
-        const mapped = mapCustodianFromApi(record)
+
+        const userMap = new Map(
+          (users || []).map((u) => {
+            const id = String(u.id ?? u.ID ?? '')
+            const userName = u.userName ?? u.user_name ?? u.USER_NAME ?? id
+            return [id, userName]
+          }),
+        )
+        const empMap = new Map(
+          (employees || []).map((e) => {
+            const id = String(e.id ?? e.ID ?? '')
+            const code = String(
+              e.employeeCode ?? e.employee_code ?? e.EMPLOYEE_CODE ?? '',
+            ).trim()
+            const name = String(
+              e.employeeName ?? e.employee_name ?? e.EMPLOYEE_NAME ?? '',
+            ).trim()
+            const display = code && name ? `${code}: ${name}` : code || name || id
+            return [id, display]
+          }),
+        )
+
+        const mapped = mapCustodianFromApi(record, userMap, empMap)
         const loaded = {
           values: {
-            BG_ID: mapped.BG_ID,
-            BU_ID: mapped.BU_ID,
+            BG_ID: resolvedGroupId || sessionGroupId || mapped.BG_ID,
+            BU_ID: sessionBusinessUnitId || mapped.BU_ID,
             CUSTODIAN_NAME: mapped.CUSTODIAN_NAME,
             STATUS: mapped.STATUS,
           },
@@ -46,16 +96,32 @@ function CustodianEdit() {
         }
         setOriginal(loaded)
         reset(loaded.values, loaded.rows)
+        setAuditLog({
+          CREATED_USER_ID: mapped.CREATED_USER_ID,
+          CREATED_USER_NAME: mapped.CREATED_USER_NAME,
+          CREATED_EMP_ID: mapped.CREATED_EMP_ID,
+          CREATED_EMP_NAME: mapped.CREATED_EMP_NAME,
+          CREATED_DATETIME: mapped.CREATED_DATETIME,
+          CREATED_APP: mapped.CREATED_APP,
+          UPDATED_USER_ID: mapped.UPDATED_USER_ID,
+          UPDATED_USER_NAME: mapped.UPDATED_USER_NAME,
+          UPDATED_EMP_ID: mapped.UPDATED_EMP_ID,
+          UPDATED_EMP_NAME: mapped.UPDATED_EMP_NAME,
+          UPDATED_DATETIME: mapped.UPDATED_DATETIME,
+          UPDATED_APP: mapped.UPDATED_APP,
+          STATUS: mapped.STATUS,
+        })
       })
       .catch((error) => {
         if (!active) return
         getApiErrorMessage(error, 'Unable to load Custodian.')
         navigate(listPath, { replace: true })
       })
+
     return () => {
       active = false
     }
-  }, [custodianId, navigate, reset])
+  }, [custodianId, navigate, reset, resolvedGroupId, sessionBusinessUnitId, sessionGroupId])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -64,7 +130,13 @@ function CustodianEdit() {
 
     setSubmitting(true)
     try {
-      await custodiansApi.update(custodianId, mapCustodianToApi(result.values, result.rows))
+      await custodiansApi.update(
+        custodianId,
+        mapCustodianToApi(result.values, result.rows, {
+          bgId: resolvedGroupId || sessionGroupId || result.values.BG_ID,
+          buId: sessionBusinessUnitId || result.values.BU_ID,
+        }),
+      )
       navigate(listPath)
     } catch (error) {
       await form.failWithApiError(error, 'Unable to update Custodian.')
@@ -82,10 +154,14 @@ function CustodianEdit() {
     <FormPage
       title={'Custodian Edit'}
       listTo={listPath}
+      backTo={listPath}
+      backLabel={'Back to List'}
+      createTo={`${listPath}/create`}
+      createLabel={'Create New'}
       tableName={ASSET_CUSTODIAN_TABLE}
       submitLabel={'Update'}
+      hideActions
       onSubmit={handleSubmit}
-      onValidate={() => form.validate().isValid}
       onReset={handleReset}
       submitting={submitting}
     >
@@ -93,10 +169,9 @@ function CustodianEdit() {
         values={form.values}
         errors={form.errors}
         rows={form.rows}
-        groupName={custodianBusinessGroup.GROUP_NAME}
-        businessUnitOptions={businessUnitOptions}
-        unitsLoading={unitsLoading}
-        businessUnitLocked
+        auditLog={auditLog}
+        submitLabel={'Update'}
+        submitting={submitting}
         custodianNameRef={custodianNameRef}
         onChange={form.handleChange}
         onRowChange={form.handleRowChange}

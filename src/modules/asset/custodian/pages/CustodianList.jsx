@@ -1,17 +1,19 @@
-/** @file List-page controller for API-backed Custodian records. */
+/**
+ * @file List-page controller for API-backed Custodian records.
+ * Records are filtered by the logged-in user's Business Unit from session data.
+ */
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { custodiansApi } from '../../../../api/custodian'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
-import useBusinessOptions from '../../../../hooks/useBusinessOptions'
 import {
   countActiveSubCustodians,
   mapCustodianFromApi,
   mapCustodianToApi,
 } from '../data/custodianApiMapper'
-import { custodianBusinessGroup } from '../data/custodianScope'
 
 const columns = [
   { key: 'CUSTODIAN_NAME', label: 'Custodian Name' },
@@ -20,10 +22,12 @@ const columns = [
     key: 'STATUS',
     label: 'Status',
     render: (value) => (
-      <span className={[
-        'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
-        String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
-      ].join(' ')}>
+      <span
+        className={[
+          'inline-flex rounded-[5px] px-[5px] py-[3px] text-xs font-bold leading-none text-white shadow-sm',
+          String(value) === '1' ? 'bg-action-success' : 'bg-action-danger',
+        ].join(' ')}
+      >
         {String(value) === '1' ? 'Active' : 'Inactive'}
       </span>
     ),
@@ -38,14 +42,19 @@ function toListRow(record) {
 
 function CustodianList() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const sessionBusinessUnitId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
+
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
-  const { businessUnitOptions } = useBusinessOptions(custodianBusinessGroup.ID)
 
   useEffect(() => {
     let active = true
-    // No buId is sent: the default view lists every Business Unit.
-    custodiansApi.list()
+    setLoading(true)
+
+    // Filtered by logged-in user's business unit from session data
+    custodiansApi
+      .list(sessionBusinessUnitId || undefined)
       .then((records) => {
         if (active) setRows(records.map(toListRow))
       })
@@ -55,41 +64,41 @@ function CustodianList() {
       .finally(() => {
         if (active) setLoading(false)
       })
+
     return () => {
       active = false
     }
-  }, [])
+  }, [sessionBusinessUnitId])
 
-  const filters = useMemo(() => [
-    {
-      key: 'CUSTODIAN_NAME',
-      label: 'Search by Custodian Name',
-      placeholder: '--Search by Custodian Name--',
-      matches: (row, value) => String(row.CUSTODIAN_NAME ?? '').toLowerCase().includes(value.toLowerCase()),
-    },
-    {
-      key: 'BU_ID',
-      label: 'Search by Business Unit',
-      placeholder: '--Search by Business Unit--',
-      options: businessUnitOptions,
-    },
-    {
-      key: 'STATUS',
-      label: 'Search by Status',
-      placeholder: '--Search by Status--',
-      options: [
-        { label: 'Active', value: '1' },
-        { label: 'Inactive', value: '0' },
-      ],
-    },
-  ], [businessUnitOptions])
+  const filters = useMemo(
+    () => [
+      {
+        key: 'CUSTODIAN_NAME',
+        label: 'Search by Custodian Name',
+        placeholder: '--Search by Custodian Name--',
+        matches: (row, value) =>
+          String(row.CUSTODIAN_NAME ?? '')
+            .toLowerCase()
+            .includes(value.toLowerCase()),
+      },
+      {
+        key: 'STATUS',
+        label: 'Search by Status',
+        placeholder: '--Search by Status--',
+        options: [
+          { label: 'Active', value: '1' },
+          { label: 'Inactive', value: '0' },
+        ],
+      },
+    ],
+    [],
+  )
 
   const handleDelete = async (row) => {
     try {
       await custodiansApi.remove(row.ID)
       setRows((current) => current.filter((item) => item.ID !== row.ID))
     } catch (error) {
-      // e.g. 400 when locations exist under this custodian: show the backend message.
       getApiErrorMessage(error, 'Unable to delete Custodian.')
     }
   }
@@ -99,11 +108,14 @@ function CustodianList() {
   const handleStatusChange = async (row) => {
     try {
       const current = mapCustodianFromApi(await custodiansApi.get(row.ID))
-      const updated = await custodiansApi.update(row.ID, mapCustodianToApi(
-        { ...current, STATUS: current.STATUS === '1' ? '0' : '1' },
-        current.SUB_CUSTODIANS,
-      ))
-      setRows((items) => items.map((item) => (item.ID === row.ID ? toListRow(updated) : item)))
+      const updated = await custodiansApi.update(
+        row.ID,
+        mapCustodianToApi(
+          { ...current, STATUS: current.STATUS === '1' ? '0' : '1' },
+          current.SUB_CUSTODIANS,
+        ),
+      )
+      setRows((items) => (items.map((item) => (item.ID === row.ID ? toListRow(updated) : item))))
     } catch (error) {
       getApiErrorMessage(error, 'Unable to update Custodian status.')
     }
@@ -121,6 +133,7 @@ function CustodianList() {
       renderActions={(row) => (
         <ListRowActions
           row={row}
+          onView={() => navigate(`/asset/custodian/${row.ID}/view`)}
           onEdit={() => navigate(`/asset/custodian/${row.ID}/edit`)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}

@@ -4,4 +4,5 @@ export const afmLookupData = {
     paymentThrough: "PTH001",
     paymentType: "PT001",
     depreciationMethod: "DM001",
+    assetSpecification: "AS001",
 };
