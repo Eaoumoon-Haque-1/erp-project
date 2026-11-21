@@ -147,13 +147,7 @@ function DepreciationCategoryView() {
       <section className={'erp-form-card space-y-6'}>
         {/* Main Details Card */}
         <div className={'bg-white p-4 rounded border border-gray-200'}>
-          <div className={'flex items-center justify-between pb-2 mb-3 border-b border-gray-100'}>
-            <div className={'flex items-center gap-2'}>
-              <div className={'w-1.5 h-4 bg-[#038b8d] rounded-full'} />
-              <h2 className={'text-sm font-semibold text-gray-800'}>
-                Depreciation Category Details
-              </h2>
-            </div>
+          <div className={'flex items-center justify-end pb-2 mb-3 border-b border-gray-100'}>
             <span
               className={[
                 'inline-flex rounded-[4px] px-[6px] py-[2px] text-[11px] font-bold leading-none text-white',

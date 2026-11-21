@@ -52,6 +52,7 @@ import BulkAssetReceiveForSplitList from './bulk-asset-receive-for-split/pages/B
 import CustodianCreate from './custodian/pages/CustodianCreate'
 import CustodianEdit from './custodian/pages/CustodianEdit'
 import CustodianList from './custodian/pages/CustodianList'
+import CustodianView from './custodian/pages/CustodianView'
 import DepreciationCategoryCreate from './depreciation-category/pages/DepreciationCategoryCreate'
 import DepreciationCategoryEdit from './depreciation-category/pages/DepreciationCategoryEdit'
 import DepreciationCategoryList from './depreciation-category/pages/DepreciationCategoryList'
@@ -59,6 +60,7 @@ import DepreciationCategoryView from './depreciation-category/pages/Depreciation
 import LocationMasterCreate from './location-master/pages/LocationMasterCreate'
 import LocationMasterEdit from './location-master/pages/LocationMasterEdit'
 import LocationMasterList from './location-master/pages/LocationMasterList'
+import LocationMasterView from './location-master/pages/LocationMasterView'
 import MaintenanceAmcCreate from './maintenance-amc/pages/MaintenanceAmcCreate'
 import MaintenanceAmcEdit from './maintenance-amc/pages/MaintenanceAmcEdit'
 import MaintenanceAmcList from './maintenance-amc/pages/MaintenanceAmcList'
@@ -117,9 +119,11 @@ export const assetRoutes = [
   { path: 'asset/asset-specification-map/:assetSpecificationMapId/edit', element: <AssetSpecificationMapEdit /> },
   { path: 'asset/custodian', element: <CustodianList /> },
   { path: 'asset/custodian/create', element: <CustodianCreate /> },
+  { path: 'asset/custodian/:custodianId/view', element: <CustodianView /> },
   { path: 'asset/custodian/:custodianId/edit', element: <CustodianEdit /> },
   { path: 'asset/location-master', element: <LocationMasterList /> },
   { path: 'asset/location-master/create', element: <LocationMasterCreate /> },
+  { path: 'asset/location-master/:locationMasterId/view', element: <LocationMasterView /> },
   { path: 'asset/location-master/:locationMasterId/edit', element: <LocationMasterEdit /> },
   { path: 'asset/asset-lookup-type', element: <AssetLookupTypeList /> },
   { path: 'asset/asset-lookup-type/create', element: <AssetLookupTypeCreate /> },
