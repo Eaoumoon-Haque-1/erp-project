@@ -33,6 +33,7 @@ function AssetSpecificationMapList() {
   const { session } = useAuth()
   const sessionBusinessUnitId = String(session?.buId ?? '')
   const [rows, setRows] = useState([])
+  const [references, setReferences] = useState({ assetItems: [], specificationOptions: [] })
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
@@ -42,10 +43,11 @@ function AssetSpecificationMapList() {
       loadAssetSpecificationMapReferences(sessionBusinessUnitId),
       assetSpecificationMapsApi.list({ businessUnitId: sessionBusinessUnitId }),
     ])
-      .then(([references, records]) => {
+      .then(([refs, records]) => {
         if (!active) return
+        setReferences(refs)
         setRows(records
-          .map((record) => mapAssetSpecificationMapFromApi(record, references))
+          .map((record) => mapAssetSpecificationMapFromApi(record, refs))
           .sort((left, right) => Number(left.SORT_ORDER || 0) - Number(right.SORT_ORDER || 0)))
       })
       .catch((error) => {
@@ -57,20 +59,80 @@ function AssetSpecificationMapList() {
     return () => { active = false }
   }, [sessionBusinessUnitId])
 
+  // Asset Item Name options for searchable dropdown with write enable option
+  const assetItemOptions = useMemo(() => {
+    const itemMap = new Map()
+    ;(references.assetItems || []).forEach((item) => {
+      const name = String(item.ITEM_NAME ?? '').trim()
+      if (name && !itemMap.has(name.toLowerCase())) {
+        itemMap.set(name.toLowerCase(), { value: name, label: name, code: item.ID })
+      }
+    })
+    rows.forEach((row) => {
+      const name = String(row.ITEM_NAME_LABEL ?? '').trim()
+      if (name && !itemMap.has(name.toLowerCase())) {
+        itemMap.set(name.toLowerCase(), { value: name, label: name, code: row.ITEM_NAME })
+      }
+    })
+    return Array.from(itemMap.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [references.assetItems, rows])
+
+  // Specification options for searchable dropdown with write enable option
+  const specificationOptions = useMemo(() => {
+    const specMap = new Map()
+    ;(references.specificationOptions || []).forEach((spec) => {
+      const name = String(spec.label ?? spec.value ?? '').trim()
+      if (name && !specMap.has(name.toLowerCase())) {
+        specMap.set(name.toLowerCase(), { value: name, label: name })
+      }
+    })
+    rows.forEach((row) => {
+      const name = String(row.SPECIFICATION_NAME ?? '').trim()
+      if (name && !specMap.has(name.toLowerCase())) {
+        specMap.set(name.toLowerCase(), { value: name, label: name })
+      }
+    })
+    return Array.from(specMap.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [references.specificationOptions, rows])
+
   const filters = useMemo(() => [
     {
-      key: 'ITEM_NAME', label: 'Search by Asset Item', placeholder: '--Search by Asset Item--',
-      options: [...new Map(rows.map((row) => [row.ITEM_NAME, { value: row.ITEM_NAME, label: row.ITEM_NAME_LABEL }])).values()],
+      key: 'ITEM_NAME_LABEL',
+      label: 'Search by Asset Item Name',
+      placeholder: '--Select/Write Asset Item Name--',
+      searchable: true,
+      options: assetItemOptions,
+      matches: (row, value) => {
+        const q = String(value ?? '').trim().toLowerCase()
+        if (!q) return true
+        return (
+          String(row.ITEM_NAME_LABEL ?? '').toLowerCase().includes(q) ||
+          String(row.ITEM_NAME ?? '').toLowerCase() === q
+        )
+      },
     },
     {
-      key: 'SPECIFICATION', label: 'Search by Specification', placeholder: '--Search by Specification--',
-      options: [...new Map(rows.map((row) => [row.SPECIFICATION, { value: row.SPECIFICATION, label: row.SPECIFICATION_NAME }])).values()],
+      key: 'SPECIFICATION_NAME',
+      label: 'Search by Specification',
+      placeholder: '--Select/Write Specification--',
+      searchable: true,
+      options: specificationOptions,
+      matches: (row, value) => {
+        const q = String(value ?? '').trim().toLowerCase()
+        if (!q) return true
+        return (
+          String(row.SPECIFICATION_NAME ?? '').toLowerCase().includes(q) ||
+          String(row.SPECIFICATION ?? '').toLowerCase() === q
+        )
+      },
     },
     {
-      key: 'STATUS', label: 'Search by Status', placeholder: '--Search by Status--',
+      key: 'STATUS',
+      label: 'Search by Status',
+      placeholder: '--Search by Status--',
       options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }],
     },
-  ], [rows])
+  ], [assetItemOptions, specificationOptions])
 
   const handleDelete = async (row) => {
     try {
