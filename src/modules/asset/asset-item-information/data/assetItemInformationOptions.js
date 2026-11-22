@@ -10,6 +10,8 @@ export function getAssetItemReferences({
   uomRecords = [],
   lookupValueRecords = [],
   departmentRecords = [],
+  businessUnitId = '',
+  businessGroupId = '',
 } = {}) {
   const lookupNames = new Map(lookupValueRecords.map((record) => [
     String(record.id),
@@ -21,11 +23,23 @@ export function getAssetItemReferences({
   ]))
   const assetGroups = assetGroupRecords
     .map((record) => mapAssetGroupFromApi(record, departmentNames))
-    .filter((record) => record.STATUS === '1')
+    .filter((record) => {
+      const active = record.STATUS === '1'
+      const matchBu = businessUnitId ? String(record.BU_ID) === String(businessUnitId) : true
+      const matchBg = businessGroupId ? String(record.BG_ID) === String(businessGroupId) : true
+      return active && matchBu && matchBg
+    })
   const depreciationCategories = categoryRecords
-    .filter((record) => String(record.status ?? 1) === '1')
+    .filter((record) => {
+      const active = String(record.status ?? 1) === '1'
+      const matchBu = businessUnitId ? String(record.buId ?? record.BU_ID ?? '') === String(businessUnitId) : true
+      const matchBg = businessGroupId ? String(record.bgId ?? record.BG_ID ?? '') === String(businessGroupId) : true
+      return active && matchBu && matchBg
+    })
     .map((record) => ({
       ID: String(record.id ?? ''),
+      BG_ID: String(record.bgId ?? record.BG_ID ?? ''),
+      BU_ID: String(record.buId ?? record.BU_ID ?? ''),
       DEPRI_CATEGORY: record.depriCategory ?? '',
       DEPRI_METHOD: String(record.depriMethodId ?? ''),
       DEPRI_METHOD_NAME: lookupNames.get(String(record.depriMethodId)) || '',
@@ -60,6 +74,8 @@ export async function loadAssetItemReferences(businessUnitId, businessGroupId) {
     uomRecords,
     lookupValueRecords,
     departmentRecords,
+    businessUnitId,
+    businessGroupId,
   })
 }
 

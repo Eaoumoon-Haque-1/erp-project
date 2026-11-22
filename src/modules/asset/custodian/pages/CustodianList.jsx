@@ -70,16 +70,30 @@ function CustodianList() {
     }
   }, [sessionBusinessUnitId])
 
+  // Custodian Name options for dropdown field with write option (searchable: true)
+  const custodianNameOptions = useMemo(() => {
+    const distinct = Array.from(
+      new Set(rows.map((r) => String(r.CUSTODIAN_NAME ?? '').trim()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b))
+    return distinct.map((name) => ({ value: name, label: name }))
+  }, [rows])
+
   const filters = useMemo(
     () => [
       {
         key: 'CUSTODIAN_NAME',
         label: 'Search by Custodian Name',
-        placeholder: '--Search by Custodian Name--',
-        matches: (row, value) =>
-          String(row.CUSTODIAN_NAME ?? '')
-            .toLowerCase()
-            .includes(value.toLowerCase()),
+        placeholder: '--Select/Write Custodian Name--',
+        searchable: true,
+        options: custodianNameOptions,
+        matches: (row, value) => {
+          const q = String(value ?? '').trim().toLowerCase()
+          if (!q) return true
+          return (
+            String(row.CUSTODIAN_NAME ?? '').toLowerCase().includes(q) ||
+            String(row.ID ?? '').toLowerCase() === q
+          )
+        },
       },
       {
         key: 'STATUS',
@@ -91,7 +105,7 @@ function CustodianList() {
         ],
       },
     ],
-    [],
+    [custodianNameOptions],
   )
 
   const handleDelete = async (row) => {

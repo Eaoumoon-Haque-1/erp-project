@@ -5,7 +5,9 @@ import { getApiErrorMessage } from '../../../../api/errors'
 import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
+import { departmentGroupsApi } from '../../../hris/department-group/api/departmentGroupApi'
 import { departmentsApi } from '../../../hris/department/api/departmentApi'
+import { businessUnitsApi } from '../../../super-admin/business-unit/api/businessUnitApi'
 import { assetGroupsApi } from '../api/assetGroupApi'
 import {
   mapAssetGroupFromApi,
@@ -32,26 +34,83 @@ const columns = [
 function AssetGroupList() {
   const navigate = useNavigate()
   const { session } = useAuth()
-  const sessionGroupId = String(session?.bgId ?? '')
-  const sessionBusinessUnitId = String(session?.buId ?? '')
+  const sessionBusinessUnitId = String(session?.buId ?? session?.businessUnitId ?? '').trim()
+  const sessionGroupId = String(session?.bgId ?? session?.businessGroupId ?? '').trim()
+  const [resolvedGroupId, setResolvedGroupId] = useState(sessionGroupId)
+  const [departmentOptions, setDepartmentOptions] = useState([])
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
+  // Resolve BG_ID if only buId is in the session
+  useEffect(() => {
+    if (!sessionGroupId && sessionBusinessUnitId) {
+      businessUnitsApi
+        .get(sessionBusinessUnitId)
+        .then((bu) => {
+          if (bu?.bgId) {
+            setResolvedGroupId(String(bu.bgId))
+          }
+        })
+        .catch(() => {})
+    }
+  }, [sessionGroupId, sessionBusinessUnitId])
+
+  const effectiveGroupId = resolvedGroupId || sessionGroupId
+
   useEffect(() => {
     let active = true
+    setLoading(true)
 
     Promise.all([
       assetGroupsApi.list(sessionBusinessUnitId),
-      departmentsApi.listByGroup(sessionGroupId),
+      departmentsApi.listByGroup(effectiveGroupId).catch(() => []),
+      departmentGroupsApi.list().catch(() => []),
     ])
-      .then(([records, departments]) => {
+      .then(([records, departments, departmentGroups]) => {
         if (!active) return
-        const departmentNames = new Map(departments.map((department) => [
+
+        // Asset owners are departments actively mapped to logged-in BU via HR_DEPT_GROUP
+        const allowedDeptIds = new Set(
+          (departmentGroups || [])
+            .filter((g) => {
+              const matchBu = sessionBusinessUnitId ? String(g.buId) === sessionBusinessUnitId : true
+              const matchBg = effectiveGroupId ? String(g.bgId) === effectiveGroupId : true
+              const activeStatus = String(g.status ?? '1') === '1'
+              return matchBu && matchBg && activeStatus
+            })
+            .map((g) => String(g.deptId)),
+        )
+
+        // General map for resolving any assigned department names on records
+        const departmentNames = new Map((departments || []).map((department) => [
           String(department.id),
           department.departmentName,
         ]))
-        setRows(records.map((record) => mapAssetGroupFromApi(record, departmentNames)))
+
+        // Department options for search dropdown strictly scoped to user's BU & BG
+        const scopedDeptOptions = (departments || [])
+          .filter((d) => {
+            const activeStatus = String(d.status ?? 1) === '1'
+            const inBuGroup = allowedDeptIds.size > 0 ? allowedDeptIds.has(String(d.id)) : true
+            return activeStatus && inBuGroup
+          })
+          .map((d) => ({ value: String(d.id), label: d.departmentName }))
+
+        setDepartmentOptions(scopedDeptOptions)
+
+        const mapped = (records || []).map((record) => mapAssetGroupFromApi(record, departmentNames))
+        // Extra safeguard: exclude records belonging to other BUs/Groups
+        const scoped = mapped.filter((record) => {
+          const matchBu = sessionBusinessUnitId
+            ? String(record.BU_ID) === sessionBusinessUnitId
+            : true
+          const matchBg = effectiveGroupId
+            ? String(record.BG_ID) === String(effectiveGroupId)
+            : true
+          return matchBu && matchBg
+        })
+        setRows(scoped)
       })
       .catch((error) => {
         if (active) setMessage(getApiErrorMessage(error, 'Unable to load Asset Groups.'))
@@ -61,23 +120,67 @@ function AssetGroupList() {
       })
 
     return () => { active = false }
-  }, [sessionBusinessUnitId, sessionGroupId])
+  }, [sessionBusinessUnitId, effectiveGroupId])
 
+  // 1. Asset Group options for searchable dropdown with write enable option
+  const assetGroupOptions = useMemo(() => {
+    const distinct = Array.from(
+      new Set(rows.map((r) => String(r.ASSET_GROUP ?? '').trim()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b))
+    return distinct.map((name) => ({ value: name, label: name }))
+  }, [rows])
+
+  // 2. Asset Owner options for searchable dropdown with write enable option (scoped to user's BU & BG)
+  const assetOwnerOptions = useMemo(() => {
+    const ownerMap = new Map()
+    // First from scoped active department options
+    departmentOptions.forEach((opt) => {
+      const label = String(opt.label ?? '').trim()
+      if (label && !ownerMap.has(label.toLowerCase())) {
+        ownerMap.set(label.toLowerCase(), { value: label, label, code: opt.value })
+      }
+    })
+    // Also include any assigned owner name in rows
+    rows.forEach((row) => {
+      const name = String(row.ASSET_OWNER_NAME ?? '').trim()
+      if (name && name !== '-' && name !== 'N/A' && !ownerMap.has(name.toLowerCase())) {
+        ownerMap.set(name.toLowerCase(), { value: name, label: name, code: row.ASSET_OWNER_ID })
+      }
+    })
+    return Array.from(ownerMap.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [departmentOptions, rows])
+
+  // Individual Search options:
+  // 1. Asset Group with dropdown field including write enable option
+  // 2. Asset Owner with dropdown field including write enable option
+  // 3. Status with dropdown field
   const filters = useMemo(() => [
     {
       key: 'ASSET_GROUP',
       label: 'Search by Asset Group',
-      placeholder: '--Search by Asset Group--',
-      matches: (row, value) => String(row.ASSET_GROUP ?? '').toLowerCase().includes(value.toLowerCase()),
+      placeholder: '--Select/Write Asset Group--',
+      searchable: true,
+      options: assetGroupOptions,
+      matches: (row, value) => {
+        const q = String(value ?? '').trim().toLowerCase()
+        if (!q) return true
+        return String(row.ASSET_GROUP ?? '').toLowerCase().includes(q)
+      },
     },
     {
-      key: 'ASSET_OWNER_ID',
+      key: 'ASSET_OWNER_NAME',
       label: 'Search by Asset Owner',
-      placeholder: '--Search by Asset Owner--',
-      options: [...new Map(rows.map((row) => [row.ASSET_OWNER_ID, {
-        value: row.ASSET_OWNER_ID,
-        label: row.ASSET_OWNER_NAME || `Department ${row.ASSET_OWNER_ID}`,
-      }])).values()],
+      placeholder: '--Select/Write Asset Owner--',
+      searchable: true,
+      options: assetOwnerOptions,
+      matches: (row, value) => {
+        const q = String(value ?? '').trim().toLowerCase()
+        if (!q) return true
+        return (
+          String(row.ASSET_OWNER_NAME ?? '').toLowerCase().includes(q) ||
+          String(row.ASSET_OWNER_ID ?? '').toLowerCase() === q
+        )
+      },
     },
     {
       key: 'STATUS',
@@ -85,7 +188,7 @@ function AssetGroupList() {
       placeholder: '--Search by Status--',
       options: [{ label: 'Active', value: '1' }, { label: 'Inactive', value: '0' }],
     },
-  ], [rows])
+  ], [assetGroupOptions, assetOwnerOptions])
 
   const handleDelete = async (row) => {
     try {
