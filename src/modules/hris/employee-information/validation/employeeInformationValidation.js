@@ -184,6 +184,8 @@ function validateEducation(rows) {
   return rows.map((row) => {
     const errors = {};
     if (isBlankRow(row)) return errors;
+    required(errors, "EDUCATION_LEVEL_ID", row.EDUCATION_LEVEL_ID, "Education Level");
+    required(errors, "DEGREE_TITLE_ID", row.DEGREE_TITLE_ID, "Degree Title");
     max(errors, "MAJOR_GROUP", row.MAJOR_GROUP, 150, "Major/Group");
     minMax(
       errors,
@@ -464,10 +466,14 @@ export function validateEmployeeInformation(inputValues) {
       );
     }
   }
-  if (values.PHOTO && !["image/jpeg", "image/png"].includes(values.PHOTO.type))
-    fields.PHOTO = "Photo must be a JPG, JPEG, or PNG image.";
-  if (values.PHOTO?.size > 2 * 1024 * 1024)
-    fields.PHOTO = "Photo must not exceed 2 MB.";
+  // Only a newly selected File is checked. When editing, PHOTO is the saved
+  // image URL (a string), which was already validated when it was uploaded.
+  if (values.PHOTO instanceof File) {
+    if (!["image/jpeg", "image/png"].includes(values.PHOTO.type))
+      fields.PHOTO = "Photo must be a JPG, JPEG, or PNG image.";
+    else if (values.PHOTO.size > 2 * 1024 * 1024)
+      fields.PHOTO = "Photo must not exceed 2 MB.";
+  }
 
   const errors = {
     fields,
