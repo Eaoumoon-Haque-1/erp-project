@@ -1,9 +1,10 @@
 /**
  * @file Asset Specification Mapping View page.
+ * Supports both Bulk View (all specifications for this item) and Single View.
  * Displays read-only asset specification mapping details and audit log block.
  */
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
 import PageHeader from '../../../../components/shared/PageHeader'
 import { employeesApi } from '../../../hris/employee-information/api/employeeApi'
@@ -36,7 +37,11 @@ function formatAuditDateTime(value) {
 function AssetSpecificationMapView() {
   const { assetSpecificationMapId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const viewMode = searchParams.get('mode') === 'bulk' ? 'bulk' : 'single'
+
   const [record, setRecord] = useState(null)
+  const [allItemSpecs, setAllItemSpecs] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -95,6 +100,22 @@ function AssetSpecificationMapView() {
           GROUP_NAME: groupMap.get(String(mapped.BG_ID)) || '',
           BUSINESS_UNIT: unitMap.get(String(mapped.BU_ID)) || '',
         })
+
+        // Fetch all specifications for this item to display in bulk view
+        try {
+          const allSpecs = await assetSpecificationMapsApi.list({
+            businessUnitId: item.buId,
+            itemNameId: item.itemNameId,
+          })
+          if (active && Array.isArray(allSpecs)) {
+            const mappedAll = allSpecs
+              .map((s) => mapAssetSpecificationMapFromApi(s, references, userMap, empMap))
+              .sort((a, b) => Number(a.SORT_ORDER || 0) - Number(b.SORT_ORDER || 0))
+            setAllItemSpecs(mappedAll)
+          }
+        } catch {
+          // fallback
+        }
       })
       .catch((error) => {
         if (!active) return
@@ -109,6 +130,10 @@ function AssetSpecificationMapView() {
       active = false
     }
   }, [assetSpecificationMapId, navigate])
+
+  const handleModeChange = (mode) => {
+    setSearchParams({ mode })
+  }
 
   if (loading) {
     return (
@@ -127,6 +152,11 @@ function AssetSpecificationMapView() {
   }
 
   if (!record) return null
+
+  // In Single View, show specific single data; in Bulk View, show last specification map data
+  const lastSpecRecord =
+    allItemSpecs.length > 0 ? allItemSpecs[allItemSpecs.length - 1] : record
+  const auditRecord = viewMode === 'bulk' ? (lastSpecRecord || record) : record
 
   return (
     <div className={'erp-list-page'}>
@@ -149,59 +179,183 @@ function AssetSpecificationMapView() {
         ]}
       />
 
-      <section className={'erp-form-card space-y-6'}>
-        {/* Main Details Card */}
-        <div className={'bg-white p-4 rounded border border-gray-200'}>
-          <div className={'flex items-center justify-end pb-2 mb-3 border-b border-gray-100'}>
-            <span
-              className={[
-                'inline-flex rounded-[4px] px-[6px] py-[2px] text-[11px] font-bold leading-none text-white',
-                record.STATUS === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
-              ].join(' ')}
-            >
-              {record.STATUS === '1' ? 'Active' : 'Inactive'}
-            </span>
-          </div>
+      <section className={'erp-form-card space-y-4'}>
+        {/* Mode Switcher Tabs */}
+        <div className={'flex items-center gap-2 mb-1'}>
+          <button
+            type={'button'}
+            onClick={() => handleModeChange('bulk')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+              viewMode === 'bulk'
+                ? 'bg-teal-600 text-white shadow-xs'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            📋 Bulk View (All Specifications)
+          </button>
+          <button
+            type={'button'}
+            onClick={() => handleModeChange('single')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+              viewMode === 'single'
+                ? 'bg-teal-600 text-white shadow-xs'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            📄 Single View
+          </button>
+        </div>
 
-          <div className={'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs'}>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Group Name</span>
-              <span className={'font-semibold text-gray-800'}>{record.GROUP_NAME || '-'}</span>
+        {viewMode === 'bulk' ? (
+          /* =========================================================================
+              BULK VIEW: ASSET ITEM & ALL SPECIFICATIONS TABLE
+              ========================================================================= */
+          <div className={'space-y-4'}>
+            {/* Asset Item Header Card */}
+            <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>
+              <div className={'grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs'}>
+                <div>
+                  <span className={'block text-gray-400 font-medium mb-0.5'}>Asset Item Name</span>
+                  <span className={'font-bold text-teal-800 text-sm'}>
+                    {record.ITEM_NAME_LABEL || '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className={'block text-gray-400 font-medium mb-0.5'}>Group Name</span>
+                  <span className={'font-semibold text-gray-800'}>{record.GROUP_NAME || '-'}</span>
+                </div>
+                <div>
+                  <span className={'block text-gray-400 font-medium mb-0.5'}>Business Unit</span>
+                  <span className={'font-semibold text-gray-800'}>{record.BUSINESS_UNIT || '-'}</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Business Unit</span>
-              <span className={'font-semibold text-gray-800'}>{record.BUSINESS_UNIT || '-'}</span>
+
+            {/* Specifications Table */}
+            <div className={'bg-white rounded border border-gray-200 shadow-xs overflow-hidden'}>
+              <div className={'p-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between'}>
+                <span className={'text-xs font-bold text-gray-800 uppercase tracking-wider'}>
+                  Mapped Specifications ({allItemSpecs.length})
+                </span>
+                <span className={'text-xs text-gray-500'}>
+                  Ordered by Sort Order
+                </span>
+              </div>
+
+              <div className={'overflow-x-auto'}>
+                <table className={'w-full text-left border-collapse text-xs'}>
+                  <thead>
+                    <tr className={'bg-gray-100/75 border-b border-gray-200 text-gray-700 font-semibold'}>
+                      <th className={'py-2.5 px-3 w-16 text-center'}>Sort Order</th>
+                      <th className={'py-2.5 px-4'}>Specification</th>
+                      <th className={'py-2.5 px-3 w-28 text-center'}>Status</th>
+                      <th className={'py-2.5 px-4 w-44'}>Created By</th>
+                      <th className={'py-2.5 px-4 w-44'}>Created Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allItemSpecs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className={'py-8 text-center text-gray-400 italic'}>
+                          No specifications mapped to this item yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      allItemSpecs.map((itemSpec, idx) => (
+                        <tr
+                          key={itemSpec.ID || idx}
+                          className={'border-b border-gray-100 hover:bg-gray-50/60 transition-colors'}
+                        >
+                          <td className={'py-2.5 px-3 text-center align-middle'}>
+                            <span className={'inline-flex items-center justify-center w-7 h-6 rounded bg-teal-50 text-teal-800 font-bold text-xs border border-teal-200'}>
+                              {itemSpec.SORT_ORDER || idx + 1}
+                            </span>
+                          </td>
+                          <td className={'py-2.5 px-4 font-semibold text-gray-800 align-middle'}>
+                            {itemSpec.SPECIFICATION_NAME || itemSpec.SPECIFICATION || '-'}
+                          </td>
+                          <td className={'py-2.5 px-3 text-center align-middle'}>
+                            <span
+                              className={[
+                                'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none text-white',
+                                itemSpec.STATUS === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
+                              ].join(' ')}
+                            >
+                              {itemSpec.STATUS === '1' ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className={'py-2.5 px-4 text-gray-600 align-middle'}>
+                            {itemSpec.CREATED_EMP_NAME || itemSpec.CREATED_USER_NAME || '-'}
+                          </td>
+                          <td className={'py-2.5 px-4 text-gray-600 align-middle'}>
+                            {formatAuditDateTime(itemSpec.CREATED_DATETIME)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Status</span>
-              <span className={'font-semibold text-gray-800'}>
+          </div>
+        ) : (
+          /* =========================================================================
+              SINGLE VIEW: SINGLE SPECIFICATION MAPPING DETAILS
+              ========================================================================= */
+          <div className={'bg-white p-4 rounded border border-gray-200 shadow-xs'}>
+            <div className={'flex items-center justify-end pb-2 mb-3 border-b border-gray-100'}>
+              <span
+                className={[
+                  'inline-flex rounded-[4px] px-[6px] py-[2px] text-[11px] font-bold leading-none text-white',
+                  record.STATUS === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
+                ].join(' ')}
+              >
                 {record.STATUS === '1' ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Asset Item Name</span>
-              <div className={'mt-0.5'}>
-                <span className={'font-semibold text-teal-800 text-sm'}>
-                  {record.ITEM_NAME_LABEL || '-'}
+
+            <div className={'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs'}>
+              <div>
+                <span className={'block text-gray-400 font-medium'}>Group Name</span>
+                <span className={'font-semibold text-gray-800'}>{record.GROUP_NAME || '-'}</span>
+              </div>
+              <div>
+                <span className={'block text-gray-400 font-medium'}>Business Unit</span>
+                <span className={'font-semibold text-gray-800'}>{record.BUSINESS_UNIT || '-'}</span>
+              </div>
+              <div>
+                <span className={'block text-gray-400 font-medium'}>Status</span>
+                <span className={'font-semibold text-gray-800'}>
+                  {record.STATUS === '1' ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div>
+                <span className={'block text-gray-400 font-medium'}>Asset Item Name</span>
+                <div className={'mt-0.5'}>
+                  <span className={'font-semibold text-teal-800 text-sm'}>
+                    {record.ITEM_NAME_LABEL || '-'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className={'block text-gray-400 font-medium'}>Specification</span>
+                <span className={'font-semibold text-gray-800'}>
+                  {record.SPECIFICATION_NAME || record.SPECIFICATION || '-'}
+                </span>
+              </div>
+              <div>
+                <span className={'block text-gray-400 font-medium'}>Sort Order</span>
+                <span className={'font-semibold text-gray-800'}>
+                  {record.SORT_ORDER || '-'}
                 </span>
               </div>
             </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Specification</span>
-              <span className={'font-semibold text-gray-800'}>
-                {record.SPECIFICATION_NAME || record.SPECIFICATION || '-'}
-              </span>
-            </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Sort Order</span>
-              <span className={'font-semibold text-gray-800'}>
-                {record.SORT_ORDER || '-'}
-              </span>
-            </div>
           </div>
-        </div>
+        )}
 
-        {/* Audit Log Block */}
+        {/* =========================================================================
+            AUDIT LOG CARD (LIKE CUSTODIAN AUDIT LOG BLOCK FOR BOTH BULK & SINGLE VIEW)
+            ========================================================================= */}
         <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>
           <div className={'flex items-center justify-between pb-2 mb-3 border-b border-gray-100'}>
             <div className={'flex items-center gap-2'}>
@@ -214,12 +368,12 @@ function AssetSpecificationMapView() {
               data-column={'STATUS'}
               className={[
                 'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none text-white',
-                String(record.STATUS ?? '1') === '1'
+                String(auditRecord.STATUS ?? '1') === '1'
                   ? 'bg-[#32c497]'
                   : 'bg-[#fa5c70]',
               ].join(' ')}
             >
-              {String(record.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
+              {String(auditRecord.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
             </span>
           </div>
 
@@ -234,7 +388,7 @@ function AssetSpecificationMapView() {
                   Created By (User):
                 </span>
                 <span className={'font-semibold text-gray-800 break-words'}>
-                  {record.CREATED_USER_NAME || record.CREATED_USER_ID || '-'}
+                  {auditRecord.CREATED_USER_NAME || auditRecord.CREATED_USER_ID || '-'}
                 </span>
               </div>
 
@@ -246,7 +400,7 @@ function AssetSpecificationMapView() {
                   Created By (Employee):
                 </span>
                 <span className={'font-semibold text-gray-800 break-words'}>
-                  {record.CREATED_EMP_NAME || record.CREATED_EMP_ID || '-'}
+                  {auditRecord.CREATED_EMP_NAME || auditRecord.CREATED_EMP_ID || '-'}
                 </span>
               </div>
 
@@ -258,7 +412,7 @@ function AssetSpecificationMapView() {
                   Created At:
                 </span>
                 <span className={'font-semibold text-gray-800'}>
-                  {formatAuditDateTime(record.CREATED_DATETIME)}
+                  {formatAuditDateTime(auditRecord.CREATED_DATETIME)}
                 </span>
               </div>
 
@@ -270,7 +424,7 @@ function AssetSpecificationMapView() {
                   Created From:
                 </span>
                 <span className={'font-semibold text-gray-800 break-words'}>
-                  {record.CREATED_APP || '-'}
+                  {auditRecord.CREATED_APP || '-'}
                 </span>
               </div>
             </div>
@@ -285,7 +439,7 @@ function AssetSpecificationMapView() {
                   Updated By (User):
                 </span>
                 <span className={'font-semibold text-gray-800 break-words'}>
-                  {record.UPDATED_USER_NAME || record.UPDATED_USER_ID || '-'}
+                  {auditRecord.UPDATED_USER_NAME || auditRecord.UPDATED_USER_ID || '-'}
                 </span>
               </div>
 
@@ -297,7 +451,7 @@ function AssetSpecificationMapView() {
                   Updated By (Employee):
                 </span>
                 <span className={'font-semibold text-gray-800 break-words'}>
-                  {record.UPDATED_EMP_NAME || record.UPDATED_EMP_ID || '-'}
+                  {auditRecord.UPDATED_EMP_NAME || auditRecord.UPDATED_EMP_ID || '-'}
                 </span>
               </div>
 
@@ -309,7 +463,7 @@ function AssetSpecificationMapView() {
                   Updated At:
                 </span>
                 <span className={'font-semibold text-gray-800'}>
-                  {formatAuditDateTime(record.UPDATED_DATETIME)}
+                  {formatAuditDateTime(auditRecord.UPDATED_DATETIME)}
                 </span>
               </div>
 
@@ -321,7 +475,7 @@ function AssetSpecificationMapView() {
                   Updated From:
                 </span>
                 <span className={'font-semibold text-gray-800 break-words'}>
-                  {record.UPDATED_APP || '-'}
+                  {auditRecord.UPDATED_APP || '-'}
                 </span>
               </div>
             </div>

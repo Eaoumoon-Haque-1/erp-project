@@ -2,6 +2,7 @@
  * @file Controlled Asset Specification Mapping entry form.
  * Matches standard compact entry layout with audit log block.
  */
+import SearchableSelect from '../../../../components/shared/SearchableSelect'
 
 function FieldError({ id, message }) {
   if (!message) return null
@@ -48,11 +49,41 @@ function AssetSpecificationMapForm({
   submitting = false,
   assetItemRef,
   onChange,
+  mode = 'single',
+  onModeChange,
 }) {
   const { assetItems = [], specificationOptions = [] } = references
 
   return (
     <div className={'space-y-4 text-xs sm:text-sm'}>
+      {/* Mode switcher tabs (Bulk Entry vs Single Entry) */}
+      {onModeChange && (
+        <div className={'flex items-center gap-2 mb-2'}>
+          <button
+            type={'button'}
+            onClick={() => onModeChange('bulk')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+              mode === 'bulk'
+                ? 'bg-teal-600 text-white shadow-xs'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            📋 Bulk Entry (Multiple Specifications)
+          </button>
+          <button
+            type={'button'}
+            onClick={() => onModeChange('single')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+              mode === 'single'
+                ? 'bg-teal-600 text-white shadow-xs'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            📄 Single Entry
+          </button>
+        </div>
+      )}
+
       {/* =========================================================================
           SECTION 1: ASSET SPECIFICATION MAPPING (ENTRY FORM)
           ========================================================================= */}
@@ -66,24 +97,25 @@ function AssetSpecificationMapForm({
             >
               Asset Item Name<span className={'text-rose-500 ml-0.5'}>*</span>
             </label>
-            <select
-              ref={assetItemRef}
-              id={'ITEM_NAME'}
-              name={'ITEM_NAME'}
-              className={inputClass(errors.ITEM_NAME)}
-              value={values.ITEM_NAME || ''}
-              required
-              aria-invalid={Boolean(errors.ITEM_NAME)}
-              aria-describedby={errors.ITEM_NAME ? 'ITEM_NAME-error' : undefined}
-              onChange={onChange}
-            >
-              <option value={''}>--Select Asset Item--</option>
-              {assetItems.map((record) => (
-                <option key={record.ID} value={record.ID}>
-                  {record.ITEM_NAME}
-                </option>
-              ))}
-            </select>
+            <div ref={assetItemRef}>
+              <SearchableSelect
+                id={'ITEM_NAME'}
+                name={'ITEM_NAME'}
+                value={values.ITEM_NAME || ''}
+                placeholder={'--Select Asset Item--'}
+                error={Boolean(errors.ITEM_NAME)}
+                inputClassName={'h-8'}
+                options={assetItems.map((record) => ({
+                  value: String(record.ID),
+                  label: record.ITEM_NAME,
+                }))}
+                onChange={(nextValue) =>
+                  onChange({
+                    target: { name: 'ITEM_NAME', type: 'text', value: nextValue || '' },
+                  })
+                }
+              />
+            </div>
             <FieldError id={'ITEM_NAME-error'} message={errors.ITEM_NAME} />
           </div>
 

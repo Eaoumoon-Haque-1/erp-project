@@ -14,6 +14,7 @@ import {
 } from '../data/assetItemInformationOptions'
 import {
   ASSET_ITEM_TABLE,
+  createInitialAssetItemSetRow,
   initialAssetItemInformationValues,
   validateAssetItemInformation,
 } from '../validation/assetItemInformationValidation'
@@ -23,6 +24,7 @@ const categoryDerivedFields = ['CATEGORY_TYPE', 'DEPRI_METHOD', 'DEPRI_LIFE', 'D
 const fieldMap = {
   itemName: 'ITEM_NAME',
   itemGroupId: 'ITEM_GROUP',
+  itemPieceOrSet: 'ITEM_PIECE_OR_SET',
   assetDepriCatId: 'ASSET_DEPRI_CATE_ID',
   uomId: 'UOM',
   status: 'STATUS',
@@ -35,6 +37,9 @@ function AssetItemInformationCreate() {
   const sessionBusinessUnitId = String(session?.buId ?? '')
   const itemNameRef = useRef(null)
   const [values, setValues] = useState(initialAssetItemInformationValues)
+  const [setRows, setSetRows] = useState(() => [
+    createInitialAssetItemSetRow({ BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId }, 1),
+  ])
   const [errors, setErrors] = useState({})
   const [references, setReferences] = useState(() => getAssetItemReferences())
   const [existingRecords, setExistingRecords] = useState([])
@@ -65,6 +70,11 @@ function AssetItemInformationCreate() {
       ...current,
       ...deriveAssetItemFields(name, nextValue, current, references),
     }))
+    if (name === 'ITEM_PIECE_OR_SET' && nextValue === 'Set' && setRows.length === 0) {
+      setSetRows([
+        createInitialAssetItemSetRow({ BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId }, 1),
+      ])
+    }
     setErrors((current) => {
       const next = { ...current, [name]: undefined }
       if (name === 'ASSET_DEPRI_CATE_ID') {
@@ -75,10 +85,57 @@ function AssetItemInformationCreate() {
     })
   }
 
+  const handleSetRowChange = (index, field, value) => {
+    setSetRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+    )
+    setErrors((prev) => ({
+      ...prev,
+      ITEM_SETS: undefined,
+      [`setRow_${index}_${field}`]: undefined,
+    }))
+  }
+
+  const handleAddSetRow = () => {
+    setSetRows((prev) => [
+      ...prev,
+      createInitialAssetItemSetRow(
+        { BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId },
+        prev.length + 1,
+      ),
+    ])
+    setErrors((prev) => ({ ...prev, ITEM_SETS: undefined }))
+  }
+
+  const handleRemoveSetRow = (index) => {
+    setSetRows((prev) => {
+      const filtered = prev.filter((_, i) => i !== index)
+      return filtered.map((row, idx) => ({
+        ...row,
+        SORT_ORDER: String(idx + 1),
+      }))
+    })
+    setErrors({})
+  }
+
+  const handleReorderSetRows = (fromIndex, toIndex) => {
+    setSetRows((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next.map((row, idx) => ({
+        ...row,
+        SORT_ORDER: String(idx + 1),
+      }))
+    })
+    setErrors({})
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAssetItemInformation(values, existingRecords, references)
+    const result = validateAssetItemInformation(values, existingRecords, references, setRows)
     setValues({ ...values, ...result.values })
+    setSetRows(result.setRows)
     setErrors(result.errors)
     if (!result.isValid) {
       requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
@@ -88,10 +145,16 @@ function AssetItemInformationCreate() {
     setSubmitting(true)
     setMessage('')
     try {
-      await assetItemsApi.create(mapAssetItemToApi(result.values, {
-        bgId: sessionGroupId,
-        buId: sessionBusinessUnitId,
-      }))
+      await assetItemsApi.create(
+        mapAssetItemToApi(
+          result.values,
+          {
+            bgId: sessionGroupId,
+            buId: sessionBusinessUnitId,
+          },
+          result.setRows,
+        ),
+      )
       navigate(listPath)
     } catch (error) {
       setMessage(applyApiFormErrors(error, setErrors, 'Unable to create Asset Item.', fieldMap))
@@ -102,6 +165,9 @@ function AssetItemInformationCreate() {
 
   const handleReset = () => {
     setValues(initialAssetItemInformationValues)
+    setSetRows([
+      createInitialAssetItemSetRow({ BG_ID: sessionGroupId, BU_ID: sessionBusinessUnitId }, 1),
+    ])
     setErrors({})
     setMessage('')
     requestAnimationFrame(() => itemNameRef.current?.focus())
@@ -125,10 +191,15 @@ function AssetItemInformationCreate() {
         values={values}
         errors={errors}
         references={references}
+        setRows={setRows}
         submitLabel={'Save'}
         submitting={submitting}
         itemNameRef={itemNameRef}
         onChange={handleChange}
+        onSetRowChange={handleSetRowChange}
+        onAddSetRow={handleAddSetRow}
+        onRemoveSetRow={handleRemoveSetRow}
+        onReorderSetRows={handleReorderSetRows}
       />
     </FormPage>
   )

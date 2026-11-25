@@ -68,11 +68,11 @@ function AssetUnitOfMeasureList() {
   }
 
   return (
-    <ListPage title={'Unit of Measure (UOM) List'} createLabel={'New'} createTo={'/procure-to-pay/procurement-settings/asset-unit-of-measure/create'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => (
+    <ListPage title={'Unit of Measure (UOM) List'} createLabel={'New'} createTo={'/asset/asset-unit-of-measure/create'} filters={filters} columns={columns} rows={rows} loading={loading} message={message} renderActions={(row) => (
       <ListRowActions
         row={row}
-        onView={() => navigate(`/procure-to-pay/procurement-settings/asset-unit-of-measure/${row.ID}/view`)}
-        onEdit={() => navigate(`/procure-to-pay/procurement-settings/asset-unit-of-measure/${row.ID}/edit`)}
+        onView={() => navigate(`/asset/asset-unit-of-measure/${row.ID}/view`)}
+        onEdit={() => navigate(`/asset/asset-unit-of-measure/${row.ID}/edit`)}
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
       />

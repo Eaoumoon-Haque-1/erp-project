@@ -7,10 +7,10 @@ import { createCrudApi, unwrapApiResponse } from './createCrudApi'
 import { normalizeApiError } from './errors'
 
 export const suppliersApi = {
-  ...createCrudApi('/suppliers'),
+  ...createCrudApi('/afm-suppliers'),
   // buId is optional; omit it to list every supplier of the caller's group.
   list: (buId) => unwrapApiResponse(
-    apiClient.get('/suppliers', { params: buId ? { buId } : undefined }),
+    apiClient.get('/afm-suppliers', { params: buId ? { buId } : undefined }),
   ),
 }
 

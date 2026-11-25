@@ -16,6 +16,7 @@ import {
 } from '../data/assetItemInformationOptions'
 import {
   ASSET_ITEM_TABLE,
+  createInitialAssetItemSetRow,
   initialAssetItemInformationValues,
   validateAssetItemInformation,
 } from '../validation/assetItemInformationValidation'
@@ -25,6 +26,7 @@ const categoryDerivedFields = ['CATEGORY_TYPE', 'DEPRI_METHOD', 'DEPRI_LIFE', 'D
 const fieldMap = {
   itemName: 'ITEM_NAME',
   itemGroupId: 'ITEM_GROUP',
+  itemPieceOrSet: 'ITEM_PIECE_OR_SET',
   assetDepriCatId: 'ASSET_DEPRI_CATE_ID',
   uomId: 'UOM',
   status: 'STATUS',
@@ -39,6 +41,8 @@ function AssetItemInformationEdit() {
   const itemNameRef = useRef(null)
   const [values, setValues] = useState(initialAssetItemInformationValues)
   const [originalValues, setOriginalValues] = useState(initialAssetItemInformationValues)
+  const [setRows, setSetRows] = useState([])
+  const [originalSetRows, setOriginalSetRows] = useState([])
   const [auditLog, setAuditLog] = useState(null)
   const [errors, setErrors] = useState({})
   const [references, setReferences] = useState(() => getAssetItemReferences())
@@ -80,9 +84,26 @@ function AssetItemInformationEdit() {
         )
 
         const mapped = mapAssetItemFromApi(record, loadedReferences, userMap, empMap)
+        const initialRows =
+          Array.isArray(mapped.ITEM_SETS) && mapped.ITEM_SETS.length > 0
+            ? mapped.ITEM_SETS.map((row, idx) =>
+                createInitialAssetItemSetRow(row, idx + 1),
+              )
+            : [
+                createInitialAssetItemSetRow(
+                  {
+                    BG_ID: sessionGroupId || mapped.BG_ID,
+                    BU_ID: sessionBusinessUnitId || mapped.BU_ID,
+                    ITEM_ID: mapped.ID,
+                  },
+                  1,
+                ),
+              ]
         setReferences(loadedReferences)
         setValues(mapped)
         setOriginalValues(mapped)
+        setSetRows(initialRows)
+        setOriginalSetRows(initialRows)
         setAuditLog({
           CREATED_USER_ID: mapped.CREATED_USER_ID,
           CREATED_USER_NAME: mapped.CREATED_USER_NAME,
@@ -115,6 +136,18 @@ function AssetItemInformationEdit() {
       ...current,
       ...deriveAssetItemFields(name, nextValue, current, references),
     }))
+    if (name === 'ITEM_PIECE_OR_SET' && nextValue === 'Set' && setRows.length === 0) {
+      setSetRows([
+        createInitialAssetItemSetRow(
+          {
+            BG_ID: sessionGroupId || values.BG_ID,
+            BU_ID: sessionBusinessUnitId || values.BU_ID,
+            ITEM_ID: assetItemId,
+          },
+          1,
+        ),
+      ])
+    }
     setErrors((current) => {
       const next = { ...current, [name]: undefined }
       if (name === 'ASSET_DEPRI_CATE_ID') {
@@ -125,10 +158,61 @@ function AssetItemInformationEdit() {
     })
   }
 
+  const handleSetRowChange = (index, field, value) => {
+    setSetRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+    )
+    setErrors((prev) => ({
+      ...prev,
+      ITEM_SETS: undefined,
+      [`setRow_${index}_${field}`]: undefined,
+    }))
+  }
+
+  const handleAddSetRow = () => {
+    setSetRows((prev) => [
+      ...prev,
+      createInitialAssetItemSetRow(
+        {
+          BG_ID: sessionGroupId || values.BG_ID,
+          BU_ID: sessionBusinessUnitId || values.BU_ID,
+          ITEM_ID: assetItemId,
+        },
+        prev.length + 1,
+      ),
+    ])
+    setErrors((prev) => ({ ...prev, ITEM_SETS: undefined }))
+  }
+
+  const handleRemoveSetRow = (index) => {
+    setSetRows((prev) => {
+      const filtered = prev.filter((_, i) => i !== index)
+      return filtered.map((row, idx) => ({
+        ...row,
+        SORT_ORDER: String(idx + 1),
+      }))
+    })
+    setErrors({})
+  }
+
+  const handleReorderSetRows = (fromIndex, toIndex) => {
+    setSetRows((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next.map((row, idx) => ({
+        ...row,
+        SORT_ORDER: String(idx + 1),
+      }))
+    })
+    setErrors({})
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
-    const result = validateAssetItemInformation(values, existingRecords, references)
+    const result = validateAssetItemInformation(values, existingRecords, references, setRows)
     setValues({ ...values, ...result.values })
+    setSetRows(result.setRows)
     setErrors(result.errors)
     if (!result.isValid) {
       requestAnimationFrame(() => document.querySelector('[aria-invalid=true]')?.focus())
@@ -138,10 +222,17 @@ function AssetItemInformationEdit() {
     setSubmitting(true)
     setMessage('')
     try {
-      await assetItemsApi.update(assetItemId, mapAssetItemToApi(result.values, {
-        bgId: sessionGroupId || values.BG_ID,
-        buId: sessionBusinessUnitId || values.BU_ID,
-      }))
+      await assetItemsApi.update(
+        assetItemId,
+        mapAssetItemToApi(
+          result.values,
+          {
+            bgId: sessionGroupId || values.BG_ID,
+            buId: sessionBusinessUnitId || values.BU_ID,
+          },
+          result.setRows,
+        ),
+      )
       navigate(listPath)
     } catch (error) {
       setMessage(applyApiFormErrors(error, setErrors, 'Unable to update Asset Item.', fieldMap))
@@ -152,6 +243,7 @@ function AssetItemInformationEdit() {
 
   const handleReset = () => {
     setValues(originalValues)
+    setSetRows(originalSetRows)
     setErrors({})
     setMessage('')
     requestAnimationFrame(() => itemNameRef.current?.focus())
@@ -177,11 +269,16 @@ function AssetItemInformationEdit() {
         values={values}
         errors={errors}
         references={references}
+        setRows={setRows}
         auditLog={auditLog}
         submitLabel={'Update'}
         submitting={submitting}
         itemNameRef={itemNameRef}
         onChange={handleChange}
+        onSetRowChange={handleSetRowChange}
+        onAddSetRow={handleAddSetRow}
+        onRemoveSetRow={handleRemoveSetRow}
+        onReorderSetRows={handleReorderSetRows}
       />
     </FormPage>
   )

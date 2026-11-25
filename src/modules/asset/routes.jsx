@@ -34,6 +34,10 @@ import AssetItemInformationView from './asset-item-information/pages/AssetItemIn
 import AssetReceiveRegisterCreate from './asset-receive-register/pages/AssetReceiveRegisterCreate'
 import AssetReceiveRegisterEdit from './asset-receive-register/pages/AssetReceiveRegisterEdit'
 import AssetReceiveRegisterList from './asset-receive-register/pages/AssetReceiveRegisterList'
+import AssetBookRegisterCreate from './asset-book-register/pages/AssetBookRegisterCreate'
+import AssetBookRegisterEdit from './asset-book-register/pages/AssetBookRegisterEdit'
+import AssetBookRegisterList from './asset-book-register/pages/AssetBookRegisterList'
+import AssetBookRegisterView from './asset-book-register/pages/AssetBookRegisterView'
 import AssetLookupTypeCreate from './asset-lookup-type/pages/AssetLookupTypeCreate'
 import AssetLookupTypeEdit from './asset-lookup-type/pages/AssetLookupTypeEdit'
 import AssetLookupTypeList from './asset-lookup-type/pages/AssetLookupTypeList'
@@ -69,6 +73,10 @@ import GatePassCreate from './gate-pass/pages/GatePassCreate'
 import GatePassEdit from './gate-pass/pages/GatePassEdit'
 import GatePassList from './gate-pass/pages/GatePassList'
 import GatePassView from './gate-pass/pages/GatePassView'
+import AssetUnitOfMeasureCreate from './asset-unit-of-measure/pages/AssetUnitOfMeasureCreate'
+import AssetUnitOfMeasureEdit from './asset-unit-of-measure/pages/AssetUnitOfMeasureEdit'
+import AssetUnitOfMeasureList from './asset-unit-of-measure/pages/AssetUnitOfMeasureList'
+import AssetUnitOfMeasureView from './asset-unit-of-measure/pages/AssetUnitOfMeasureView'
 
 export const assetRoutes = [
   { path: 'asset/asset-assign-to-employee', element: <AssetAssignEmployeeList /> },
@@ -110,6 +118,14 @@ export const assetRoutes = [
   { path: 'asset/asset-receive-register', element: <AssetReceiveRegisterList /> },
   { path: 'asset/asset-receive-register/create', element: <AssetReceiveRegisterCreate /> },
   { path: 'asset/asset-receive-register/:assetReceiveId/edit', element: <AssetReceiveRegisterEdit /> },
+  { path: 'asset/asset-book-register', element: <AssetBookRegisterList /> },
+  { path: 'asset/asset-book-register/create', element: <AssetBookRegisterCreate /> },
+  { path: 'asset/asset-book-register/:id/view', element: <AssetBookRegisterView /> },
+  { path: 'asset/asset-book-register/:id/edit', element: <AssetBookRegisterEdit /> },
+  { path: 'asset/asset-receive-register/asset-book-register', element: <AssetBookRegisterList /> },
+  { path: 'asset/asset-receive-register/asset-book-register/create', element: <AssetBookRegisterCreate /> },
+  { path: 'asset/asset-receive-register/asset-book-register/:id/view', element: <AssetBookRegisterView /> },
+  { path: 'asset/asset-receive-register/asset-book-register/:id/edit', element: <AssetBookRegisterEdit /> },
   { path: 'bulk-asset-receive-for-split', element: <BulkAssetReceiveForSplitList /> },
   { path: 'asset/bulk-asset-receive-for-split/create', element: <BulkAssetReceiveForSplitCreate /> },
   { path: 'asset/bulk-asset-receive-for-split/:bulkAssetReceiveId/edit', element: <BulkAssetReceiveForSplitEdit /> },
@@ -142,4 +158,8 @@ export const assetRoutes = [
   { path: 'asset/gate-pass/create', element: <GatePassCreate /> },
   { path: 'asset/gate-pass/:gatePassId/view', element: <GatePassView /> },
   { path: 'asset/gate-pass/:gatePassId/edit', element: <GatePassEdit /> },
+  { path: 'asset/asset-unit-of-measure', element: <AssetUnitOfMeasureList /> },
+  { path: 'asset/asset-unit-of-measure/create', element: <AssetUnitOfMeasureCreate /> },
+  { path: 'asset/asset-unit-of-measure/:assetUnitOfMeasureId/view', element: <AssetUnitOfMeasureView /> },
+  { path: 'asset/asset-unit-of-measure/:assetUnitOfMeasureId/edit', element: <AssetUnitOfMeasureEdit /> },
 ]

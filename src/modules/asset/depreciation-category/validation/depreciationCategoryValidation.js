@@ -35,7 +35,7 @@ export function validateDepreciationCategory(values, existingRecords = []) {
   const errors = {}
 
   if (!normalizedValues.DEPRI_CATEGORY) {
-    errors.DEPRI_CATEGORY = 'Depreciation Category is required.'
+    errors.DEPRI_CATEGORY = 'Asset Major Category is required.'
   }
   if (!normalizedValues.DEPRI_METHOD) {
     errors.DEPRI_METHOD = 'Depreciation Method is required.'

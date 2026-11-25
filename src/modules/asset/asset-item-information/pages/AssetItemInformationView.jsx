@@ -144,17 +144,6 @@ function AssetItemInformationView() {
       <section className={'erp-form-card space-y-6'}>
         {/* Main Details Card */}
         <div className={'bg-white p-4 rounded border border-gray-200'}>
-          <div className={'flex items-center justify-end pb-2 mb-3 border-b border-gray-100'}>
-            <span
-              className={[
-                'inline-flex rounded-[4px] px-[6px] py-[2px] text-[11px] font-bold leading-none text-white',
-                record.STATUS === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
-              ].join(' ')}
-            >
-              {record.STATUS === '1' ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
           <div className={'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs'}>
             <div>
               <span className={'block text-gray-400 font-medium'}>Group Name</span>
@@ -163,12 +152,6 @@ function AssetItemInformationView() {
             <div>
               <span className={'block text-gray-400 font-medium'}>Business Unit</span>
               <span className={'font-semibold text-gray-800'}>{record.BUSINESS_UNIT || '-'}</span>
-            </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Status</span>
-              <span className={'font-semibold text-gray-800'}>
-                {record.STATUS === '1' ? 'Active' : 'Inactive'}
-              </span>
             </div>
             <div>
               <span className={'block text-gray-400 font-medium'}>Item Name</span>
@@ -185,7 +168,7 @@ function AssetItemInformationView() {
               </span>
             </div>
             <div>
-              <span className={'block text-gray-400 font-medium'}>Depreciation Category</span>
+              <span className={'block text-gray-400 font-medium'}>Asset Major Category</span>
               <span className={'font-semibold text-gray-800'}>
                 {record.DEPRI_CATEGORY_NAME || '-'}
               </span>
@@ -215,19 +198,87 @@ function AssetItemInformationView() {
               </span>
             </div>
             <div>
-              <span className={'block text-gray-400 font-medium'}>UOM</span>
-              <span className={'font-semibold text-gray-800'}>
-                {record.UOM_NAME || '-'}
-              </span>
-            </div>
-            <div>
               <span className={'block text-gray-400 font-medium'}>Asset Owner</span>
               <span className={'font-semibold text-gray-800'}>
                 {record.ASSET_OWNER || '-'}
               </span>
             </div>
+            <div data-column={'ITEM_PIECE_OR_SET'}>
+              <span className={'block text-gray-400 font-medium'}>Item Unit</span>
+              <span className={'font-semibold text-gray-800'}>
+                {record.ITEM_PIECE_OR_SET || 'Piece'}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Asset Item Sets (ASSET_ITEM_SET) — shown only when Item Unit is Set */}
+        {record.ITEM_PIECE_OR_SET === 'Set' && (
+          <div className={'bg-white p-3.5 rounded border border-gray-200'}>
+            <div className={'flex items-center gap-2 pb-2 mb-2.5 border-b border-gray-100'}>
+              <div className={'w-1.5 h-4 bg-[#0b7562] rounded-full'} />
+              <h3 className={'text-sm font-semibold text-gray-800'}>
+                Asset Item Sets
+              </h3>
+              <span className={'ml-2 px-1.5 py-0.2 text-[11px] font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded'}>
+                {(record.ITEM_SETS || []).length} {(record.ITEM_SETS || []).length === 1 ? 'Item' : 'Items'}
+              </span>
+            </div>
+
+            <div className={'erp-table-wrap overflow-x-auto rounded border border-gray-200'}>
+              <table className={'w-full text-xs text-left border-collapse'}>
+                <thead className={'bg-[#0b7562] text-white font-semibold'}>
+                  <tr>
+                    <th className={'w-12 px-2 py-1.5 text-center border-r border-[#096353]'}>#</th>
+                    <th className={'px-2.5 py-1.5 border-r border-[#096353]'}>Item Name</th>
+                    <th className={'w-24 px-2.5 py-1.5 text-center border-r border-[#096353]'}>Sort Order</th>
+                    <th className={'w-24 px-2.5 py-1.5 text-center'}>Status</th>
+                  </tr>
+                </thead>
+                <tbody className={'divide-y divide-gray-200 bg-white'}>
+                  {!record.ITEM_SETS || record.ITEM_SETS.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className={'px-3 py-6 text-center text-gray-500 bg-gray-50/50 text-xs'}>
+                        No set items recorded.
+                      </td>
+                    </tr>
+                  ) : (
+                    record.ITEM_SETS.map((setRow, idx) => (
+                      <tr
+                        key={setRow.ID || setRow._ROW_ID || idx}
+                        className={`hover:bg-teal-50/20 transition-colors ${
+                          idx % 2 === 1 ? 'bg-gray-50/40' : 'bg-white'
+                        }`}
+                      >
+                        <td className={'px-2 py-1 text-center text-gray-500 font-mono text-xs border-r border-gray-100'}>
+                          {idx + 1}
+                        </td>
+                        <td className={'px-2.5 py-1.5 font-semibold text-gray-800 border-r border-gray-100'}>
+                          {setRow.ITEM_NAME || '-'}
+                        </td>
+                        <td className={'px-2.5 py-1.5 text-center font-mono text-gray-700 border-r border-gray-100'}>
+                          {setRow.SORT_ORDER || idx + 1}
+                        </td>
+                        <td className={'px-2.5 py-1.5 text-center'}>
+                          <span
+                            className={[
+                              'inline-flex rounded-[4px] px-2 py-0.5 text-[11px] font-bold leading-none text-white',
+                              String(setRow.STATUS ?? '1') === '1'
+                                ? 'bg-[#32c497]'
+                                : 'bg-[#fa5c70]',
+                            ].join(' ')}
+                          >
+                            {String(setRow.STATUS ?? '1') === '1' ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Audit Log Block */}
         <div className={'bg-white p-3.5 rounded border border-gray-200 shadow-xs'}>

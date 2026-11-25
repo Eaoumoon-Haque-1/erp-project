@@ -3,7 +3,7 @@ import ApiRecordViewPage from '../../../../components/shared/ApiRecordViewPage'
 import { getRecordStatus } from '../../../../utils/recordValues'
 import { assetUnitsOfMeasureApi } from '../api/assetUnitOfMeasureApi'
 
-const basePath = '/procure-to-pay/procurement-settings/asset-unit-of-measure'
+const basePath = '/asset/asset-unit-of-measure'
 
 function formatAuditDateTime(value) {
   if (!value) return 'N/A'

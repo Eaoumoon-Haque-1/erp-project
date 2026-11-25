@@ -43,6 +43,11 @@ export const assetMenu = [
             key: 'location-master',
             path: '/asset/location-master',
           },
+          {
+            label: 'Unit of Measure (UOM)',
+            key: 'asset-unit-of-measure',
+            path: '/asset/asset-unit-of-measure',
+          },
         ],
       },
       {
@@ -53,6 +58,11 @@ export const assetMenu = [
             label: 'Asset Receive Register',
             key: 'asset-receive-register',
             path: '/asset/asset-receive-register',
+          },
+          {
+            label: 'Asset Book Register',
+            key: 'asset-book-register',
+            path: '/asset/asset-book-register',
           },
           {
             label: 'Bulk Asset Receive for Split',

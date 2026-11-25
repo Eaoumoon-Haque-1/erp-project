@@ -11,7 +11,7 @@ import { mapDepreciationCategoryFromApi, mapDepreciationCategoryToApi } from '..
 import { loadDepreciationCategoryReferences } from '../data/depreciationCategoryOptions'
 
 const columns = [
-  { key: 'DEPRI_CATEGORY', label: 'Depreciation Category' },
+  { key: 'DEPRI_CATEGORY', label: 'Asset Major Category' },
   { key: 'DEPRI_METHOD_NAME', label: 'Depreciation Method' },
   { key: 'ASSET_TYPE_NAME', label: 'Asset Type' },
   { key: 'DEPRI_LIFE', label: 'Life (Months)' },
@@ -103,8 +103,8 @@ function DepreciationCategoryList() {
   const filters = useMemo(() => [
     {
       key: 'DEPRI_CATEGORY',
-      label: 'Search by Depreciation Category',
-      placeholder: '--Select/Write Depreciation Category--',
+      label: 'Search by Asset Major Category',
+      placeholder: '--Select/Write Asset Major Category--',
       searchable: true,
       options: depriCategoryOptions,
       matches: (row, value) => {

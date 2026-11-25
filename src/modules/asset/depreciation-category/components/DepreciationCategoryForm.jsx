@@ -64,7 +64,7 @@ function DepreciationCategoryForm({
               className={'block text-xs font-medium text-gray-700 mb-1'}
               htmlFor={'DEPRI_CATEGORY'}
             >
-              Depreciation Category<span className={'text-rose-500 ml-0.5'}>*</span>
+              Asset Major Category<span className={'text-rose-500 ml-0.5'}>*</span>
             </label>
             <input
               ref={categoryRef}
@@ -73,7 +73,7 @@ function DepreciationCategoryForm({
               type={'text'}
               className={inputClass(errors.DEPRI_CATEGORY)}
               value={values.DEPRI_CATEGORY || ''}
-              placeholder={'Enter depreciation category'}
+              placeholder={'Enter asset major category'}
               required
               aria-invalid={Boolean(errors.DEPRI_CATEGORY)}
               aria-describedby={errors.DEPRI_CATEGORY ? 'DEPRI_CATEGORY-error' : undefined}

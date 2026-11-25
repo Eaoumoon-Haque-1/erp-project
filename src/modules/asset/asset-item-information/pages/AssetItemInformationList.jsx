@@ -12,10 +12,10 @@ import { loadAssetItemReferences } from '../data/assetItemInformationOptions'
 
 const columns = [
   { key: 'ITEM_NAME', label: 'Item Name' },
-  { key: 'ITEM_GROUP_NAME', label: 'Item Group' },
-  { key: 'DEPRI_CATEGORY_NAME', label: 'Depreciation Category' },
+  { key: 'ITEM_GROUP_NAME', label: 'Item Group', render: (value) => value || '-' },
+  { key: 'ITEM_PIECE_OR_SET', label: 'Item Unit', render: (value) => value || 'Piece' },
+  { key: 'DEPRI_CATEGORY_NAME', label: 'Asset Major Category' },
   { key: 'CATEGORY_TYPE', label: 'Asset Type', render: (value) => value || 'N/A' },
-  { key: 'UOM_NAME', label: 'UOM' },
   { key: 'ASSET_OWNER', label: 'Asset Owner', render: (value) => value || 'N/A' },
   {
     key: 'STATUS',
@@ -169,8 +169,8 @@ function AssetItemInformationList() {
     },
     {
       key: 'DEPRI_CATEGORY_NAME',
-      label: 'Search by Depreciation Category',
-      placeholder: '--Select/Write Depreciation Category--',
+      label: 'Search by Asset Major Category',
+      placeholder: '--Select/Write Asset Major Category--',
       searchable: true,
       options: depriCategoryOptions,
       matches: (row, value) => {
@@ -201,10 +201,17 @@ function AssetItemInformationList() {
 
   const handleStatusChange = async (row) => {
     try {
-      const updated = await assetItemsApi.update(row.ID, mapAssetItemToApi({
-        ...row,
-        STATUS: row.STATUS === '1' ? '0' : '1',
-      }))
+      const updated = await assetItemsApi.update(
+        row.ID,
+        mapAssetItemToApi(
+          {
+            ...row,
+            STATUS: row.STATUS === '1' ? '0' : '1',
+          },
+          {},
+          row.ITEM_SETS,
+        ),
+      )
       setRows((current) => current.map((item) => (
         item.ID === row.ID ? { ...item, STATUS: String(updated.status ?? item.STATUS) } : item
       )))

@@ -61,10 +61,12 @@ function LocationMasterList() {
     }
   }, [sessionGroupId, sessionBusinessUnitId])
 
+  const effectiveGroupId = resolvedGroupId || sessionGroupId
+
   // References strictly scoped to logged-in user's business unit and group
   const { custodians, departments } = useLocationReferences({
     buId: sessionBusinessUnitId,
-    groupId: resolvedGroupId || sessionGroupId,
+    groupId: effectiveGroupId,
   })
 
   useEffect(() => {
@@ -82,8 +84,8 @@ function LocationMasterList() {
           const matchBu = sessionBusinessUnitId
             ? String(record.BU_ID) === sessionBusinessUnitId
             : true
-          const matchBg = resolvedGroupId || sessionGroupId
-            ? String(record.BG_ID) === String(resolvedGroupId || sessionGroupId)
+          const matchBg = effectiveGroupId
+            ? String(record.BG_ID) === String(effectiveGroupId)
             : true
           return matchBu && matchBg
         })
@@ -99,7 +101,7 @@ function LocationMasterList() {
     return () => {
       active = false
     }
-  }, [sessionBusinessUnitId, resolvedGroupId, sessionGroupId])
+  }, [sessionBusinessUnitId, effectiveGroupId])
 
   // The API returns ids only; names are resolved from the loaded reference lists.
   const rows = useMemo(
@@ -141,17 +143,20 @@ function LocationMasterList() {
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [custodians])
 
-  // 3. Sub Custodian
+  // 3. Sub Custodian (scoped strictly to user's BU & BG active custodians)
   const subCustodianFilterOptions = useMemo(() => {
     const subMap = new Map()
-    custodians.forEach((c) => {
-      (c.SUB_CUSTODIANS || []).forEach((sub) => {
-        const name = String(sub.SUB_CUSTODIAN_NAME ?? '').trim()
-        if (name && !subMap.has(name.toLowerCase())) {
-          subMap.set(name.toLowerCase(), { value: name, label: name, code: sub.ID })
-        }
+    custodians
+      .filter((c) => String(c.STATUS ?? '1') === '1')
+      .forEach((c) => {
+        (c.SUB_CUSTODIANS || []).forEach((sub) => {
+          const isSubActive = String(sub.STATUS ?? sub.status ?? '1') === '1'
+          const name = String(sub.SUB_CUSTODIAN_NAME ?? '').trim()
+          if (isSubActive && name && !subMap.has(name.toLowerCase())) {
+            subMap.set(name.toLowerCase(), { value: name, label: name, code: sub.ID })
+          }
+        })
       })
-    })
     rows.forEach((r) => {
       const name = String(r.SUB_CUSTODIAN_NAME ?? '').trim()
       if (name && name !== '-' && !subMap.has(name.toLowerCase())) {
@@ -161,18 +166,11 @@ function LocationMasterList() {
     return Array.from(subMap.values()).sort((a, b) => a.label.localeCompare(b.label))
   }, [custodians, rows])
 
-  // 4. Department
-  const departmentFilterOptions = useMemo(() => {
-    return departments
-      .filter((d) => String(d.STATUS ?? '1') === '1')
-      .map((d) => ({
-        value: d.NAME,
-        label: d.NAME,
-        code: d.ID,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label))
-  }, [departments])
-
+  // Individual Search Options with dropdown field including write enable option:
+  // 1. Location Name
+  // 2. Custodian
+  // 3. Sub Custodian
+  // 4. Status
   const filters = useMemo(
     () => [
       {
@@ -218,21 +216,6 @@ function LocationMasterList() {
         },
       },
       {
-        key: 'DEPT_NAME',
-        label: 'Search by Department',
-        placeholder: '--Select/Write Department--',
-        searchable: true,
-        options: departmentFilterOptions,
-        matches: (row, value) => {
-          const q = String(value ?? '').trim().toLowerCase()
-          if (!q) return true
-          return (
-            String(row.DEPT_NAME ?? '').toLowerCase().includes(q) ||
-            String(row.DEPT_ID ?? '').toLowerCase() === q
-          )
-        },
-      },
-      {
         key: 'STATUS',
         label: 'Search by Status',
         placeholder: '--Search by Status--',
@@ -246,7 +229,6 @@ function LocationMasterList() {
       locationNameOptions,
       custodianFilterOptions,
       subCustodianFilterOptions,
-      departmentFilterOptions,
     ],
   )
 

@@ -141,17 +141,6 @@ function AssetGroupView() {
       <section className={'erp-form-card space-y-6'}>
         {/* Main Details Card */}
         <div className={'bg-white p-4 rounded border border-gray-200'}>
-          <div className={'flex items-center justify-end pb-2 mb-3 border-b border-gray-100'}>
-            <span
-              className={[
-                'inline-flex rounded-[4px] px-[6px] py-[2px] text-[11px] font-bold leading-none text-white',
-                record.STATUS === '1' ? 'bg-[#32c497]' : 'bg-[#fa5c70]',
-              ].join(' ')}
-            >
-              {record.STATUS === '1' ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
           <div className={'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs'}>
             <div>
               <span className={'block text-gray-400 font-medium'}>Group Name</span>
@@ -160,12 +149,6 @@ function AssetGroupView() {
             <div>
               <span className={'block text-gray-400 font-medium'}>Business Unit</span>
               <span className={'font-semibold text-gray-800'}>{record.BUSINESS_UNIT || '-'}</span>
-            </div>
-            <div>
-              <span className={'block text-gray-400 font-medium'}>Status</span>
-              <span className={'font-semibold text-gray-800'}>
-                {record.STATUS === '1' ? 'Active' : 'Inactive'}
-              </span>
             </div>
             <div>
               <span className={'block text-gray-400 font-medium'}>Asset Group</span>

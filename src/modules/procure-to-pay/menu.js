@@ -9,16 +9,6 @@ export const procureToPayMenu = [
         key: 'procurement-settings',
         children: [
           {
-            label: 'Supplier Information',
-            key: 'supplier-information',
-            path: '/procure-to-pay/procurement-settings/supplier-information',
-          },
-          {
-            label: 'Unit of Measure (UOM)',
-            key: 'asset-unit-of-measure',
-            path: '/procure-to-pay/procurement-settings/asset-unit-of-measure',
-          },
-          {
             label: 'Item Category',
             key: 'item-category',
             path: '/procure-to-pay/procurement-settings/item-category',
