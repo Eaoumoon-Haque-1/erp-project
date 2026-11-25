@@ -119,6 +119,10 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange, readOn
     const columnDisabled = typeof column.disabled === 'function'
       ? column.disabled(row)
       : column.disabled
+    // A column may narrow its options per row (dependent dropdowns).
+    const options = column.getOptions ? column.getOptions(row) : column.options
+    const emptyLabel = column.emptyLabel?.(row, options) ?? 'Select...'
+    const selectedLabel = options.find((option) => option.value === row[column.key])?.label
     return (
       <select
         id={inputId}
@@ -126,11 +130,12 @@ function RecordControl({ column, row, rowIndex, inputId, error, onChange, readOn
         className={controlClass(error)}
         value={row[column.key]}
         disabled={readOnly || columnDisabled}
+        title={selectedLabel}
         aria-invalid={Boolean(error)}
         onChange={(event) => onChange(rowIndex, column.key, event.target.value)}
       >
-        <option value={""}>Select...</option>
-        {column.options.map((option) => (
+        <option value={""}>{emptyLabel}</option>
+        {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
@@ -192,6 +197,7 @@ function RepeatableEmployeeTable({
   onReorder,
   embedded = false,
   readOnly = false,
+  wrapClassName = "",
 }) {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -206,7 +212,7 @@ function RepeatableEmployeeTable({
 
   const content = (
     <>
-      <div className={"erp-employee-table-wrap"}>
+      <div className={["erp-employee-table-wrap", wrapClassName].filter(Boolean).join(" ")}>
         <table className={"erp-table erp-employee-entry-table"}>
           <thead>
             <tr>

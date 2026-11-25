@@ -337,6 +337,10 @@ function EmployeeInformationCreate() {
               ...(key === "CURRENTLY_WORKING" && value === "1"
                 ? { EMPLOYMENT_PERIOD_END_DT: "" }
                 : {}),
+              // The degree list depends on the level, so a new level clears the degree.
+              ...(section === "education" && key === "EDUCATION_LEVEL_ID"
+                ? { DEGREE_TITLE_ID: "" }
+                : {}),
             }
           : row,
       ),
@@ -344,7 +348,15 @@ function EmployeeInformationCreate() {
     setErrors((current) => ({
       ...current,
       [section]: current[section].map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [key]: undefined } : row,
+        rowIndex === index
+          ? {
+              ...row,
+              [key]: undefined,
+              ...(section === "education" && key === "EDUCATION_LEVEL_ID"
+                ? { DEGREE_TITLE_ID: undefined }
+                : {}),
+            }
+          : row,
       ),
     }));
   };

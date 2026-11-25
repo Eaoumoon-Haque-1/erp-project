@@ -193,15 +193,25 @@ function EmployeeInformationForm({
     {
       key: "EDUCATION_LEVEL_ID",
       label: "Education Level",
-      // required: true,
+      required: true,
       options: toSelectOptions(educationLevelOptions),
       className: "erp-table-cell-wide",
     },
     {
       key: "DEGREE_TITLE_ID",
       label: "Degree Title",
-      // required: true,
+      required: true,
       options: toSelectOptions(degreeTitleOptions),
+      // Only the degrees of the row's Education Level are offered (the backend
+      // rejects a degree that belongs to another level).
+      getOptions: (row) => toSelectOptions(degreeTitleOptions).filter(
+        (option) => option.levelOfEducationId === row.EDUCATION_LEVEL_ID,
+      ),
+      disabled: (row) => !row.EDUCATION_LEVEL_ID,
+      emptyLabel: (row, options) => {
+        if (!row.EDUCATION_LEVEL_ID) return "Select level first";
+        return options.length === 0 ? "No degree found" : "Select...";
+      },
       className: "erp-table-cell-wide",
     },
     { key: "MAJOR_GROUP", label: "Major/Group", maxLength: 150 },
@@ -764,6 +774,7 @@ function EmployeeInformationForm({
               rows={values.education}
               errors={errors.education}
               columns={educationColumns}
+              wrapClassName={"erp-education-table-wrap"}
               onChange={(index, key, value) =>
                 onRowChange("education", index, key, value)
               }
