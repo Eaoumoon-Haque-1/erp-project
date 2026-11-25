@@ -6,6 +6,7 @@ import useAuth from '../../../../auth/useAuth'
 import FormPage from '../../../../components/shared/FormPage'
 import { getNextSortOrder } from '../../../../utils/sortOrder'
 import { designationGroupsApi } from '../../designation-group/api/designationGroupApi'
+import { mapDesignationGroupToApi } from '../../designation-group/data/designationGroupApiMapper'
 import { designationsApi } from '../api/designationApi'
 import DesignationForm from '../components/DesignationForm'
 import { mapDesignationToApi } from '../data/designationApiMapper'
@@ -82,7 +83,25 @@ function DesignationCreate() {
 
     setSubmitting(true)
     try {
-      await designationsApi.create(mapDesignationToApi(result.values))
+      const created = await designationsApi.create(mapDesignationToApi(result.values))
+      // The list shows only designations assigned to the user's Business Unit, so
+      // assign the new one right away; otherwise it would be saved but not listed.
+      // (The backend accepts an assignment only for an active designation.)
+      if (sessionBusinessUnitId && created?.id && Number(created.status ?? 1) === 1) {
+        try {
+          await designationGroupsApi.create(mapDesignationGroupToApi({
+            BG_ID: sessionGroupId,
+            BU_ID: sessionBusinessUnitId,
+            DESIG_ID: String(created.id),
+            STATUS: '1',
+          }))
+        } catch (assignError) {
+          getApiErrorMessage(
+            assignError,
+            'The Designation was saved but could not be assigned to your Business Unit. Assign it from the Edit page.',
+          )
+        }
+      }
       navigate(listPath)
     } catch (error) {
       applyApiFormErrors(error, setErrors, 'Unable to create Designation.', {
