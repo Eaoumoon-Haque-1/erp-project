@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getApiErrorMessage } from '../../../../api/errors'
+import useAuth from '../../../../auth/useAuth'
 import ListPage from '../../../../components/shared/ListPage'
 import ListRowActions from '../../../../components/shared/ListRowActions'
 import { employeesApi } from '../api/employeeApi'
@@ -104,9 +105,15 @@ function EmployeeInformationList() {
     }
   }
 
+  // A user sees only the employees of their own Business Unit (the unit id comes
+  // from the login session). A session without a unit id (e.g. a group-level
+  // admin) still sees every unit.
+  const { session } = useAuth()
+  const userBuId = session?.buId ?? null
+
   useEffect(() => {
     let active = true
-    Promise.all([employeesApi.list(), loadEmployeeReferences()])
+    Promise.all([employeesApi.list(userBuId), loadEmployeeReferences()])
       .then(([records, referenceResult]) => {
         if (!active) return
         const names = createEmployeeReferenceNames(referenceResult.references)
@@ -116,15 +123,18 @@ function EmployeeInformationList() {
       .catch((error) => getApiErrorMessage(error, 'Unable to load Employees.'))
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [userBuId])
 
   const filters = useMemo(() => [
-    { key: 'BUSINESS_UNIT_ID', label: 'Business Unit', placeholder: '--Search by Business Unit--', options: options.businessUnitOptions || [] },
+    // The Business Unit filter only makes sense when the user can see several units.
+    ...(userBuId ? [] : [
+      { key: 'BUSINESS_UNIT_ID', label: 'Business Unit', placeholder: '--Search by Business Unit--', options: options.businessUnitOptions || [] },
+    ]),
     { key: 'DEPARTMENT_ID', label: 'Department', placeholder: '--Search by Department--', searchable: true,
       options: [...new Map(rows.filter((row) => row.DEPARTMENT_ID && row.DEPARTMENT_NAME)
         .map((row) => [row.DEPARTMENT_ID, { value: row.DEPARTMENT_ID, label: row.DEPARTMENT_NAME }])).values()] },
     { key: 'EMPLOYMENT_STATUS', label: 'Employment Status', placeholder: '--Search by Employment Status--', options: options.employmentStatusOptions || [] },
-  ], [options, rows])
+  ], [options, rows, userBuId])
 
   return (
     <ListPage
