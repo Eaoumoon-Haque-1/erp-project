@@ -42,7 +42,9 @@ function DesignationList() {
   const { session } = useAuth()
   const sessionGroupId = String(session?.bgId ?? '')
   const sessionBusinessUnitId = String(session?.buId ?? '')
-  const hasSessionScope = Boolean(sessionGroupId && sessionBusinessUnitId)
+  // Only the Business Unit is required: the list is filtered by the unit's assignments.
+  // A missing Business Group id must not silently skip the request.
+  const hasSessionScope = Boolean(sessionBusinessUnitId)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -51,7 +53,7 @@ function DesignationList() {
 
     let active = true
     Promise.all([
-      designationsApi.list(sessionGroupId),
+      designationsApi.list(sessionGroupId || undefined),
       designationGroupsApi.list(),
     ])
       .then(([designations, assignments]) => {
@@ -75,7 +77,7 @@ function DesignationList() {
       .catch((error) => {
         if (active) getApiErrorMessage(error, 'Unable to load Designations.')
       })
-      .finally(() => { if (active) setLoading(false) })
+            .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [hasSessionScope, sessionBusinessUnitId, sessionGroupId])
 
